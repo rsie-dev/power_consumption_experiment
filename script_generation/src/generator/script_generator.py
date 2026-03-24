@@ -21,6 +21,7 @@ class ScriptGenerator:
             "multimeter": "07D1A5642160",
             #"head_delay": 2,
             "tool": "gzip",
+            "tool_tags": ["default"],
             "tool_args": "-zkc",
             "input_file": "test.data",
         }

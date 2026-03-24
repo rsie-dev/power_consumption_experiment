@@ -10,7 +10,7 @@ experiment = (get_experiment_builder()
 
               .upload(test_file, remote_path)
 
-              .measure_runs({{runs}}, "{{tool}}_default")
+              .measure_runs({{runs}}, "{{tool}}_{{ tool_tags | join("_") }}")
                 .with_multimeter("{{multimeter}}")
                 {% if head_delay %}.with_head_delay({{head_delay}}) {% endif %}
                 .execute_with("{{tool}} {{tool_args}} %s" % (remote_path / test_file.name))
