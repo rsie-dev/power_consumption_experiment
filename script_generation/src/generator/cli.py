@@ -4,6 +4,8 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
+from generator.script_generator import ScriptGenerator
+
 
 class Generator:
     def __init__(self):
@@ -41,7 +43,8 @@ class Generator:
 
         self._start_logging(args)
         try:
-            # ToDo:
+            sc = ScriptGenerator()
+            sc.generate(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")

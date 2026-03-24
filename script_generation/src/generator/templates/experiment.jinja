@@ -1,0 +1,27 @@
+from pathlib import Path
+
+from experiment.api import get_experiment_builder
+
+test_file = Path("data", "{{input_file}}")
+remote_path = Path("/tmp")
+
+experiment = (get_experiment_builder()
+            .on_host("{{host}}", "{{ip}}")
+
+              .upload(test_file, remote_path)
+
+              .measure_runs({{runs}}, "{{tool}}_default")
+                .with_multimeter("{{multimeter}}")
+                {% if head_delay %}.with_head_delay({{head_delay}}) {% endif %}
+                .execute_with("{{tool}} {{tool_args}} %s" % (remote_path / test_file.name))
+                  .with_timings()
+                  .count_stdout()
+                .done()
+                {% if tail_delay %}.with_tail_delay({{tail_delay}}) {% endif %}
+              .done()
+
+              .delete(remote_path / test_file.name)
+            .done()
+            .build()
+            )
+
