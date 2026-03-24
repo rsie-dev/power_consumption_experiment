@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=9.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "power-measurement-script-generator"
+dynamic = ["version"]
+description = "Tool to create scripts for power measurements."
+readme = "README.md"
+requires-python = ">=3.12"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+	"ruamel.yaml==0.18.10",
+]
+
+[project.optional-dependencies]
+dev = [
+]
+
+[project.scripts]
+generator = "generator.cli:app"
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.in"] }
+optional-dependencies.test = { file = ["requirements-test.txt"] }
+
+[tool.setuptools_scm]
+root = ".."
+version_file = "src/generator/_version.py"
+

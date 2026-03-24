@@ -1,0 +1,9 @@
+venv
+.idea
+__pycache__
+*.log
+
+dist/
+*.egg-info/
+
+src/generator/_version.py
