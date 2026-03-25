@@ -23,6 +23,9 @@ class SingleScriptGenerator(ScriptGenerator):
         for data_set in DataSet:
             data_sets.append(self._build_data_set_entry(data_set, tools, tool_configs))
 
+        measurement_sets = len(tools) * len(tool_configs) * len(DataSet)
+        self._logger.info("Generating %d measurement sets", measurement_sets)
+
         data = {
             "args": args,
             "data_sets": data_sets,
