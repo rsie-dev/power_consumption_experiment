@@ -5,6 +5,7 @@ from jinja2 import Environment, PackageLoader
 
 from generator.tools import Tool
 from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
+from generator.data_set import DataSet
 
 
 class ScriptGenerator:
@@ -25,6 +26,8 @@ class ScriptGenerator:
         tools.append(_build_tool_entry(Tool.lzop, tool_config))
         tools.append(_build_tool_entry(Tool.gzip, tool_config))
 
+        data_set = DataSet.TEXT
+
         data = {
             "runs": 10,
             "host": "raspi5",
@@ -32,7 +35,8 @@ class ScriptGenerator:
             "multimeter": "07D1A5642160",
             #"head_delay": 2,
             "tools": tools,
-            "input_file": "test.data",
+            "data_folder": Path("data"),
+            "data_set": data_set,
         }
         output = template.render(data)
         print(output)

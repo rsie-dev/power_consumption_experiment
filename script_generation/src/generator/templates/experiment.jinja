@@ -3,18 +3,17 @@ from pathlib import Path
 
 from experiment.api import get_experiment_builder
 
-test_file = Path("data", "{{input_file}}")
 remote_path = Path("/tmp")
 
 experiment = (get_experiment_builder()
             .on_host("{{host}}", "{{ip}}")
-              .upload(test_file, remote_path)
+              .upload(Path("{{data_folder}}", "{{data_set.data_file}}"), remote_path)
 
               {%- for tool in tools %}
               {{ measurement(tool.tool, tool.tool_tags, tool.tool_args) }}
               {% endfor %}
 
-              .delete(remote_path / test_file.name)
+              .delete(remote_path / data_set.data_file.name)
             .done()
             .build()
             )
