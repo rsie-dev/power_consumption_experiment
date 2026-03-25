@@ -13,7 +13,7 @@ experiment = (get_experiment_builder()
               {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set) }}
               {% endfor %}
 
-              .delete(remote_path / data_set.data_file.name)
+              .delete(remote_path / "{{data_set.data_file}}")
             .done()
             .build()
             )
