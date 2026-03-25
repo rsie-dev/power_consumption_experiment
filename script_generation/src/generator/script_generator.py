@@ -4,6 +4,7 @@ from pathlib import Path
 from jinja2 import Environment, PackageLoader
 
 from generator.tools import Tool
+from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
 
 
 class ScriptGenerator:
@@ -19,7 +20,8 @@ class ScriptGenerator:
         print("tool: %s" % tool.name)
 
         template = env.get_template('experiment.jinja')
-        tool_config = {}
+        tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
+                                 threading=Threading.SINGLE)
         data = {
             "runs": 10,
             "host": "raspi5",
@@ -34,10 +36,31 @@ class ScriptGenerator:
         output = template.render(data)
         print(output)
 
-    def _get_tool_config(self, tool: Tool, config: dict):
-        config = []
-        config.extend([tool.compress, tool.keep, tool.to_stdout])
-        return " ".join(config)
+    def _get_tool_config(self, tool: Tool, config: ToolConfig):
+        tool_args = []
+        if config.mode == OperationMode.COMPRESS:
+            tool_args.append(tool.compress)
+        else:
+            tool_args.append(tool.decompress)
 
-    def _get_tool_tags(self, tool: Tool, config: dict):
-        return ["default]"]
+        tool_args.extend([tool.keep, tool.to_stdout])
+
+        if config.strength == CompressionStrength.MIN:
+            tool_args.append(tool.min)
+        elif config.strength == CompressionStrength.MAX:
+            tool_args.append(tool.max)
+
+        if config.threading == Threading.SINGLE:
+            tool_args.append(tool.single_thread)
+        else:
+            tool_args.append(tool.multi_thread)
+
+        return " ".join(tool_args)
+
+    def _get_tool_tags(self, tool: Tool, config: ToolConfig):
+        tags = []
+        tags.append(config.mode.name.lower())
+        if config.mode == OperationMode.COMPRESS:
+            tags.append(config.strength.name.lower())
+        tags.append(config.threading.name.lower())
+        return tags
