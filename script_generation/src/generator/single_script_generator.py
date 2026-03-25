@@ -16,8 +16,8 @@ class SingleScriptGenerator(ScriptGenerator):
         return "single_experiment.jinja"
 
     def _write_scripts(self, template, script_folder: Path, args) -> None:
+        tools = [tool for tool in Tool]
         tool_configs = self._build_tool_configs()
-        tools = [Tool.lzop, Tool.gzip]
 
         data_sets = []
         for data_set in DataSet:
@@ -29,8 +29,11 @@ class SingleScriptGenerator(ScriptGenerator):
             "data_sets": data_sets,
         }
 
-        output = template.render(data)
-        print(output)
+        host_script = script_folder / f"{args.host}.py"
+        self._logger.info("generate: %s", host_script.relative_to(Path.cwd()))
+        with host_script.open("wt", encoding="UTF_8") as script:
+            output = template.render(data)
+            script.write(output)
 
     def _build_data_set_entry(self, data_set: DataSet, tools: list[Tool], tool_configs: list[ToolConfig]):
         tool_entries = []
