@@ -43,7 +43,7 @@ class ScriptGenerator:
 def _build_tool_entry(tool: Tool, tool_config: ToolConfig, data_set: DataSet):
     entry = {
         "tool": tool,
-        "tool_tags": _get_tool_tags(tool_config, data_set),
+        "measurement_tags": _get_measurement_tags(tool_config, data_set),
         "tool_args": _get_tool_config(tool, tool_config),
     }
     return entry
@@ -71,7 +71,7 @@ def _get_tool_config(tool: Tool, config: ToolConfig):
     return " ".join(tool_args)
 
 
-def _get_tool_tags(config: ToolConfig, data_set: DataSet):
+def _get_measurement_tags(config: ToolConfig, data_set: DataSet):
     tags = []
     tags.append(config.mode.name.lower())
     tags.append(data_set.set_name.lower())

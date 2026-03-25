@@ -1,5 +1,5 @@
-{% macro measurement(args, tool, tool_tags, tool_args, data_set) %}
-              .measure_runs({{args.runs}}, "{{tool.name}}_{{ tool_tags | join("_") }}")
+{% macro measurement(args, tool, measurement_tags, tool_args, data_set) %}
+              .measure_runs({{args.runs}}, "{{tool.name}}_{{ measurement_tags | join("_") }}")
                 .with_multimeter("{{multimeter}}")
                 {% if args.head_delay %}.with_head_delay({{args.head_delay}}) {% endif %}
                 .execute_with("{{tool.name}} {{tool_args}} %s" % (remote_path / "{{data_set.data_file}}"))
