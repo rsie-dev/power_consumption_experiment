@@ -29,8 +29,6 @@ class ScriptGenerator:
 
         data = {
             "args": args,
-            "host": "raspi5",
-            "ip": "192.168.1.102",
             "multimeter": "07D1A5642160",
             "tools": tools,
             "data_set": data_set,

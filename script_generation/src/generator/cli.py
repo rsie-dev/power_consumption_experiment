@@ -49,6 +49,8 @@ class Generator:
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
         parser.add_argument('--data-folder', default=Path("data"), help="data folder" + default)
+        parser.add_argument('--host', required=True, help="DUT host name")
+        parser.add_argument('--ip', required=True, help="DUT ip address")
         args = parser.parse_args()
 
         self._start_logging(args)

@@ -6,7 +6,7 @@ from experiment.api import get_experiment_builder
 remote_path = Path("/tmp")
 
 experiment = (get_experiment_builder()
-            .on_host("{{host}}", "{{ip}}")
+            .on_host("{{args.host}}", "{{args.ip}}")
               .upload(Path("{{args.data_folder}}", "{{data_set.data_file}}"), remote_path)
 
               {% for tool in tools %}
