@@ -29,11 +29,10 @@ class ScriptGenerator:
         data_set = DataSet.TEXT
 
         data = {
-            "runs": 10,
+            "args": args,
             "host": "raspi5",
             "ip": "192.168.1.102",
             "multimeter": "07D1A5642160",
-            #"head_delay": 2,
             "tools": tools,
             "data_folder": Path("data"),
             "data_set": data_set,

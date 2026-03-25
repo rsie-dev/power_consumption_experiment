@@ -45,6 +45,7 @@ class Generator:
         default = ' (default: %(default)s)'
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
+        parser.add_argument('--runs', default=30, help="amount of runs" + default)
         args = parser.parse_args()
 
         self._start_logging(args)

@@ -10,7 +10,7 @@ experiment = (get_experiment_builder()
               .upload(Path("{{data_folder}}", "{{data_set.data_file}}"), remote_path)
 
               {% for tool in tools %}
-              {{ measurement(runs, tool.tool, tool.tool_tags, tool.tool_args) }}
+              {{ measurement(args, tool.tool, tool.tool_tags, tool.tool_args) }}
               {% endfor %}
 
               .delete(remote_path / data_set.data_file.name)
