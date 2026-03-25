@@ -3,7 +3,7 @@ from enum import Enum
 
 
 @dataclass(frozen=True)
-class ToolConfig:
+class ToolDefinition:
     binary: str
     compress: str
     decompress: str
@@ -15,7 +15,7 @@ class ToolConfig:
     multi_thread: str
 
 
-class Tool(ToolConfig, Enum):
+class Tool(ToolDefinition, Enum):
     gzip = ("gzip", "-z", "", "", "", "-k", "-c", "", "")
     bzip2 = ("bzip2", "-z", "", "", "", "-k", "-c", "", "")
     xz = ("xz", "-z", "", "", "", "-k", "-c", "-T 1", "-T 0")

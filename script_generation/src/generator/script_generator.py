@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader
 
 from generator.tools import Tool
 
