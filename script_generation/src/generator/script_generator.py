@@ -22,8 +22,8 @@ class ScriptGenerator:
                                  threading=Threading.SINGLE)
 
         tools = []
-        tools.append(self._build_tool_entry(Tool.lzop, tool_config))
-        tools.append(self._build_tool_entry(Tool.gzip, tool_config))
+        tools.append(_build_tool_entry(Tool.lzop, tool_config))
+        tools.append(_build_tool_entry(Tool.gzip, tool_config))
 
         data = {
             "runs": 10,
@@ -37,13 +37,14 @@ class ScriptGenerator:
         output = template.render(data)
         print(output)
 
-    def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig):
-        entry = {
-            "tool": tool,
-            "tool_tags": _get_tool_tags(tool_config),
-            "tool_args": _get_tool_config(tool, tool_config),
-        }
-        return entry
+
+def _build_tool_entry(tool: Tool, tool_config: ToolConfig):
+    entry = {
+        "tool": tool,
+        "tool_tags": _get_tool_tags(tool_config),
+        "tool_args": _get_tool_config(tool, tool_config),
+    }
+    return entry
 
 
 def _get_tool_config(tool: Tool, config: ToolConfig):
