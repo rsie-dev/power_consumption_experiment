@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from abc import abstractmethod
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from generator.tools import Tool
 from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
@@ -18,6 +18,7 @@ class ScriptGenerator:
             loader=PackageLoader("generator"),
             trim_blocks=True,
             lstrip_blocks=True,
+            undefined=StrictUndefined,
         )
 
         template_name = self._get_template_name()
