@@ -5,6 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from generator.script_generator import ScriptGenerator
+from generator.generator_type import GeneratorType
 
 
 class Generator:
@@ -35,10 +36,11 @@ class Generator:
             return yaml.load(f)
 
     def _generate(self, args):
-        sc = ScriptGenerator()
+        generator_type = GeneratorType[args.type.upper()]
+        sg = generator_type.create()
         script_folder = Path.cwd() / "scripts"
         script_folder.mkdir(parents=True, exist_ok=True)
-        sc.generate(script_folder, args)
+        sg.generate(script_folder, args)
 
     def main(self):
         parser = argparse.ArgumentParser()
@@ -51,6 +53,10 @@ class Generator:
         parser.add_argument('--data-folder', default=Path("data"), help="data folder" + default)
         parser.add_argument('--host', required=True, help="DUT host name")
         parser.add_argument('--ip', required=True, help="DUT ip address")
+        parser.add_argument('-t', '--type',
+                            choices=[type.name.lower() for type in GeneratorType],
+                            default=GeneratorType.SINGLE.name.lower(), help="generator type" + default)
+
         args = parser.parse_args()
 
         self._start_logging(args)

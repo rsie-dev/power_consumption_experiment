@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from abc import abstractmethod
 
 from jinja2 import Environment, PackageLoader
 
@@ -19,62 +20,52 @@ class ScriptGenerator:
             lstrip_blocks=True,
         )
 
-        template = env.get_template('experiment.jinja')
+        template_name = self._get_template_name()
+        template = env.get_template(template_name)
+        self._write_scripts(template, script_folder, args)
 
-        tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
-                                 threading=Threading.SINGLE)
-        data_set = DataSet.TEXT
+    @abstractmethod
+    def _get_template_name(self) -> str:
+        pass
 
-        tools = []
-        tools.append(_build_tool_entry(Tool.lzop, tool_config, data_set))
-        tools.append(_build_tool_entry(Tool.gzip, tool_config, data_set))
+    @abstractmethod
+    def _write_scripts(self, template, script_folder: Path, args) -> None:
+        pass
 
-        data = {
-            "args": args,
-            "multimeter": "07D1A5642160",
-            "tools": tools,
-            "data_set": data_set,
+    def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):
+        entry = {
+            "tool": tool,
+            "measurement_tags": self._get_measurement_tags(tool_config, data_set),
+            "tool_args": self._get_tool_config(tool, tool_config),
         }
-        output = template.render(data)
-        print(output)
+        return entry
 
+    def _get_tool_config(self, tool: Tool, config: ToolConfig):
+        tool_args = []
+        if config.mode == OperationMode.COMPRESS:
+            tool_args.append(tool.compress)
+        else:
+            tool_args.append(tool.decompress)
 
-def _build_tool_entry(tool: Tool, tool_config: ToolConfig, data_set: DataSet):
-    entry = {
-        "tool": tool,
-        "measurement_tags": _get_measurement_tags(tool_config, data_set),
-        "tool_args": _get_tool_config(tool, tool_config),
-    }
-    return entry
+        tool_args.extend([tool.keep, tool.to_stdout])
 
+        if config.strength == CompressionStrength.MIN:
+            tool_args.append(tool.min)
+        elif config.strength == CompressionStrength.MAX:
+            tool_args.append(tool.max)
 
-def _get_tool_config(tool: Tool, config: ToolConfig):
-    tool_args = []
-    if config.mode == OperationMode.COMPRESS:
-        tool_args.append(tool.compress)
-    else:
-        tool_args.append(tool.decompress)
+        if config.threading == Threading.SINGLE:
+            tool_args.append(tool.single_thread)
+        else:
+            tool_args.append(tool.multi_thread)
 
-    tool_args.extend([tool.keep, tool.to_stdout])
+        return " ".join(tool_args)
 
-    if config.strength == CompressionStrength.MIN:
-        tool_args.append(tool.min)
-    elif config.strength == CompressionStrength.MAX:
-        tool_args.append(tool.max)
-
-    if config.threading == Threading.SINGLE:
-        tool_args.append(tool.single_thread)
-    else:
-        tool_args.append(tool.multi_thread)
-
-    return " ".join(tool_args)
-
-
-def _get_measurement_tags(config: ToolConfig, data_set: DataSet):
-    tags = []
-    tags.append(config.mode.name.lower())
-    tags.append(data_set.set_name.lower())
-    if config.mode == OperationMode.COMPRESS:
-        tags.append(config.strength.name.lower())
-    tags.append(config.threading.name.lower())
-    return tags
+    def _get_measurement_tags(self, config: ToolConfig, data_set: DataSet):
+        tags = []
+        tags.append(config.mode.name.lower())
+        tags.append(data_set.set_name.lower())
+        if config.mode == OperationMode.COMPRESS:
+            tags.append(config.strength.name.lower())
+        tags.append(config.threading.name.lower())
+        return tags
