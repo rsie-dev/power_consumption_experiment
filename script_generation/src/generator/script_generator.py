@@ -21,12 +21,11 @@ class ScriptGenerator:
 
         tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
                                  threading=Threading.SINGLE)
+        data_set = DataSet.TEXT
 
         tools = []
-        tools.append(_build_tool_entry(Tool.lzop, tool_config))
-        tools.append(_build_tool_entry(Tool.gzip, tool_config))
-
-        data_set = DataSet.TEXT
+        tools.append(_build_tool_entry(Tool.lzop, tool_config, data_set))
+        tools.append(_build_tool_entry(Tool.gzip, tool_config, data_set))
 
         data = {
             "args": args,
@@ -41,10 +40,10 @@ class ScriptGenerator:
         print(output)
 
 
-def _build_tool_entry(tool: Tool, tool_config: ToolConfig):
+def _build_tool_entry(tool: Tool, tool_config: ToolConfig, data_set: DataSet):
     entry = {
         "tool": tool,
-        "tool_tags": _get_tool_tags(tool_config),
+        "tool_tags": _get_tool_tags(tool_config, data_set),
         "tool_args": _get_tool_config(tool, tool_config),
     }
     return entry
@@ -72,9 +71,10 @@ def _get_tool_config(tool: Tool, config: ToolConfig):
     return " ".join(tool_args)
 
 
-def _get_tool_tags(config: ToolConfig):
+def _get_tool_tags(config: ToolConfig, data_set: DataSet):
     tags = []
     tags.append(config.mode.name.lower())
+    tags.append(data_set.set_name.lower())
     if config.mode == OperationMode.COMPRESS:
         tags.append(config.strength.name.lower())
     tags.append(config.threading.name.lower())
