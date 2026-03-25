@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -9,7 +10,7 @@ class ScriptGenerator:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def generate(self, args):
+    def generate(self, script_folder: Path, args):
         env = Environment(
             loader=PackageLoader("generator")
         )
@@ -18,6 +19,7 @@ class ScriptGenerator:
         print("tool: %s" % tool.name)
 
         template = env.get_template('experiment.jinja')
+        tool_config = {}
         data = {
             "runs": 10,
             "host": "raspi5",
@@ -25,8 +27,8 @@ class ScriptGenerator:
             "multimeter": "07D1A5642160",
             #"head_delay": 2,
             "tool": tool.name,
-            "tool_tags": ["default"],
-            "tool_args": self._get_tool_config(tool, {}),
+            "tool_tags": self._get_tool_tags(tool, tool_config),
+            "tool_args": self._get_tool_config(tool, tool_config),
             "input_file": "test.data",
         }
         output = template.render(data)
@@ -36,3 +38,6 @@ class ScriptGenerator:
         config = []
         config.extend([tool.compress, tool.keep, tool.to_stdout])
         return " ".join(config)
+
+    def _get_tool_tags(self, tool: Tool, config: dict):
+        return ["default]"]

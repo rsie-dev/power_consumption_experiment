@@ -34,6 +34,12 @@ class Generator:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
+    def _generate(self, args):
+        sc = ScriptGenerator()
+        script_folder = Path.cwd() / "scripts"
+        script_folder.mkdir(parents=True, exist_ok=True)
+        sc.generate(script_folder, args)
+
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
@@ -43,8 +49,7 @@ class Generator:
 
         self._start_logging(args)
         try:
-            sc = ScriptGenerator()
-            sc.generate(args)
+            self._generate(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")
