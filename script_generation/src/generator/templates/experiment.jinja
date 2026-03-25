@@ -8,10 +8,11 @@ remote_path = Path("/tmp")
 
 experiment = (get_experiment_builder()
             .on_host("{{host}}", "{{ip}}")
-
               .upload(test_file, remote_path)
 
-              {{ measurement(tool, tool_tags, tool_args) }}
+              {%- for tool in tools %}
+              {{ measurement(tool.tool, tool.tool_tags, tool.tool_args) }}
+              {% endfor %}
 
               .delete(remote_path / test_file.name)
             .done()

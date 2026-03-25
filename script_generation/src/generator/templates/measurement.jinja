@@ -1,8 +1,8 @@
 {% macro measurement(tool, tool_tags, tool_args) %}
-              .measure_runs({{runs}}, "{{tool}}_{{ tool_tags | join("_") }}")
+              .measure_runs({{runs}}, "{{tool.name}}_{{ tool_tags | join("_") }}")
                 .with_multimeter("{{multimeter}}")
                 {% if head_delay %}.with_head_delay({{head_delay}}) {% endif %}
-                .execute_with("{{tool}} {{tool_args}} %s" % (remote_path / test_file.name))
+                .execute_with("{{tool.name}} {{tool_args}} %s" % (remote_path / test_file.name))
                   .with_timings()
                   .count_stdout()
                 .done()
