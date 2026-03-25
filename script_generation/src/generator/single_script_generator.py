@@ -18,18 +18,28 @@ class SingleScriptGenerator(ScriptGenerator):
     def _write_scripts(self, template, script_folder: Path, args) -> None:
         tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
                                  threading=Threading.SINGLE)
-        data_set = DataSet.TEXT
+        tools = [Tool.lzop, Tool.gzip]
 
-        tools = []
-        tools.append(self._build_tool_entry(Tool.lzop, tool_config, data_set))
-        tools.append(self._build_tool_entry(Tool.gzip, tool_config, data_set))
+        data_sets = []
+        data_sets.append(self._build_data_set_entry(DataSet.TEXT, tools, tool_config))
+        data_sets.append(self._build_data_set_entry(DataSet.TEXT, tools, tool_config))
 
         data = {
             "args": args,
             "multimeter": "07D1A5642160",
-            "tools": tools,
-            "data_set": data_set,
+            "data_sets": data_sets,
         }
 
         output = template.render(data)
         print(output)
+
+    def _build_data_set_entry(self, data_set: DataSet, tools: list[Tool], tool_config: ToolConfig):
+        tool_entries = []
+        for tool in tools:
+            tool_entries.append(self._build_tool_entry(tool, tool_config, data_set))
+        entry = {
+            "data_set": data_set,
+            "tools": tool_entries,
+        }
+        return entry
+

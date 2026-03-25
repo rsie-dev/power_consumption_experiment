@@ -7,13 +7,15 @@ remote_path = Path("/tmp")
 
 experiment = (get_experiment_builder()
             .on_host("{{args.host}}", "{{args.ip}}")
-              .upload(Path("{{args.data_folder}}", "{{data_set.data_file}}"), remote_path)
+{% for data_set in data_sets %}
+              .upload(Path("{{args.data_folder}}", "{{data_set.data_set.data_file}}"), remote_path)
 
-              {% for tool in tools %}
-              {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set) }}
+              {% for tool in data_set.tools %}
+              {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set) }}
               {% endfor %}
+              .delete(remote_path / "{{data_set.data_set.data_file}}")
 
-              .delete(remote_path / "{{data_set.data_file}}")
+{% endfor %}
             .done()
             .build()
             )

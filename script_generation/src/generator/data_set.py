@@ -11,3 +11,4 @@ class DataSetDefinition:
 
 class DataSet(DataSetDefinition, Enum):
     TEXT = ("text", Path("dickens"))
+    XML = ("xml", Path("xml"))
