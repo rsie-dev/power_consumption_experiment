@@ -14,7 +14,9 @@ class ScriptGenerator:
 
     def generate(self, script_folder: Path, args):
         env = Environment(
-            loader=PackageLoader("generator")
+            loader=PackageLoader("generator"),
+            trim_blocks=True,
+            lstrip_blocks=True,
         )
 
         template = env.get_template('experiment.jinja')

@@ -1,11 +1,15 @@
 {% macro measurement(args, tool, measurement_tags, tool_args, data_set) %}
-              .measure_runs({{args.runs}}, "{{tool.name}}_{{ measurement_tags | join("_") }}")
+.measure_runs({{args.runs}}, "{{tool.name}}_{{ measurement_tags | join("_") }}")
                 .with_multimeter("{{multimeter}}")
-                {% if args.head_delay %}.with_head_delay({{args.head_delay}}) {% endif %}
+{% if args.head_delay %}
+                .with_head_delay({{args.head_delay}})
+{% endif %}
                 .execute_with("{{tool.name}} {{tool_args}} %s" % (remote_path / "{{data_set.data_file}}"))
                   .with_timings()
                   .count_stdout()
                 .done()
-                {% if args.tail_delay %}.with_tail_delay({{args.tail_delay}}) {% endif %}
+{% if args.tail_delay %}
+                .with_tail_delay({{args.tail_delay}})
+{% endif %}
               .done()
 {% endmacro %}
