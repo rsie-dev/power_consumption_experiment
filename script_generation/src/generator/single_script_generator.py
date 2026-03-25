@@ -16,13 +16,12 @@ class SingleScriptGenerator(ScriptGenerator):
         return "single_experiment.jinja"
 
     def _write_scripts(self, template, script_folder: Path, args) -> None:
-        tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
-                                 threading=Threading.SINGLE)
+        tool_configs = self._build_tool_configs()
         tools = [Tool.lzop, Tool.gzip]
 
         data_sets = []
-        data_sets.append(self._build_data_set_entry(DataSet.TEXT, tools, tool_config))
-        data_sets.append(self._build_data_set_entry(DataSet.TEXT, tools, tool_config))
+        for data_set in DataSet:
+            data_sets.append(self._build_data_set_entry(data_set, tools, tool_configs))
 
         data = {
             "args": args,
@@ -33,13 +32,27 @@ class SingleScriptGenerator(ScriptGenerator):
         output = template.render(data)
         print(output)
 
-    def _build_data_set_entry(self, data_set: DataSet, tools: list[Tool], tool_config: ToolConfig):
+    def _build_data_set_entry(self, data_set: DataSet, tools: list[Tool], tool_configs: list[ToolConfig]):
         tool_entries = []
         for tool in tools:
-            tool_entries.append(self._build_tool_entry(tool, tool_config, data_set))
+            for tool_config in tool_configs:
+                tool_entry = self._build_tool_entry(tool, tool_config, data_set)
+                tool_entries.append(tool_entry)
         entry = {
             "data_set": data_set,
             "tools": tool_entries,
         }
         return entry
 
+    def _build_tool_configs(self):
+        tool_configs = []
+        for mode in OperationMode:
+            for threading in Threading:
+                if mode == OperationMode.COMPRESS:
+                    for strength in CompressionStrength:
+                        tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
+                        tool_configs.append(tool_config)
+                else:
+                    tool_config = ToolConfig(mode=mode, strength=CompressionStrength.DEFAULT, threading=threading)
+                    tool_configs.append(tool_config)
+        return tool_configs
