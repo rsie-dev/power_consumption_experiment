@@ -25,12 +25,11 @@ class SingleScriptGenerator(ScriptGenerator):
 
         data = {
             "args": args,
-            "multimeter": "07D1A5642160",
             "data_sets": data_sets,
         }
 
         host_script = script_folder / f"{args.host}.py"
-        self._logger.info("generate: %s", host_script.relative_to(Path.cwd()))
+        self._logger.info("Generate: %s", host_script.relative_to(Path.cwd()))
         with host_script.open("wt", encoding="UTF_8") as script:
             output = template.render(data)
             script.write(output)

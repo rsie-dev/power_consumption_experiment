@@ -39,6 +39,7 @@ class Generator:
         generator_type = GeneratorType[args.type.upper()]
         sg = generator_type.create()
         script_folder = Path.cwd() / "scripts"
+        self._logger.info("Generate scripts for: %s", args.host)
         script_folder.mkdir(parents=True, exist_ok=True)
         sg.generate(script_folder, args)
 
@@ -53,6 +54,7 @@ class Generator:
         parser.add_argument('--data-folder', default=Path("data"), help="data folder" + default)
         parser.add_argument('--host', required=True, help="DUT host name")
         parser.add_argument('--ip', required=True, help="DUT ip address")
+        parser.add_argument('--multimeter', required=True, help="multimeter serial number")
         parser.add_argument('-t', '--type',
                             choices=[type.name.lower() for type in GeneratorType],
                             default=GeneratorType.SINGLE.name.lower(), help="generator type" + default)
