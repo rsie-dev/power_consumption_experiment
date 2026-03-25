@@ -2,6 +2,8 @@ import logging
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+from generator.tools import Tool
+
 
 class ScriptGenerator:
     def __init__(self):
@@ -9,9 +11,11 @@ class ScriptGenerator:
 
     def generate(self, args):
         env = Environment(
-            loader=PackageLoader("generator"),
-            #autoescape=select_autoescape()
+            loader=PackageLoader("generator")
         )
+
+        tool: Tool = Tool.bzip2
+        print("tool: %s" % tool.name)
 
         template = env.get_template('experiment.jinja')
         data = {
@@ -20,10 +24,15 @@ class ScriptGenerator:
             "ip": "192.168.1.102",
             "multimeter": "07D1A5642160",
             #"head_delay": 2,
-            "tool": "gzip",
+            "tool": tool.name,
             "tool_tags": ["default"],
-            "tool_args": "-zkc",
+            "tool_args": self._get_tool_config(tool, {}),
             "input_file": "test.data",
         }
         output = template.render(data)
         print(output)
+
+    def _get_tool_config(self, tool: Tool, config: dict):
+        config = []
+        config.extend([tool.compress, tool.keep, tool.to_stdout])
+        return " ".join(config)

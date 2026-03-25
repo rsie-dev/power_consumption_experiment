@@ -4,6 +4,7 @@ from enum import Enum
 
 @dataclass(frozen=True)
 class ToolConfig:
+    binary: str
     compress: str
     decompress: str
     min: str
@@ -15,8 +16,8 @@ class ToolConfig:
 
 
 class Tool(ToolConfig, Enum):
-    gzip = ("-z", "", "", "", "-k", "-c", "", "")
-    bzip2 = ("-z", "", "", "", "-k", "-c", "", "")
-    xz = ("-z", "", "", "", "-k", "-c", "-T 1", "-T 0")
-    lz4 = ("-z", "", "", "", "-k", "-c", "-T1", "")
-    lzop = ("", "", "", "", "-k", "-c", "", "")
+    gzip = ("gzip", "-z", "", "", "", "-k", "-c", "", "")
+    bzip2 = ("bzip2", "-z", "", "", "", "-k", "-c", "", "")
+    xz = ("xz", "-z", "", "", "", "-k", "-c", "-T 1", "-T 0")
+    lz4 = ("lz4", "-z", "", "", "", "-k", "-c", "-T1", "")
+    lzop = ("lzop", "", "", "", "", "-k", "-c", "", "")
