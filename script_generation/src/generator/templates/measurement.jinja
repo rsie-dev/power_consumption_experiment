@@ -1,4 +1,4 @@
-{% macro measurement(tool, tool_tags, tool_args) %}
+{% macro measurement(runs, tool, tool_tags, tool_args) %}
               .measure_runs({{runs}}, "{{tool.name}}_{{ tool_tags | join("_") }}")
                 .with_multimeter("{{multimeter}}")
                 {% if head_delay %}.with_head_delay({{head_delay}}) {% endif %}
