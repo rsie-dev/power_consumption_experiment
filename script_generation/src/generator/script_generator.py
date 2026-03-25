@@ -33,7 +33,6 @@ class ScriptGenerator:
             "ip": "192.168.1.102",
             "multimeter": "07D1A5642160",
             "tools": tools,
-            "data_folder": Path("data"),
             "data_set": data_set,
         }
         output = template.render(data)

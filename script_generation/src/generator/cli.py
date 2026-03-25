@@ -48,6 +48,7 @@ class Generator:
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
+        parser.add_argument('--data-folder', default=Path("data"), help="data folder" + default)
         args = parser.parse_args()
 
         self._start_logging(args)

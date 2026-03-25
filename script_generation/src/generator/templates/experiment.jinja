@@ -7,7 +7,7 @@ remote_path = Path("/tmp")
 
 experiment = (get_experiment_builder()
             .on_host("{{host}}", "{{ip}}")
-              .upload(Path("{{data_folder}}", "{{data_set.data_file}}"), remote_path)
+              .upload(Path("{{args.data_folder}}", "{{data_set.data_file}}"), remote_path)
 
               {% for tool in tools %}
               {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set) }}
