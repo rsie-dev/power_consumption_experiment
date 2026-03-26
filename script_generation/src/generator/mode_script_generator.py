@@ -30,4 +30,3 @@ class ModeScriptGenerator(SingleScriptGenerator):
         }
         host_script = script_folder / f"{args.host}_{mode.name.lower()}.py"
         self._generate_script(host_script, template, data)
-
