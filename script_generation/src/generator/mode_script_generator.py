@@ -3,17 +3,13 @@ from pathlib import Path
 
 from generator.single_script_generator import SingleScriptGenerator
 from generator.tools import Tool
-from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
-from generator.data_set import DataSet
+from generator.tool_config import OperationMode
 
 
 class ModeScriptGenerator(SingleScriptGenerator):
     def __init__(self):
         super().__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
-
-    def _get_template_name(self) -> str:
-        return "single_experiment.jinja"
 
     def _write_scripts(self, template, script_folder: Path, args) -> None:
         tools = [tool for tool in Tool]
