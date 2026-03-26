@@ -13,7 +13,7 @@ class SingleScriptGenerator(ScriptGenerator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
-        return "single_experiment.jinja"
+        return "experiment.jinja"
 
     def _write_scripts(self, template, script_folder: Path, args) -> None:
         tools = [tool for tool in Tool]
