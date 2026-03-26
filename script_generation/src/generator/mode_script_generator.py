@@ -36,19 +36,19 @@ class ModeScriptGenerator(SingleScriptGenerator):
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool]):
-        tool_configs_compress = self._build_tool_configs(OperationMode.COMPRESS)
-        data_sets_compress = []
+        tool_configs = self._build_tool_configs(OperationMode.COMPRESS)
+        data_sets = []
         for data_set in DataSet:
-            data_sets_compress.append(self._build_data_set_entry(data_set, tools, tool_configs_compress))
-        measurement_sets_compress = len(tools) * len(tool_configs_compress) * len(data_sets_compress)
-        return data_sets_compress, measurement_sets_compress
+            data_sets.append(self._build_data_set_entry(data_set, tools, tool_configs))
+        measurement_sets = len(tools) * len(tool_configs) * len(data_sets)
+        return data_sets, measurement_sets
 
     def _get_measurement_sets_decompress(self, tools: list[Tool]):
-        tool_configs_decompress = self._build_tool_configs(OperationMode.DECOMPRESS)
-        data_sets_decompress = []
+        tool_configs = self._build_tool_configs(OperationMode.DECOMPRESS)
+        data_sets = []
         for tool in tools:
             for data_set in DataSet:
-                entries = self._build_data_set_entry_decompress(data_set, tool, tool_configs_decompress)
-                data_sets_decompress.extend(entries)
-        measurement_sets_decompress = len(data_sets_decompress)
-        return data_sets_decompress, measurement_sets_decompress
+                entries = self._build_data_set_entry_decompress(data_set, tool, tool_configs)
+                data_sets.extend(entries)
+        measurement_sets = len(data_sets)
+        return data_sets, measurement_sets
