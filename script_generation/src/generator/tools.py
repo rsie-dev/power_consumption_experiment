@@ -26,6 +26,9 @@ class Tool(Enum):
     BZIP2 = ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="-d", min="--fast", max="--best",
                            keep="-k", to_stdout="-c",
                            threading=Threading.SINGLE, single_thread="", multi_thread="")
+    BZIP3 = ToolDefinition(binary="bzip3", extension=".bz3", compress="-z", decompress="-d", min="-b 1", max="-b 511",
+                           keep="-k", to_stdout="-c",
+                           threading=Threading.MULTI, single_thread="-j 1", multi_thread="-j 4")
     XZ = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="-d", min="-0", max="-9",
                         keep="-k", to_stdout="-c",
                         threading=Threading.MULTI, single_thread="-T 1", multi_thread="-T 0")
