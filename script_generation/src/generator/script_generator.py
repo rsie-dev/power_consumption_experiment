@@ -36,7 +36,7 @@ class ScriptGenerator:
     def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):
         entry = {
             "tool": tool,
-            "measurement_tags": self._get_measurement_tags(tool_config, data_set),
+            "measurement_tags": self._get_measurement_tags(tool, tool_config, data_set),
             "tool_args": self._get_tool_config(tool, tool_config),
         }
         return entry
@@ -62,11 +62,12 @@ class ScriptGenerator:
 
         return " ".join(tool_args)
 
-    def _get_measurement_tags(self, config: ToolConfig, data_set: DataSet):
+    def _get_measurement_tags(self, tool: Tool, config: ToolConfig, data_set: DataSet):
         tags = []
         tags.append(config.mode.name.lower())
         tags.append(data_set.set_name.lower())
         if config.mode == OperationMode.COMPRESS:
             tags.append(config.strength.name.lower())
-        tags.append(config.threading.name.lower())
+        if tool.value.threading == Threading.MULTI:
+            tags.append(config.threading.name.lower())
         return tags
