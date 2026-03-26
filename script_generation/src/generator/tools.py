@@ -35,3 +35,6 @@ class Tool(Enum):
     lzop = ToolDefinition(binary="lzop", extension=".lzo", compress="", decompress="", min="", max="",
                           keep="-k", to_stdout="-c",
                           threading=Threading.SINGLE, single_thread="", multi_thread="")
+    zstd = ToolDefinition(binary="zstd", extension=".zst", compress="-z", decompress="-d", min="--fast", max="--ultra",
+                         keep="-k", to_stdout="-c",
+                         threading=Threading.MULTI, single_thread="--single-thread", multi_thread="-T0")
