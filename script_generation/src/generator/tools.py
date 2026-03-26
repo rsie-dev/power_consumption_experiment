@@ -4,7 +4,7 @@ from enum import Enum
 from generator.threading import Threading
 
 
-@dataclass(frozen=True,kw_only=True)
+@dataclass(frozen=True, kw_only=True)
 class ToolDefinition:
     binary: str
     extension: str
