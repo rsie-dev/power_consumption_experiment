@@ -5,24 +5,24 @@ from experiment.api import get_experiment_builder
 
 local_path = Path("{{args.data_folder}}")
 {% for data_set in data_sets %}
-local_{{data_set.data_set.set_name}} = local_path / "{{data_set.data_set.data_file}}"
+local_{{data_set.data_set_name}} = local_path / "{{data_set.data_set_file}}"
 {% endfor %}
 
 remote_path = Path("/tmp")
 {% for data_set in data_sets %}
-remote_{{data_set.data_set.set_name}} = remote_path / "{{data_set.data_set.data_file}}"
+remote_{{data_set.data_set_name}} = remote_path / "{{data_set.data_set_file}}"
 {% endfor %}
 
 
 experiment = (get_experiment_builder()
             .on_host("{{args.host}}", "{{args.ip}}")
 {% for data_set in data_sets %}
-              .upload(local_{{data_set.data_set.set_name}}, remote_path)
+              .upload(local_{{data_set.data_set_name}}, remote_path)
 
               {% for tool in data_set.tools %}
-              {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set) }}
+              {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set_name) }}
               {% endfor %}
-              .delete(remote_{{data_set.data_set.set_name}})
+              .delete(remote_{{data_set.data_set_name}})
 
 {% endfor %}
             .done()

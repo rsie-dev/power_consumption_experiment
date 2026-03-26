@@ -44,7 +44,8 @@ class SingleScriptGenerator(ScriptGenerator):
                 tool_entry = self._build_tool_entry(tool, tool_config, data_set)
                 tool_entries.append(tool_entry)
         entry = {
-            "data_set": data_set,
+            "data_set_name": data_set.set_name,
+            "data_set_file": data_set.data_file,
             "tools": tool_entries,
         }
         return entry
