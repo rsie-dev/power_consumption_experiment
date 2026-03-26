@@ -38,7 +38,8 @@ class SingleScriptGenerator(ScriptGenerator):
         tool_configs = self._build_tool_configs(OperationMode.COMPRESS)
         data_sets = []
         for data_set in DataSet:
-            data_sets.append(self._build_data_set_entry(data_set, tools, tool_configs))
+            entry = self._build_data_set_entry_compress(data_set, tools, tool_configs)
+            data_sets.append(entry)
         measurement_sets = len(tools) * len(tool_configs) * len(data_sets)
         return data_sets, measurement_sets
 
@@ -58,7 +59,7 @@ class SingleScriptGenerator(ScriptGenerator):
             output = template.render(data)
             script.write(output)
 
-    def _build_data_set_entry(self, data_set: DataSet, tools: list[Tool], tool_configs: list[ToolConfig]):
+    def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool], tool_configs: list[ToolConfig]):
         tool_entries = []
         for tool in tools:
             for tool_config in tool_configs:
