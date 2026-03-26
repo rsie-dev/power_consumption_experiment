@@ -15,9 +15,7 @@ class SingleScriptGenerator(ScriptGenerator):
     def _get_template_name(self) -> str:
         return "experiment.jinja"
 
-    def _write_scripts(self, template, script_folder: Path, args) -> None:
-        tools = [tool for tool in Tool]
-
+    def _write_scripts(self, tools: list[Tool], template, script_folder: Path, args) -> None:
         data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools)
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools)
 
