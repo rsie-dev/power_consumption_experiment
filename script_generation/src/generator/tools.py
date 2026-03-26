@@ -41,3 +41,6 @@ class Tool(Enum):
     ZSTD = ToolDefinition(binary="zstd", extension=".zst", compress="-z", decompress="-d", min="--fast", max="--ultra",
                           keep="-k", to_stdout="-c",
                           threading=Threading.MULTI, single_thread="--single-thread", multi_thread="-T0")
+    BROTLI = ToolDefinition(binary="brotli", extension=".br", compress="", decompress="-d", min="-q 0", max="-q 11",
+                            keep="-k", to_stdout="-c",
+                            threading=Threading.SINGLE, single_thread="", multi_thread="")
