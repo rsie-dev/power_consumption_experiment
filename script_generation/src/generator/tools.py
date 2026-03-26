@@ -19,8 +19,8 @@ class ToolDefinition:
 class Tool(Enum):
     gzip = ToolDefinition(binary="gzip", extension=".gz", compress="-z", decompress="", min="", max="", keep="-k",
                           to_stdout="-c", single_thread="", multi_thread="")
-    bzip2 =ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="", min="", max="", keep="-k",
-                          to_stdout="-c", single_thread="", multi_thread="")
+    bzip2 = ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="", min="", max="", keep="-k",
+                           to_stdout="-c", single_thread="", multi_thread="")
     xz = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="", min="", max="", keep="-k",
                         to_stdout="-c", single_thread="-T 1", multi_thread="-T 0")
     lz4 = ToolDefinition(binary="lz4", extension=".lz4", compress="-z", decompress="", min="", max="", keep="-k",
