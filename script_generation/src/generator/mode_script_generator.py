@@ -21,7 +21,8 @@ class ModeScriptGenerator(SingleScriptGenerator):
         self._write_measurement_sets(template, script_folder, args, data_sets_decompress,
                                      measurement_sets_decompress, OperationMode.DECOMPRESS)
 
-    def _write_measurement_sets(self, template, script_folder: Path, args, data_sets, measurement_sets, mode: OperationMode):
+    def _write_measurement_sets(self, template, script_folder: Path, args, data_sets, measurement_sets,
+                                mode: OperationMode):
         self._logger.info("Generating %d %s measurement sets", measurement_sets, mode.name.lower())
         data = {
             "args": args,

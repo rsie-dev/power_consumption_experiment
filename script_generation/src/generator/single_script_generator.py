@@ -81,8 +81,9 @@ class SingleScriptGenerator(ScriptGenerator):
             decompress_file = data_set.data_file
             data_set_name = f"{data_set.set_name}_{tool.name}"
             if tool.value.threading == Threading.MULTI:
-                decompress_file = decompress_file.with_stem(f"{data_set.data_file.stem}_{tool_config.threading.name.lower()}")
-                data_set_name = f"{data_set.set_name}_{tool.name}_{tool_config.threading.name.lower()}"
+                threading_name = tool_config.threading.name.lower()
+                decompress_file = decompress_file.with_stem(f"{data_set.data_file.stem}_{threading_name}")
+                data_set_name = f"{data_set.set_name}_{tool.name}_{threading_name}"
             suffixes = decompress_file.suffixes + [tool.value.extension]
             decompress_file = decompress_file.with_suffix("".join(suffixes))
             entry = {
