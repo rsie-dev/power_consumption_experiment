@@ -14,15 +14,16 @@ class ModeScriptGenerator(SingleScriptGenerator):
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
         data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
-        self._write_measurement_sets(template, args, data_sets_compress,
-                                     measurement_sets_compress, OperationMode.COMPRESS)
+        self._logger.info("Generating %d %s measurement sets", measurement_sets_compress,
+                          OperationMode.COMPRESS.name.lower())
+        self._write_measurement_sets(template, args, data_sets_compress, OperationMode.COMPRESS)
 
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
-        self._write_measurement_sets(template, args, data_sets_decompress,
-                                     measurement_sets_decompress, OperationMode.DECOMPRESS)
+        self._logger.info("Generating %d %s measurement sets", measurement_sets_decompress,
+                          OperationMode.DECOMPRESS.name.lower())
+        self._write_measurement_sets(template, args, data_sets_decompress, OperationMode.DECOMPRESS)
 
-    def _write_measurement_sets(self, template, args, data_sets, measurement_sets, mode: OperationMode):
-        self._logger.info("Generating %d %s measurement sets", measurement_sets, mode.name.lower())
+    def _write_measurement_sets(self, template, args, data_sets, mode: OperationMode):
         data = {
             "args": args,
             "data_sets": data_sets,
