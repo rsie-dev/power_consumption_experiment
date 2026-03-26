@@ -24,6 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+	"pylint==3.3.0",
 ]
 
 [project.scripts]
