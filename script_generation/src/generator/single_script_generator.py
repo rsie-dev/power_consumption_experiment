@@ -42,8 +42,11 @@ class SingleScriptGenerator(ScriptGenerator):
         }
 
         host_script = script_folder / f"{args.host}.py"
-        self._logger.info("Generate: %s", host_script.relative_to(Path.cwd()))
-        with host_script.open("wt", encoding="UTF_8") as script:
+        self._generate_script(host_script, template, data)
+
+    def _generate_script(self, script_file: Path, template, data):
+        self._logger.info("Generate: %s", script_file.relative_to(Path.cwd()))
+        with script_file.open("wt", encoding="UTF_8") as script:
             output = template.render(data)
             script.write(output)
 
