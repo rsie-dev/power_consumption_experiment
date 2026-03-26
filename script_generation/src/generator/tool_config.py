@@ -1,6 +1,8 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 
+from generator.threading import Threading
+
 
 class OperationMode(Enum):
     COMPRESS = auto()
@@ -11,11 +13,6 @@ class CompressionStrength(Enum):
     MIN = auto()
     DEFAULT = auto()
     MAX = auto()
-
-
-class Threading(Enum):
-    SINGLE = auto()
-    MULTI = auto()
 
 
 @dataclass(frozen=True)
