@@ -38,12 +38,12 @@ class Generator:
 
     def _generate(self, args):
         generator_type = GeneratorType[args.type.upper()]
-        sg = generator_type.create()
+        script_folder = Path.cwd() / "scripts"
+        sg = generator_type.create(script_folder)
         tools = list(Tool)
         data_sets = list(DataSet)
-        script_folder = Path.cwd() / "scripts"
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, script_folder, args)
+        sg.generate(tools, data_sets, args)
 
     def main(self):
         parser = argparse.ArgumentParser()

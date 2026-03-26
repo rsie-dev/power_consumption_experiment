@@ -8,14 +8,14 @@ from generator.data_set import DataSet
 
 
 class SingleScriptGenerator(ScriptGenerator):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, script_folder: Path):
+        super().__init__(script_folder)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
         return "experiment.jinja"
 
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, script_folder: Path, args) -> None:
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
         data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
 
@@ -28,7 +28,7 @@ class SingleScriptGenerator(ScriptGenerator):
             "data_sets": data_sets,
         }
 
-        host_script = script_folder / f"{args.host}.py"
+        host_script = self._script_folder / f"{args.host}.py"
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet]):

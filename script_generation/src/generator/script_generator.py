@@ -10,10 +10,11 @@ from generator.data_set import DataSet
 
 
 class ScriptGenerator:
-    def __init__(self):
+    def __init__(self, script_folder: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._script_folder = script_folder
 
-    def generate(self, tools: list[Tool], data_sets: list[DataSet], script_folder: Path, args):
+    def generate(self, tools: list[Tool], data_sets: list[DataSet], args):
         env = Environment(
             loader=PackageLoader("generator"),
             trim_blocks=True,
@@ -26,14 +27,14 @@ class ScriptGenerator:
         self._logger.info("Using data sets: %s", ", ".join([data_set.name for data_set in data_sets]))
         template_name = self._get_template_name()
         template = env.get_template(template_name)
-        self._write_scripts(tools, data_sets, template, script_folder, args)
+        self._write_scripts(tools, data_sets, template, args)
 
     @abstractmethod
     def _get_template_name(self) -> str:
         pass
 
     @abstractmethod
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, script_folder: Path, args) -> None:
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
         pass
 
     def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):
