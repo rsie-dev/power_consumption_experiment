@@ -42,7 +42,6 @@ class Generator:
         tools = list(Tool)
         data_sets = list(DataSet)
         script_folder = Path.cwd() / "scripts"
-        self._logger.info("Generate scripts for: %s", args.host)
         script_folder.mkdir(parents=True, exist_ok=True)
         sg.generate(tools, data_sets, script_folder, args)
 
