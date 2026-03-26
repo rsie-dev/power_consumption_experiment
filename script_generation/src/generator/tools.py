@@ -5,7 +5,7 @@ from generator.threading import Threading
 
 
 @dataclass(frozen=True, kw_only=True)
-class ToolDefinition:
+class ToolDefinition:   # pylint: disable=too-many-instance-attributes
     binary: str
     extension: str
     compress: str
