@@ -12,3 +12,5 @@ class DataSetDefinition:
 class DataSet(DataSetDefinition, Enum):
     TEXT = ("text", Path("dickens"))
     XML = ("xml", Path("xml"))
+    IMAGE = ("image", Path("x-ray"))
+    SENSOR = ("sensor", Path("sensor_data.txt"))
