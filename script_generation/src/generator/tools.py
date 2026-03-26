@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True,kw_only=True)
 class ToolDefinition:
     binary: str
     extension: str
@@ -16,9 +16,14 @@ class ToolDefinition:
     multi_thread: str
 
 
-class Tool(ToolDefinition, Enum):
-    gzip = ("gzip", ".gz", "-z", "", "", "", "-k", "-c", "", "")
-    bzip2 = ("bzip2", ".bz2", "-z", "", "", "", "-k", "-c", "", "")
-    xz = ("xz", ".xz", "-z", "", "", "", "-k", "-c", "-T 1", "-T 0")
-    lz4 = ("lz4", ".lz4", "-z", "", "", "", "-k", "-c", "-T1", "")
-    lzop = ("lzop", ".lzo", "", "", "", "", "-k", "-c", "", "")
+class Tool(Enum):
+    gzip = ToolDefinition(binary="gzip", extension=".gz", compress="-z", decompress="", min="", max="", keep="-k",
+                          to_stdout="-c", single_thread="", multi_thread="")
+    bzip2 =ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="", min="", max="", keep="-k",
+                          to_stdout="-c", single_thread="", multi_thread="")
+    xz = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="", min="", max="", keep="-k",
+                        to_stdout="-c", single_thread="-T 1", multi_thread="-T 0")
+    lz4 = ToolDefinition(binary="lz4", extension=".lz4", compress="-z", decompress="", min="", max="", keep="-k",
+                         to_stdout="-c", single_thread="-T1", multi_thread="")
+    lzop = ToolDefinition(binary="lzop", extension=".lzo", compress="", decompress="", min="", max="", keep="-k",
+                          to_stdout="-c", single_thread="", multi_thread="")

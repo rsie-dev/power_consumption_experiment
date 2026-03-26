@@ -44,21 +44,21 @@ class ScriptGenerator:
     def _get_tool_config(self, tool: Tool, config: ToolConfig):
         tool_args = []
         if config.mode == OperationMode.COMPRESS:
-            tool_args.append(tool.compress)
+            tool_args.append(tool.value.compress)
         else:
-            tool_args.append(tool.decompress)
+            tool_args.append(tool.value.decompress)
 
-        tool_args.extend([tool.keep, tool.to_stdout])
+        tool_args.extend([tool.value.keep, tool.value.to_stdout])
 
         if config.strength == CompressionStrength.MIN:
-            tool_args.append(tool.min)
+            tool_args.append(tool.value.min)
         elif config.strength == CompressionStrength.MAX:
-            tool_args.append(tool.max)
+            tool_args.append(tool.value.max)
 
         if config.threading == Threading.SINGLE:
-            tool_args.append(tool.single_thread)
+            tool_args.append(tool.value.single_thread)
         else:
-            tool_args.append(tool.multi_thread)
+            tool_args.append(tool.value.multi_thread)
 
         return " ".join(tool_args)
 
