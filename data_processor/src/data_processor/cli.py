@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 
-class Generator:
+class Processor:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -50,5 +50,5 @@ class Generator:
 
 
 def app():
-    generator = Generator()
-    return generator.main()
+    processor = Processor()
+    return processor.main()
