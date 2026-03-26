@@ -67,6 +67,7 @@ class ScriptGenerator:
 
     def _get_measurement_tags(self, tool: Tool, config: ToolConfig, data_set: DataSet):
         tags = []
+        tags.append(tool.name.lower())
         tags.append(config.mode.name.lower())
         tags.append(data_set.set_name.lower())
         if config.mode == OperationMode.COMPRESS:
