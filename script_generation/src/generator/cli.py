@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 
 from generator.generator_type import GeneratorType
 from generator.tools import Tool
+from generator.data_set import DataSet
 
 
 class Generator:
@@ -39,10 +40,11 @@ class Generator:
         generator_type = GeneratorType[args.type.upper()]
         sg = generator_type.create()
         tools = list(Tool)
+        data_sets = list(DataSet)
         script_folder = Path.cwd() / "scripts"
         self._logger.info("Generate scripts for: %s", args.host)
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, script_folder, args)
+        sg.generate(tools, data_sets, script_folder, args)
 
     def main(self):
         parser = argparse.ArgumentParser()

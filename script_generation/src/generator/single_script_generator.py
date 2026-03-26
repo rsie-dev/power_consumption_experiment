@@ -15,9 +15,9 @@ class SingleScriptGenerator(ScriptGenerator):
     def _get_template_name(self) -> str:
         return "experiment.jinja"
 
-    def _write_scripts(self, tools: list[Tool], template, script_folder: Path, args) -> None:
-        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools)
-        data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools)
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, script_folder: Path, args) -> None:
+        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
+        data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
 
         data_sets = data_sets_compress + data_sets_decompress
         measurement_sets = measurement_sets_compress + measurement_sets_decompress
@@ -31,24 +31,24 @@ class SingleScriptGenerator(ScriptGenerator):
         host_script = script_folder / f"{args.host}.py"
         self._generate_script(host_script, template, data)
 
-    def _get_measurement_sets_compress(self, tools: list[Tool]):
+    def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet]):
         measurement_sets = 0
-        data_sets = []
-        for data_set in DataSet:
+        data_set_entries = []
+        for data_set in data_sets:
             entry, count = self._build_data_set_entry_compress(data_set, tools)
-            data_sets.append(entry)
+            data_set_entries.append(entry)
             measurement_sets += count
-        return data_sets, measurement_sets
+        return data_set_entries, measurement_sets
 
-    def _get_measurement_sets_decompress(self, tools: list[Tool]):
+    def _get_measurement_sets_decompress(self, tools: list[Tool], data_sets: list[DataSet]):
         measurement_sets = 0
-        data_sets = []
+        data_set_entries = []
         for tool in tools:
-            for data_set in DataSet:
+            for data_set in data_sets:
                 entries, count = self._build_data_set_entry_decompress(data_set, tool)
-                data_sets.extend(entries)
+                data_set_entries.extend(entries)
                 measurement_sets += count
-        return data_sets, measurement_sets
+        return data_set_entries, measurement_sets
 
     def _generate_script(self, script_file: Path, template, data):
         self._logger.info("Generate: %s", script_file.relative_to(Path.cwd()))

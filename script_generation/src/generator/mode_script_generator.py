@@ -3,6 +3,7 @@ from pathlib import Path
 
 from generator.single_script_generator import SingleScriptGenerator
 from generator.tools import Tool
+from generator.data_set import DataSet
 from generator.tool_config import OperationMode
 
 
@@ -11,12 +12,12 @@ class ModeScriptGenerator(SingleScriptGenerator):
         super().__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def _write_scripts(self, tools: list[Tool], template, script_folder: Path, args) -> None:
-        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools)
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, script_folder: Path, args) -> None:
+        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
         self._write_measurement_sets(template, script_folder, args, data_sets_compress,
                                      measurement_sets_compress, OperationMode.COMPRESS)
 
-        data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools)
+        data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
         self._write_measurement_sets(template, script_folder, args, data_sets_decompress,
                                      measurement_sets_decompress, OperationMode.DECOMPRESS)
 
