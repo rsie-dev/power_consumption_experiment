@@ -35,22 +35,22 @@ class SingleScriptGenerator(ScriptGenerator):
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool]):
-        tool_configs = self._build_tool_configs(OperationMode.COMPRESS)
+        measurement_sets = 0
         data_sets = []
         for data_set in DataSet:
-            entry = self._build_data_set_entry_compress(data_set, tools, tool_configs)
+            entry, count = self._build_data_set_entry_compress(data_set, tools)
             data_sets.append(entry)
-        measurement_sets = len(tools) * len(tool_configs) * len(data_sets)
+            measurement_sets += count
         return data_sets, measurement_sets
 
     def _get_measurement_sets_decompress(self, tools: list[Tool]):
-        tool_configs = self._build_tool_configs(OperationMode.DECOMPRESS)
+        measurement_sets = 0
         data_sets = []
         for tool in tools:
             for data_set in DataSet:
-                entries = self._build_data_set_entry_decompress(data_set, tool, tool_configs)
+                entries, count = self._build_data_set_entry_decompress(data_set, tool)
                 data_sets.extend(entries)
-        measurement_sets = len(data_sets)
+                measurement_sets += count
         return data_sets, measurement_sets
 
     def _generate_script(self, script_file: Path, template, data):
@@ -59,22 +59,26 @@ class SingleScriptGenerator(ScriptGenerator):
             output = template.render(data)
             script.write(output)
 
-    def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool], tool_configs: list[ToolConfig]):
+    def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool]):
+        count = 0
+        tool_configs = self._build_tool_configs(OperationMode.COMPRESS)
         tool_entries = []
         for tool in tools:
             for tool_config in tool_configs:
                 tool_entry = self._build_tool_entry(tool, tool_config, data_set)
                 tool_entries.append(tool_entry)
+            count += len(tool_configs)
         entry = {
             "data_set_name": data_set.set_name,
             "data_set_file": data_set.data_file,
             "tools": tool_entries,
         }
-        return entry
+        return entry, count
 
-    def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool, tool_configs: list[ToolConfig]):
+    def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool):
         entries = []
 
+        tool_configs = self._build_tool_configs(OperationMode.DECOMPRESS)
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
             decompress_file = data_set.data_file.with_stem(f"{data_set.data_file.stem}_{tool_config.threading.name.lower()}")
@@ -86,7 +90,7 @@ class SingleScriptGenerator(ScriptGenerator):
             }
             entries.append(entry)
 
-        return entries
+        return entries, len(entries)
 
     def _build_tool_configs(self, mode: OperationMode):
         tool_configs = []
