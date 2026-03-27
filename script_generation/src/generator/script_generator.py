@@ -70,7 +70,7 @@ class ScriptGenerator:
         tags = []
         tags.append(tool.name.lower())
         tags.append(config.mode.name.lower())
-        tags.append(data_set.set_name.lower())
+        tags.append(data_set.name.lower())
         if config.mode == OperationMode.COMPRESS:
             tags.append(config.strength.name.lower())
         if tool.value.threading == Threading.MULTI:

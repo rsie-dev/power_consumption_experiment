@@ -66,8 +66,8 @@ class SingleScriptGenerator(ScriptGenerator):
                 tool_entries.append(tool_entry)
             count += len(tool_configs)
         entry = {
-            "data_set_name": data_set.set_name,
-            "data_set_file": data_set.data_file,
+            "data_set_name": data_set.name.lower(),
+            "data_set_file": data_set.value,
             "tools": tool_entries,
         }
         return entry, count
@@ -78,11 +78,11 @@ class SingleScriptGenerator(ScriptGenerator):
         tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS)
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
-            decompress_file = data_set.data_file
-            data_set_name = f"{data_set.set_name}_{tool.name.lower()}"
+            decompress_file = data_set.value
+            data_set_name = f"{data_set.name.lower()}_{tool.name.lower()}"
             if tool.value.threading == Threading.MULTI:
                 threading_name = tool_config.threading.name.lower()
-                decompress_file = decompress_file.with_stem(f"{data_set.data_file.stem}_{threading_name}")
+                decompress_file = decompress_file.with_stem(f"{data_set.value.stem}_{threading_name}")
                 data_set_name = f"{data_set_name}_{threading_name}"
             suffixes = decompress_file.suffixes + [tool.value.extension]
             decompress_file = decompress_file.with_suffix("".join(suffixes))
