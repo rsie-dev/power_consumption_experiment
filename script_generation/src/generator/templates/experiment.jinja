@@ -18,12 +18,16 @@ experiment = (get_experiment_builder()
             .on_host("{{args.host}}", "{{args.ip}}")
 {% for data_set in data_sets %}
               .upload(local_{{data_set.data_set_name}}, remote_path)
+{% endfor %}
 
+{% for data_set in data_sets %}
               {% for tool in data_set.tools %}
               {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set_name) }}
               {% endfor %}
-              .delete(remote_{{data_set.data_set_name}})
+{% endfor %}
 
+{% for data_set in data_sets %}
+              .delete(remote_{{data_set.data_set_name}})
 {% endfor %}
             .done()
             .build()
