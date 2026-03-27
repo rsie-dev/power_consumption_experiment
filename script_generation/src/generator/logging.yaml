@@ -16,7 +16,7 @@ formatters:
 handlers:
     console:
         class: logging.StreamHandler
-        formatter: console_color
+        formatter: console_output
         stream: ext://sys.stderr
     file:
         class: logging.FileHandler
