@@ -41,6 +41,8 @@ class Generator:
         script_folder = Path.cwd() / "scripts"
         sg = generator_type.create(script_folder)
         tools = list(Tool)
+        skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
+        tools = [t for t in tools if t not in skip_tools]
         data_sets = list(DataSet)
         script_folder.mkdir(parents=True, exist_ok=True)
         sg.generate(tools, data_sets, args)
@@ -60,6 +62,9 @@ class Generator:
         parser.add_argument('-t', '--type',
                             choices=[type.name.lower() for type in GeneratorType],
                             default=GeneratorType.SINGLE.name.lower(), help="generator type" + default)
+        parser.add_argument('--no-tool', nargs="*",
+                            choices=[tool.name.lower() for tool in Tool],
+                            help="tools to skip")
 
         args = parser.parse_args()
 
