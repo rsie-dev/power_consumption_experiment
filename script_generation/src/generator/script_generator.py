@@ -23,8 +23,8 @@ class ScriptGenerator:
         )
 
         self._logger.info("Generate scripts for: %s", args.host)
-        self._logger.info("Using tools: %s", ", ".join([tool.name for tool in tools]))
-        self._logger.info("Using data sets: %s", ", ".join([data_set.name for data_set in data_sets]))
+        self._logger.info("Using tools:          %s", ", ".join([tool.name for tool in tools]))
+        self._logger.info("Using data sets:      %s", ", ".join([data_set.name for data_set in data_sets]))
         template_name = self._get_template_name()
         template = env.get_template(template_name)
         self._write_scripts(tools, data_sets, template, args)
