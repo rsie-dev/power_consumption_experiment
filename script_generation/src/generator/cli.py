@@ -41,8 +41,9 @@ class Generator:
         script_folder = Path.cwd() / "scripts"
         sg = generator_type.create(script_folder)
         tools = list(Tool)
-        skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
-        tools = [t for t in tools if t not in skip_tools]
+        if args.no_tool:
+            skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
+            tools = [t for t in tools if t not in skip_tools]
         data_sets = list(DataSet)
         script_folder.mkdir(parents=True, exist_ok=True)
         sg.generate(tools, data_sets, args)
