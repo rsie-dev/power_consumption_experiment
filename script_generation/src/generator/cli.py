@@ -45,6 +45,9 @@ class Generator:
             skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
             tools = [t for t in tools if t not in skip_tools]
         data_sets = list(DataSet)
+        if args.no_data_set:
+            skip_ds = [DataSet[ds.upper()] for ds in args.no_data_set]
+            data_sets = [ds for ds in data_sets if ds not in skip_ds]
         script_folder.mkdir(parents=True, exist_ok=True)
         sg.generate(tools, data_sets, args)
 
@@ -66,6 +69,9 @@ class Generator:
         parser.add_argument('--no-tool', nargs="*",
                             choices=[tool.name.lower() for tool in Tool],
                             help="tools to skip")
+        parser.add_argument('--no-data-set', nargs="*",
+                            choices=[ds.name.lower() for ds in DataSet],
+                            help="data sets to skip")
 
         args = parser.parse_args()
 
