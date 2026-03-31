@@ -16,7 +16,7 @@ class DataScriptGenerator(ScriptGenerator):
         return "data_gen.jinja"
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
-        data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets[:2])
+        data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets)
 
         measurement_sets = measurement_sets_decompress
         self._logger.info("Generating %d data sets", measurement_sets)
