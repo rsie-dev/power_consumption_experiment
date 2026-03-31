@@ -19,13 +19,13 @@ class SingleScriptGenerator(ScriptGenerator):
         data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
 
-        data_sets = data_sets_compress + data_sets_decompress
+        all_data_sets = data_sets_compress + data_sets_decompress
         measurement_sets = measurement_sets_compress + measurement_sets_decompress
         self._logger.info("Generating %d measurement sets", measurement_sets)
 
         data = {
             "args": args,
-            "data_sets": data_sets,
+            "data_sets": all_data_sets,
         }
 
         host_script = self._script_folder / f"{args.host}.py"
