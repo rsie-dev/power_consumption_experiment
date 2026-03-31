@@ -24,6 +24,8 @@ experiment = (get_experiment_builder()
 {% endfor %}
               .done()
 
+              .measure_with_multimeter("{{args.multimeter}}")
+
 {% for data_set in data_sets %}
               {% for tool in data_set.tools %}
               {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set_name) }}
