@@ -20,7 +20,7 @@ class ToolDefinition:   # pylint: disable=too-many-instance-attributes
 
 
 class Tool(Enum):
-    GZIP = ToolDefinition(binary="gzip", extension=".gz", compress="-z", decompress="-d", min="--fast", max="--best",
+    GZIP = ToolDefinition(binary="gzip", extension=".gz", compress="", decompress="-d", min="--fast", max="--best",
                           keep="-k", to_stdout="-c",
                           threading=Threading.SINGLE, single_thread="", multi_thread="")
     BZIP2 = ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="-d", min="--fast", max="--best",
