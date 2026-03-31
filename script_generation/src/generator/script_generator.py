@@ -76,3 +76,9 @@ class ScriptGenerator:
         if tool.value.threading == Threading.MULTI:
             tags.append(config.threading.name.lower())
         return tags
+
+    def _generate_script(self, script_file: Path, template, data):
+        self._logger.info("Generate: %s", script_file.relative_to(Path.cwd()))
+        with script_file.open("wt", encoding="UTF_8") as script:
+            output = template.render(data)
+            script.write(output)

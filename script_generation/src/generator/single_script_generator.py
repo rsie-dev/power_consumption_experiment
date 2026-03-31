@@ -50,12 +50,6 @@ class SingleScriptGenerator(ScriptGenerator):
                 measurement_sets += count
         return data_set_entries, measurement_sets
 
-    def _generate_script(self, script_file: Path, template, data):
-        self._logger.info("Generate: %s", script_file.relative_to(Path.cwd()))
-        with script_file.open("wt", encoding="UTF_8") as script:
-            output = template.render(data)
-            script.write(output)
-
     def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool]):
         count = 0
         tool_entries = []
