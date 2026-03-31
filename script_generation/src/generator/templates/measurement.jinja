@@ -1,5 +1,5 @@
 {% macro measurement(args, tool, measurement_tags, tool_args, data_set_name) %}
-.measure_runs({{args.runs}}, "{{ measurement_tags | join("_") }}")
+.measure_runs(run_count, "{{ measurement_tags | join("_") }}")
                 .with_multimeter("{{args.multimeter}}")
 {% if args.head_delay %}
                 .with_head_delay({{args.head_delay}})
