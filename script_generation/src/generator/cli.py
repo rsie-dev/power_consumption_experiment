@@ -65,7 +65,7 @@ class Generator:
         parser.add_argument('--multimeter', required=True, help="multimeter serial number")
         parser.add_argument('-t', '--type',
                             choices=[type.name.lower() for type in GeneratorType],
-                            default=GeneratorType.SINGLE.name.lower(), help="generator type" + default)
+                            default=GeneratorType.HOST.name.lower(), help="generator type" + default)
         parser.add_argument('--no-tool', nargs="*",
                             choices=[tool.name.lower() for tool in Tool],
                             help="tools to skip")

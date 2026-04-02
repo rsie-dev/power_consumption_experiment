@@ -1,12 +1,12 @@
 import logging
 from pathlib import Path
 
-from generator.single_script_generator import SingleScriptGenerator
+from generator.host_script_generator import HostScriptGenerator
 from generator.tools import Tool
 from generator.data_set import DataSet
 
 
-class DataSetScriptGenerator(SingleScriptGenerator):
+class DataSetScriptGenerator(HostScriptGenerator):
     def __init__(self, script_folder: Path):
         super().__init__(script_folder)
         self._logger = logging.getLogger(self.__class__.__name__)
