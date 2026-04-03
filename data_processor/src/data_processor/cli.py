@@ -4,6 +4,8 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
+from data_processor.measurement_collector import MeasurementCollector
+
 
 class Processor:
     def __init__(self):
@@ -32,15 +34,43 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
+    def _process_raw_data(self, args):
+        if not self._valid_input_folder(args.resources):
+            raise RuntimeError("not a valid resource folder: %s" % args.resources)
+        host_folder = self._collect_host_folders(args.resources)
+        measurement_folders = list(host_folder.iterdir())
+        measurement_collector = MeasurementCollector()
+        for measurement_folder in measurement_folders:
+            measurement_collector.collect_measurements(measurement_folder)
+
+    def _collect_host_folders(self, resources: Path) -> Path:
+        self._logger.info("Collecting input folders in: %s", resources)
+        for child in resources.iterdir():
+            if child.is_dir():
+                self._logger.debug("found host folder: %s", child)
+                return child
+        raise RuntimeError("no host folder found")
+
+    def _valid_input_folder(self, folder: Path) -> bool:
+        log = folder / "experiment.log"
+        if not log.exists():
+            return False
+        script = folder / f"{folder.stem}.py"
+        if not script.exists():
+            return False
+        return True
+
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
+        parser.add_argument('-r', '--resources', type=Path, required=True, help="resource folder")
         args = parser.parse_args()
 
         self._start_logging(args)
         try:
+            self._process_raw_data(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")

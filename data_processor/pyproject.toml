@@ -19,6 +19,7 @@ license-files = ["LICEN[CS]E*"]
 
 dependencies = [
 	"ruamel.yaml==0.18.10",
+	"Pint==0.25.3",
 ]
 
 [project.optional-dependencies]
