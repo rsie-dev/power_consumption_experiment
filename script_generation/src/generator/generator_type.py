@@ -7,7 +7,7 @@ from generator.host_script_generator import HostScriptGenerator
 from generator.mode_script_generator import ModeScriptGenerator
 from generator.tool_script_generator import ToolScriptGenerator
 from generator.dataset_script_generator import DataSetScriptGenerator
-from generator.data_script_generator import DataScriptGenerator
+from generator.data_gen_script_generator import DataGenScriptGenerator
 
 
 class GeneratorType(Enum):
@@ -15,7 +15,7 @@ class GeneratorType(Enum):
     MODE = ModeScriptGenerator
     TOOL = ToolScriptGenerator
     DATASET = DataSetScriptGenerator
-    DATA = DataScriptGenerator
+    DATAGEN = DataGenScriptGenerator
 
     def create(self, script_folder: Path) -> ScriptGenerator:
         generator_class: Type[ScriptGenerator] = self.value

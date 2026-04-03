@@ -7,7 +7,7 @@ from generator.tool_config import ToolConfig, OperationMode, CompressionStrength
 from generator.data_set import DataSet
 
 
-class DataScriptGenerator(ScriptGenerator):
+class DataGenScriptGenerator(ScriptGenerator):
     def __init__(self, script_folder: Path):
         super().__init__(script_folder)
         self._logger = logging.getLogger(self.__class__.__name__)
