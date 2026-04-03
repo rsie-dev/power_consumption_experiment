@@ -24,6 +24,14 @@ experiment = (get_experiment_builder()
 {% endfor %}
               .done()
 
+{% if args.warmup %}
+              .with_warmup()
+                .execute_with("stress-ng --cpu 0 --timeout {{args.warmup}}s")
+                  .with_work_dir("/tmp")
+                .done()
+              .done()
+{% endif %}
+
               .measure_with_multimeter("{{args.multimeter}}")
 
 {% for data_set in data_sets %}
