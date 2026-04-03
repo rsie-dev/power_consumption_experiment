@@ -1,0 +1,19 @@
+from pathlib import Path
+
+from experiment.api import get_experiment_builder
+
+run_count = {{args.runs}}
+
+experiment = (get_experiment_builder()
+            .on_host("{{args.host}}", "{{args.ip}}")
+
+              .measure_with_multimeter("{{args.multimeter}}")
+
+              .measure_runs(run_count, "baseline")
+                .execute_with("/usr/bin/sleep {{sleep_time}}s")
+                  .with_timings()
+                .done()
+              .done()
+            .done()
+            .build()
+            )
