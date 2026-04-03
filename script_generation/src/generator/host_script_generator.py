@@ -28,7 +28,7 @@ class HostScriptGenerator(ScriptGenerator):
             "data_sets": all_data_sets,
         }
 
-        host_script = self._script_folder / f"{args.host}.py"
+        host_script = self._script_folder / f"{args.host}_all.py"
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet]):
