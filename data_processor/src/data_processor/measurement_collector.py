@@ -17,8 +17,8 @@ class MeasurementCollector:
         run_folders = list(measurement_folder.iterdir())
         self._logger.info("Found %d runs", len(run_folders))
         runs: list[RunInfo]= []
+        run_collector = RunCollector()
         for run_folder in run_folders:
-            run_collector = RunCollector()
             run_info = run_collector .process_run_folder(run_folder, measurement_info.tool_config.mode)
             runs.append(run_info)
         return runs
