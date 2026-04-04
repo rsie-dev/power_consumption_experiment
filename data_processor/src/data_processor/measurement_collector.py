@@ -22,6 +22,7 @@ class MeasurementCollector:
         for run_folder in run_folders:
             run_info = self._process_run_folder(run_folder, measurement_info.tool_config.mode)
             runs.append(run_info)
+        return runs
 
     def _get_measurement_info(self, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")
@@ -53,6 +54,26 @@ class MeasurementCollector:
                 first = next(iter(reader))
                 count = int(first["count_B"])
 
+        end, start = self._read_markers(run_folder)
+
+        timings = self._read_timings(run_folder)
+
+        readings = self._read_measurement(run_folder)
+        measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
+        return RunInfo(run=run, measurement=measurement )
+
+    def _read_timings(self, run_folder):
+        with open(run_folder / 'timings.csv', encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            it = iter(reader)
+            start_entry = next(it)
+            real = datetime.timedelta(seconds=float(start_entry["real_S"]))
+            user = datetime.timedelta(seconds=float(start_entry["user_S"]))
+            sys = datetime.timedelta(seconds=float(start_entry["sys_S"]))
+            timings = Timings(real=real, user=user, sys=sys)
+        return timings
+
+    def _read_markers(self, run_folder):
         with open(run_folder / 'markers.csv', encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             it = iter(reader)
@@ -60,19 +81,7 @@ class MeasurementCollector:
             start = datetime.datetime.fromisoformat(start_entry["timestamp"])
             end_entry = next(it)
             end = datetime.datetime.fromisoformat(end_entry["timestamp"])
-
-        with open(run_folder / 'timings.csv', encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            it = iter(reader)
-            start_entry = next(it)
-            real = datetime.timedelta(seconds=float(start_entry["real_S"]))
-            user= datetime.timedelta(seconds=float(start_entry["user_S"]))
-            sys = datetime.timedelta(seconds=float(start_entry["sys_S"]))
-            timings = Timings(real=real, user=user, sys=sys)
-
-        readings = self._read_measurement(run_folder)
-        measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
-        return RunInfo(run=run, measurement=measurement )
+        return end, start
 
     def _read_measurement(self, run_folder: Path) -> list[ElectricalMeasurement]:
         readings = []
