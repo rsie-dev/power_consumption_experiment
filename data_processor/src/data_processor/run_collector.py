@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import csv
 import datetime
+from collections.abc import Generator
 
 from data_processor.tool_config import OperationMode
 from data_processor.run_info import RunInfo
@@ -12,7 +13,14 @@ class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def process_run_folder(self, run_folder, mode: OperationMode) -> RunInfo:
+    def collect_runs(self, runs_folder: Path, mode: OperationMode) -> Generator[RunInfo]:
+        run_folders = list(runs_folder.iterdir())
+        self._logger.info("Found %d runs", len(run_folders))
+        for run_folder in run_folders:
+            run_info = self._process_run_folder(run_folder, mode)
+            yield run_info
+
+    def _process_run_folder(self, run_folder, mode: OperationMode) -> RunInfo:
         self._logger.debug("processing run folder: %s", run_folder)
         run = int(run_folder.stem[4:])
         count = None

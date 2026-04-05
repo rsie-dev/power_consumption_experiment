@@ -16,11 +16,9 @@ class MeasurementCollector:
         self._logger.info("Collecting measurements of: %s", measurement_info)
         run_folders = list(measurement_folder.iterdir())
         self._logger.info("Found %d runs", len(run_folders))
-        runs: list[RunInfo]= []
+
         run_collector = RunCollector()
-        for run_folder in run_folders:
-            run_info = run_collector .process_run_folder(run_folder, measurement_info.tool_config.mode)
-            runs.append(run_info)
+        runs = run_collector.collect_runs(measurement_folder, measurement_info.tool_config.mode)
         return runs
 
     def _get_measurement_info(self, tags: str) -> MeasurementInfo:
