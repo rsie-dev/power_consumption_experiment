@@ -4,10 +4,6 @@ import datetime
 import pint
 
 
-ureg = pint.UnitRegistry()
-Q_ = ureg.Quantity
-
-
 @dataclass(frozen=True)
 class Timings:
     real: datetime.timedelta

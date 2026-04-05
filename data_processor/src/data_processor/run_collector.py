@@ -4,9 +4,11 @@ import csv
 import datetime
 from collections.abc import Generator
 
+import pint
+
 from data_processor.tool_config import OperationMode
 from data_processor.run_info import RunInfo
-from data_processor.measurement import Timings, ElectricalMeasurement, Measurement, Q_
+from data_processor.measurement import Timings, ElectricalMeasurement, Measurement
 
 
 class RunCollector:
@@ -61,6 +63,8 @@ class RunCollector:
         return end, start
 
     def _read_measurement(self, run_folder: Path) -> list[ElectricalMeasurement]:
+        ureg = pint.get_application_registry()
+        Q_ = ureg.Quantity
         readings = []
         with open(run_folder / 'multimeter.csv', encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
