@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime
 
-import pint
+import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -12,21 +12,9 @@ class Timings:
 
 
 @dataclass(frozen=True)
-class ElectricalMeasurement:
-    timestamp: datetime.datetime
-    relative_time: datetime.timedelta
-    voltage: pint.Quantity
-    current: pint.Quantity
-
-    def __post_init__(self):
-        object.__setattr__(self, "voltage", self.voltage.to("volt"))
-        object.__setattr__(self, "current", self.current.to("ampere"))
-
-
-@dataclass(frozen=True)
 class Measurement:
     start: datetime.datetime
     end: datetime.datetime
     timings: Timings
     count: int | None
-    readings: list[ElectricalMeasurement]
+    readings: list[pd.DataFrame]

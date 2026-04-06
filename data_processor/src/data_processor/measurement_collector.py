@@ -14,8 +14,8 @@ class MeasurementCollector:
     def collect_measurements(self, measurement_folder: Path):
         measurement_info = self._get_measurement_info(measurement_folder.stem)
         self._logger.info("Collecting measurements of: %s", measurement_info)
-        run_folders = list(measurement_folder.iterdir())
-        self._logger.info("Found %d runs", len(run_folders))
+        #run_folders = list(measurement_folder.iterdir())
+        #self._logger.info("Found %d runs", len(run_folders))
 
         run_collector = RunCollector()
         runs = run_collector.collect_runs(measurement_folder, measurement_info.tool_config.mode)

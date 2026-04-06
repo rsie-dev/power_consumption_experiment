@@ -4,23 +4,24 @@ import csv
 import datetime
 from collections.abc import Generator
 
-import pint
+import pandas as pd
+import pint_pandas  # needed to convert to pint columns
 
 from data_processor.tool_config import OperationMode
 from data_processor.run_info import RunInfo
-from data_processor.measurement import Timings, ElectricalMeasurement, Measurement
+from data_processor.measurement import Timings, Measurement
 
 
 class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def collect_runs(self, runs_folder: Path, mode: OperationMode) -> Generator[RunInfo]:
+    def collect_runs(self, runs_folder: Path, mode: OperationMode):  # -> Generator[RunInfo]:
         run_folders = list(runs_folder.iterdir())
         self._logger.info("Found %d runs", len(run_folders))
-        for run_folder in run_folders:
+        for run_folder in run_folders[:1]:
             run_info = self._process_run_folder(run_folder, mode)
-            yield run_info
+            return run_info
 
     def _process_run_folder(self, run_folder, mode: OperationMode) -> RunInfo:
         self._logger.debug("processing run folder: %s", run_folder)
@@ -37,7 +38,7 @@ class RunCollector:
 
         timings = self._read_timings(run_folder)
 
-        readings = self._read_measurement(run_folder)
+        readings = self._read_measurement(run_folder, run)
         measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
         return RunInfo(run=run, measurement=measurement )
 
@@ -62,18 +63,18 @@ class RunCollector:
             end = datetime.datetime.fromisoformat(end_entry["timestamp"])
         return end, start
 
-    def _read_measurement(self, run_folder: Path) -> list[ElectricalMeasurement]:
-        ureg = pint.get_application_registry()
-        Q_ = ureg.Quantity
-        readings = []
-        with open(run_folder / 'multimeter.csv', encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                timestamp = datetime.datetime.fromisoformat(row["timestamp"])
-                rel_time = datetime.timedelta(seconds=float(row["rel_time_S"]))
-                voltage = Q_(float(row["voltage_V"]), "volt")
-                current = Q_(float(row["current_A"]), "ampere")
-                measurement = ElectricalMeasurement(timestamp=timestamp, relative_time=rel_time,
-                                                    voltage=voltage, current=current)
-                readings.append(measurement)
-        return readings
+    def _read_measurement(self, run_folder: Path, run: int) -> pd.DataFrame:
+        self._logger.debug("read: %s", (run_folder / 'multimeter.csv'))
+        df = pd.read_csv(run_folder / 'multimeter.csv', parse_dates=["timestamp"], skipinitialspace=True)
+        df["voltage_V"] = df["voltage_V"].astype("pint[volt]")
+        df["current_A"] = df["current_A"].astype("pint[ampere]")
+        df = df.rename(columns={'voltage_V': 'voltage', 'current_A': 'current'})
+        df = df.drop('temperature_C', axis=1)
+        df = df.drop('rel_time_S', axis=1)
+        df['run'] = run
+        df = df[['run', 'timestamp', "voltage", "current"]]
+
+        #self._logger.warning(df.dtypes)
+        #self._logger.warning("head:\n%s", df.head())
+
+        return df
