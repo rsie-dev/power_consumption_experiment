@@ -38,7 +38,9 @@ class Processor:
         if not self._valid_input_folder(args.raw_data):
             raise RuntimeError("not a valid resource folder: %s" % args.raw_data)
         host_folders = self._collect_host_folder(args.raw_data)
-        preprocessor = Preprocessor()
+        resources_folder = Path("resources")
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        preprocessor = Preprocessor(resources_folder)
         for host_folder in host_folders:
             preprocessor.aggregate_raw_data(host_folder.stem, host_folder)
 
