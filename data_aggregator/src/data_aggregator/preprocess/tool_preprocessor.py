@@ -43,7 +43,7 @@ class ToolPreprocessor:
 
     def _build_name(self, measurement_info: MeasurementInfo) -> str:
         tokens = self._build_name_tokens(measurement_info)
-        return "_".join(tokens[:-1])
+        return "_".join(tokens[1:])
 
     def _build_preprocessed_path(self, measurement_info: MeasurementInfo) -> Path:
         tokens = self._build_name_tokens(measurement_info)
@@ -51,6 +51,7 @@ class ToolPreprocessor:
 
     def _build_name_tokens(self, measurement_info: MeasurementInfo) -> list[str]:
         tokens = []
+        tokens.append("preprocessed")
         tokens.append(measurement_info.host)
         tokens.append(measurement_info.tool)
         tokens.append(measurement_info.tool_config.mode.name.lower())
@@ -59,5 +60,4 @@ class ToolPreprocessor:
             tokens.append(measurement_info.tool_config.strength.name.lower())
         if measurement_info.tool_config.threading != Threading.NONE:
             tokens.append(measurement_info.tool_config.threading.name.lower())
-        tokens.append("aggregated")
         return tokens
