@@ -14,12 +14,14 @@ class ToolAggregator:
     def aggregate_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
         self._logger.info("Aggregate runs for %s", measurement_info.host)
         all_runs = []
+        entries_count = 0
         for run in runs:
-            all_runs.append(run)
-            self._cut_lead_tail(run)
+            entries_count += len(run.measurement.readings)
+            cut_run = self._cut_lead_tail(run)
+            all_runs.append(cut_run)
 
-        all_df = [run.measurement.readings for run in all_runs]
-        df_all = pd.concat(all_df)
+        df_all = pd.concat(all_runs)
+        self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
 
         aggregated_name = self._build_aggregated_name(measurement_info)
         csv_file = resources_folder / aggregated_name
@@ -27,8 +29,8 @@ class ToolAggregator:
         df = df_all.pint.dequantify()
         df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
 
-    def _cut_lead_tail(self, run):
-        pass
+    def _cut_lead_tail(self, run) -> pd.DataFrame:
+        return run.measurement.readings
 
     def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> Path:
         tokens = []
