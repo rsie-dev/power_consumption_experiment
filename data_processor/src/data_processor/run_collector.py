@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 import csv
 import datetime
-from collections.abc import Generator
 
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
@@ -16,14 +15,7 @@ class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def collect_runs(self, runs_folder: Path, mode: OperationMode):  # -> Generator[RunInfo]:
-        run_folders = list(runs_folder.iterdir())
-        self._logger.info("Found %d runs", len(run_folders))
-        for run_folder in run_folders[:1]:
-            run_info = self._process_run_folder(run_folder, mode)
-            return run_info
-
-    def _process_run_folder(self, run_folder, mode: OperationMode) -> RunInfo:
+    def collect_run(self, run_folder: Path, mode: OperationMode) -> RunInfo:
         self._logger.debug("processing run folder: %s", run_folder)
         run = int(run_folder.stem[4:])
         count = None
