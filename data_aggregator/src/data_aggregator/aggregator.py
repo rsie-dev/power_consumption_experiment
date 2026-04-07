@@ -15,12 +15,13 @@ class Aggregator:
         self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))
+        resources_folder = Path("resources")
         for measurement_folder in measurement_folders[:1]:
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
             tool_aggregator = ToolAggregator()
-            tool_aggregator.aggregate_runs(measurement_info, runs)
+            tool_aggregator.aggregate_runs(resources_folder, measurement_info, runs)
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")
