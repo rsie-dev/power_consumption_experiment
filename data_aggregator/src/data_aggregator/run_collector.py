@@ -24,11 +24,6 @@ class RunCollector:
         self._logger.info("Found %d runs", len(run_folders))
         for run_folder in run_folders[:2]:
             run_info = self.collect_run(measurement_info.tool_config.mode, run_folder)
-            #df = run_info.measurement.readings
-            #csv_file = resources_folder / Path(measurement_folder.stem).with_suffix(".csv")
-            #self._logger.info("Generate: %s", csv_file)
-            #df = df.pint.dequantify()
-            #df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
             yield run_info
 
     def collect_run(self, mode: OperationMode, run_folder: Path) -> RunInfo:
@@ -72,7 +67,7 @@ class RunCollector:
         return end, start
 
     def _read_measurement(self, run_folder: Path, run: int) -> pd.DataFrame:
-        self._logger.debug("read: %s", (run_folder / 'multimeter.csv'))
+        #self._logger.debug("read: %s", (run_folder / 'multimeter.csv'))
         df = pd.read_csv(run_folder / 'multimeter.csv', parse_dates=["timestamp"], skipinitialspace=True)
         df["voltage_V"] = df["voltage_V"].astype("pint[volt]")
         df["current_A"] = df["current_A"].astype("pint[ampere]")
