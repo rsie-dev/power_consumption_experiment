@@ -42,7 +42,7 @@ class Processor:
         resources_folder.mkdir(parents=True, exist_ok=True)
         preprocessor = Preprocessor(resources_folder)
         for host_folder in host_folders:
-            preprocessor.aggregate_raw_data(host_folder.stem, host_folder)
+            preprocessor.preprocess_raw_data(host_folder.stem, host_folder)
 
     def _collect_host_folder(self, resources: Path) -> list[Path]:
         self._logger.info("Collecting host folder in: %s", resources)
