@@ -12,7 +12,7 @@ class ToolAggregator:
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def aggregate_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
-        self._logger.info("Aggregate runs for %s", measurement_info.host)
+        self._logger.info("Aggregate runs for %s", measurement_info)
         all_runs = []
         entries_count = 0
         for run in runs:
@@ -30,7 +30,9 @@ class ToolAggregator:
         df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
 
     def _cut_lead_tail(self, run) -> pd.DataFrame:
-        return run.measurement.readings
+        df = run.measurement.readings
+        filtered_df = df[(df['timestamp'] >= run.measurement.start) & (df['timestamp'] <= run.measurement.end)]
+        return  filtered_df
 
     def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> Path:
         tokens = []
