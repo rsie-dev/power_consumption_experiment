@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .aggregate import Aggregator
+from .preprocess import Preprocessor
 
 
 class Processor:
@@ -38,7 +38,7 @@ class Processor:
         if not self._valid_input_folder(args.resources):
             raise RuntimeError("not a valid resource folder: %s" % args.resources)
         host_folders = self._collect_host_folder(args.resources)
-        aggregator = Aggregator()
+        aggregator = Preprocessor()
         for host_folder in host_folders:
             aggregator.aggregate_raw_data(host_folder.stem, host_folder)
 

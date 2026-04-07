@@ -4,10 +4,10 @@ from pathlib import Path
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
-from .tool_aggregator import ToolAggregator
+from .tool_preprocessor import ToolPreprocessor
 
 
-class Aggregator:
+class Preprocessor:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -20,8 +20,8 @@ class Aggregator:
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
-            tool_aggregator = ToolAggregator()
-            tool_aggregator.aggregate_runs(resources_folder, measurement_info, runs)
+            tool_aggregator = ToolPreprocessor()
+            tool_aggregator.preprocess_runs(resources_folder, measurement_info, runs)
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")

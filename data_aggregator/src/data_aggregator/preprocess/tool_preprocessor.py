@@ -7,13 +7,13 @@ from data_aggregator.common import MeasurementInfo
 from data_aggregator.common import OperationMode, Threading
 
 
-class ToolAggregator:
+class ToolPreprocessor:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def aggregate_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
-        name = self._build_aggregated_name(measurement_info)
-        self._logger.info("Aggregate runs for: %s", name)
+    def preprocess_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
+        name = self._build_name(measurement_info)
+        self._logger.info("Preprocess runs for: %s", name)
         all_runs = []
         entries_count = 0
         for run in runs:
@@ -25,8 +25,8 @@ class ToolAggregator:
         df_all = pd.concat(all_runs)
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
 
-        aggregated_name = self._build_aggregated_path(measurement_info)
-        csv_file = resources_folder / aggregated_name
+        preprocessed_name = self._build_preprocessed_path(measurement_info)
+        csv_file = resources_folder / preprocessed_name
         self._logger.info("Generate: %s", csv_file)
         df = df_all.pint.dequantify()
         df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
@@ -41,15 +41,15 @@ class ToolAggregator:
         filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
         return  filtered_df
 
-    def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> str:
-        tokens = self._build_aggregated_tokens(measurement_info)
+    def _build_name(self, measurement_info: MeasurementInfo) -> str:
+        tokens = self._build_name_tokens(measurement_info)
         return "_".join(tokens[:-1])
 
-    def _build_aggregated_path(self, measurement_info: MeasurementInfo) -> Path:
-        tokens = self._build_aggregated_tokens(measurement_info)
+    def _build_preprocessed_path(self, measurement_info: MeasurementInfo) -> Path:
+        tokens = self._build_name_tokens(measurement_info)
         return Path("_".join(tokens)).with_suffix(".csv")
 
-    def _build_aggregated_tokens(self, measurement_info: MeasurementInfo) -> list[str]:
+    def _build_name_tokens(self, measurement_info: MeasurementInfo) -> list[str]:
         tokens = []
         tokens.append(measurement_info.host)
         tokens.append(measurement_info.tool)
