@@ -21,6 +21,8 @@ class ToolAggregator:
             all_runs.append(cut_run)
 
         df_all = pd.concat(all_runs)
+
+        df_all["energy"] = df_all.voltage * df_all.current
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
 
         aggregated_name = self._build_aggregated_name(measurement_info)
