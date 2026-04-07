@@ -34,13 +34,13 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
-    def _aggregate_raw_data(self, args):
-        if not self._valid_input_folder(args.resources):
-            raise RuntimeError("not a valid resource folder: %s" % args.resources)
-        host_folders = self._collect_host_folder(args.resources)
-        aggregator = Preprocessor()
+    def _preprocess_raw_data(self, args):
+        if not self._valid_input_folder(args.raw_data):
+            raise RuntimeError("not a valid resource folder: %s" % args.raw_data)
+        host_folders = self._collect_host_folder(args.raw_data)
+        preprocessor = Preprocessor()
         for host_folder in host_folders:
-            aggregator.aggregate_raw_data(host_folder.stem, host_folder)
+            preprocessor.aggregate_raw_data(host_folder.stem, host_folder)
 
     def _collect_host_folder(self, resources: Path) -> list[Path]:
         self._logger.info("Collecting host folder in: %s", resources)
@@ -65,12 +65,19 @@ class Processor:
         default = ' (default: %(default)s)'
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
-        parser.add_argument('-r', '--resources', type=Path, required=True, help="resource folder")
+
+        subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                           description='valid subcommands', help='sub-command help')
+
+        parser_preprocess = subparsers.add_parser('preprocess', help="preprocesses raw measurement data")
+        parser_preprocess.add_argument('-r', '--raw-data', type=Path, required=True, help="raw data measurement folder")
+        parser_preprocess.set_defaults(func=self._preprocess_raw_data)
+
         args = parser.parse_args()
 
         self._start_logging(args)
         try:
-            self._aggregate_raw_data(args)
+            args.func(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")
