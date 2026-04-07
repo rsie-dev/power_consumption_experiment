@@ -35,8 +35,9 @@ class ToolAggregator:
         return df_run
 
     def _cut_lead_tail(self, run) -> pd.DataFrame:
-        df = run.measurement.readings
-        filtered_df = df[(df['timestamp'] >= run.measurement.start) & (df['timestamp'] <= run.measurement.end)]
+        measurement = run.measurement
+        df = measurement.readings
+        filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
         return  filtered_df
 
     def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> Path:
