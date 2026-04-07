@@ -4,8 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .measurement_collector import MeasurementCollector
-from .tool_aggregator import ToolAggregator
+from .aggregator import Aggregator
 
 
 class Processor:
@@ -38,16 +37,12 @@ class Processor:
     def _aggregate_raw_data(self, args):
         if not self._valid_input_folder(args.resources):
             raise RuntimeError("not a valid resource folder: %s" % args.resources)
-        host_folder = self._collect_host_folders(args.resources)
-        measurement_folders = list(host_folder.iterdir())
-        measurement_collector = MeasurementCollector()
-        for measurement_folder in measurement_folders[:1]:
-            tool_aggregator = ToolAggregator()
-            measurement_info, runs = measurement_collector.collect_measurements(measurement_folder)
-            tool_aggregator.aggregate_runs(measurement_info, runs)
+        host_folder = self._collect_host_folder(args.resources)
+        aggregator = Aggregator()
+        aggregator.aggregate_raw_data(host_folder)
 
-    def _collect_host_folders(self, resources: Path) -> Path:
-        self._logger.info("Collecting input folders in: %s", resources)
+    def _collect_host_folder(self, resources: Path) -> Path:
+        self._logger.info("Collecting host folder in: %s", resources)
         for child in resources.iterdir():
             if child.is_dir():
                 self._logger.debug("found host folder: %s", child)
