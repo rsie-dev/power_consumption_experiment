@@ -17,4 +17,4 @@ class Measurement:
     end: datetime.datetime
     timings: Timings
     count: int | None
-    readings: list[pd.DataFrame]
+    readings: pd.DataFrame
