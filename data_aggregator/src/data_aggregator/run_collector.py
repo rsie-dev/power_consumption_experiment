@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import csv
 import datetime
+from typing import Generator
 
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
@@ -9,13 +10,28 @@ import pint_pandas  # needed to convert to pint columns
 from .tool_config import OperationMode
 from .run_info import RunInfo
 from .measurement import Timings, Measurement
+from .measurement_info import MeasurementInfo
 
 
 class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def collect_run(self, run_folder: Path, mode: OperationMode) -> RunInfo:
+    def collect_runs(self, measurement_info: MeasurementInfo, measurement_folder: Path) -> Generator[RunInfo, None, None]:
+        self._logger.info("Collecting runs of: %s", measurement_info)
+
+        run_folders = list(measurement_folder.iterdir())
+        self._logger.info("Found %d runs", len(run_folders))
+        for run_folder in run_folders[:2]:
+            run_info = self.collect_run(measurement_info.tool_config.mode, run_folder)
+            #df = run_info.measurement.readings
+            #csv_file = resources_folder / Path(measurement_folder.stem).with_suffix(".csv")
+            #self._logger.info("Generate: %s", csv_file)
+            #df = df.pint.dequantify()
+            #df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
+            yield run_info
+
+    def collect_run(self, mode: OperationMode, run_folder: Path) -> RunInfo:
         self._logger.debug("processing run folder: %s", run_folder)
         run = int(run_folder.stem[4:])
         count = None
@@ -32,7 +48,7 @@ class RunCollector:
 
         readings = self._read_measurement(run_folder, run)
         measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
-        return RunInfo(run=run, measurement=measurement )
+        return RunInfo(run=run, measurement=measurement)
 
     def _read_timings(self, run_folder):
         with open(run_folder / 'timings.csv', encoding="utf-8") as csvfile:
@@ -64,8 +80,4 @@ class RunCollector:
         df = df.drop('temperature_C', axis=1)
         df['run'] = run
         df = df[['run', 'timestamp', "voltage", "current"]]
-
-        #self._logger.warning(df.dtypes)
-        #self._logger.warning("head:\n%s", df.head())
-
         return df

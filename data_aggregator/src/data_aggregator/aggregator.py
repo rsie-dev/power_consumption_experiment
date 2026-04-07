@@ -1,7 +1,9 @@
 import logging
 from pathlib import Path
 
-from .measurement_collector import MeasurementCollector
+from .tool_config import OperationMode, CompressionStrength, Threading, ToolConfig
+from .measurement_info import MeasurementInfo
+from .run_collector import RunCollector
 from .tool_aggregator import ToolAggregator
 
 
@@ -9,10 +11,32 @@ class Aggregator:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def aggregate_raw_data(self, host_folder: Path):
+    def aggregate_raw_data(self, host: str, host_folder: Path):
+        self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
-        measurement_collector = MeasurementCollector()
+        self._logger.info("Found %d measurements", len(measurement_folders))
         for measurement_folder in measurement_folders[:1]:
+            measurement_info = self._get_measurement_info(host, measurement_folder.stem)
+            run_collector = RunCollector()
+            runs = run_collector.collect_runs(measurement_info, measurement_folder)
             tool_aggregator = ToolAggregator()
-            measurement_info, runs = measurement_collector.collect_measurements(measurement_folder)
             tool_aggregator.aggregate_runs(measurement_info, runs)
+
+    def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
+        tokens = tags.split("_")
+        tool = tokens[0]
+        mode = OperationMode[tokens[1].upper()]
+        dataset = tokens[2]
+        threading = Threading.NONE
+        if mode == OperationMode.COMPRESS:
+            strength = CompressionStrength[tokens[3].upper()]
+            if len(tokens) > 4:
+                threading = Threading[tokens[4].upper()]
+        else:
+            strength = CompressionStrength.DEFAULT
+            if len(tokens) > 3:
+                threading = Threading[tokens[3].upper()]
+
+        tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
+        measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
+        return measurement_info

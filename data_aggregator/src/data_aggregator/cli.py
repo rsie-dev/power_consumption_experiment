@@ -37,17 +37,19 @@ class Processor:
     def _aggregate_raw_data(self, args):
         if not self._valid_input_folder(args.resources):
             raise RuntimeError("not a valid resource folder: %s" % args.resources)
-        host_folder = self._collect_host_folder(args.resources)
+        host_folders = self._collect_host_folder(args.resources)
         aggregator = Aggregator()
-        aggregator.aggregate_raw_data(host_folder)
+        for host_folder in host_folders:
+            aggregator.aggregate_raw_data(host_folder.stem, host_folder)
 
-    def _collect_host_folder(self, resources: Path) -> Path:
+    def _collect_host_folder(self, resources: Path) -> list[Path]:
         self._logger.info("Collecting host folder in: %s", resources)
+        hosts = []
         for child in resources.iterdir():
             if child.is_dir():
                 self._logger.debug("found host folder: %s", child)
-                return child
-        raise RuntimeError("no host folder found")
+                hosts.append(child)
+        return hosts
 
     def _valid_input_folder(self, folder: Path) -> bool:
         log = folder / "experiment.log"
