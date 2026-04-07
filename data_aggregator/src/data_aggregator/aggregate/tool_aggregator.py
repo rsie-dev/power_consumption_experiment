@@ -18,11 +18,10 @@ class ToolAggregator:
         for run in runs:
             entries_count += len(run.measurement.readings)
             cut_run = self._cut_lead_tail(run)
-            all_runs.append(cut_run)
+            energy_df = self._calculate_energy(cut_run)
+            all_runs.append(energy_df)
 
         df_all = pd.concat(all_runs)
-
-        df_all["energy"] = df_all.voltage * df_all.current
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
 
         aggregated_name = self._build_aggregated_name(measurement_info)
@@ -30,6 +29,10 @@ class ToolAggregator:
         self._logger.info("Generate: %s", csv_file)
         df = df_all.pint.dequantify()
         df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
+
+    def _calculate_energy(self, df_run: pd.DataFrame) -> pd.DataFrame:
+        df_run["energy"] = df_run.voltage * df_run.current
+        return df_run
 
     def _cut_lead_tail(self, run) -> pd.DataFrame:
         df = run.measurement.readings
