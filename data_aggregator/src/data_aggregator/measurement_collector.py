@@ -2,9 +2,9 @@ import logging
 from pathlib import Path
 from typing import Generator
 
-from data_processor.tool_config import OperationMode, CompressionStrength, Threading, ToolConfig
-from data_processor.measurement_info import MeasurementInfo
-from data_processor.run_info import RunInfo
+from .tool_config import OperationMode, CompressionStrength, Threading, ToolConfig
+from .measurement_info import MeasurementInfo
+from .run_info import RunInfo
 from .run_collector import RunCollector
 
 

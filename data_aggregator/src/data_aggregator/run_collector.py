@@ -6,9 +6,9 @@ import datetime
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
 
-from data_processor.tool_config import OperationMode
-from data_processor.run_info import RunInfo
-from data_processor.measurement import Timings, Measurement
+from .tool_config import OperationMode
+from .run_info import RunInfo
+from .measurement import Timings, Measurement
 
 
 class RunCollector:

@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-aggregator = "data_processor.cli:app"
+aggregator = "data_aggregator.cli:app"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.in"] }

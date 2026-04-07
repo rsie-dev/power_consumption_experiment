@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from data_processor.measurement import Measurement
+from .measurement import Measurement
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from data_processor.tool_config import ToolConfig
+from .tool_config import ToolConfig
 
 
 @dataclass(frozen=True)
