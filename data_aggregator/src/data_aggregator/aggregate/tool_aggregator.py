@@ -12,7 +12,8 @@ class ToolAggregator:
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def aggregate_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
-        self._logger.info("Aggregate runs for %s", measurement_info)
+        name = self._build_aggregated_name(measurement_info)
+        self._logger.info("Aggregate runs for: %s", name)
         all_runs = []
         entries_count = 0
         for run in runs:
@@ -24,7 +25,7 @@ class ToolAggregator:
         df_all = pd.concat(all_runs)
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
 
-        aggregated_name = self._build_aggregated_name(measurement_info)
+        aggregated_name = self._build_aggregated_path(measurement_info)
         csv_file = resources_folder / aggregated_name
         self._logger.info("Generate: %s", csv_file)
         df = df_all.pint.dequantify()
@@ -40,7 +41,15 @@ class ToolAggregator:
         filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
         return  filtered_df
 
-    def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> Path:
+    def _build_aggregated_name(self, measurement_info: MeasurementInfo) -> str:
+        tokens = self._build_aggregated_tokens(measurement_info)
+        return "_".join(tokens[:-1])
+
+    def _build_aggregated_path(self, measurement_info: MeasurementInfo) -> Path:
+        tokens = self._build_aggregated_tokens(measurement_info)
+        return Path("_".join(tokens)).with_suffix(".csv")
+
+    def _build_aggregated_tokens(self, measurement_info: MeasurementInfo) -> list[str]:
         tokens = []
         tokens.append(measurement_info.host)
         tokens.append(measurement_info.tool)
@@ -51,4 +60,4 @@ class ToolAggregator:
         if measurement_info.tool_config.threading != Threading.NONE:
             tokens.append(measurement_info.tool_config.threading.name.lower())
         tokens.append("aggregated")
-        return Path("_".join(tokens)).with_suffix(".csv")
+        return tokens
