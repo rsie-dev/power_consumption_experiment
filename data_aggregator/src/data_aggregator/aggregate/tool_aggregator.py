@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from .measurement_info import MeasurementInfo
-from .tool_config import OperationMode, Threading
+from data_aggregator.common import MeasurementInfo
+from data_aggregator.common import OperationMode, Threading
 
 
 class ToolAggregator:

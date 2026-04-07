@@ -7,10 +7,10 @@ from typing import Generator
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
 
-from .tool_config import OperationMode
-from .run_info import RunInfo
-from .measurement import Timings, Measurement
-from .measurement_info import MeasurementInfo
+from data_aggregator.common import OperationMode
+from data_aggregator.common import RunInfo
+from data_aggregator.common import Timings, Measurement
+from data_aggregator.common import MeasurementInfo
 
 
 class RunCollector:
