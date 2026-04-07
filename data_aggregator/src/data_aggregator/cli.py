@@ -35,7 +35,7 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
-    def _process_raw_data(self, args):
+    def _aggregate_raw_data(self, args):
         if not self._valid_input_folder(args.resources):
             raise RuntimeError("not a valid resource folder: %s" % args.resources)
         host_folder = self._collect_host_folders(args.resources)
@@ -73,7 +73,7 @@ class Processor:
 
         self._start_logging(args)
         try:
-            self._process_raw_data(args)
+            self._aggregate_raw_data(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")
