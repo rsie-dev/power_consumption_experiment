@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .aggregator import Aggregator
+from .aggregate import Aggregator
 
 
 class Processor:
