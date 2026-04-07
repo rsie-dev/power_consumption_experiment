@@ -62,7 +62,6 @@ class RunCollector:
         df["current_A"] = df["current_A"].astype("pint[ampere]")
         df = df.rename(columns={'voltage_V': 'voltage', 'current_A': 'current'})
         df = df.drop('temperature_C', axis=1)
-        df = df.drop('rel_time_S', axis=1)
         df['run'] = run
         df = df[['run', 'timestamp', "voltage", "current"]]
 
