@@ -4,7 +4,8 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from data_processor.measurement_collector import MeasurementCollector
+from .measurement_collector import MeasurementCollector
+from .tool_aggregator import ToolAggregator
 
 
 class Processor:
@@ -40,8 +41,10 @@ class Processor:
         host_folder = self._collect_host_folders(args.resources)
         measurement_folders = list(host_folder.iterdir())
         measurement_collector = MeasurementCollector()
-        for measurement_folder in measurement_folders:
-            measurement_collector.collect_measurements(measurement_folder)
+        for measurement_folder in measurement_folders[:1]:
+            tool_aggregator = ToolAggregator()
+            measurement_info, runs = measurement_collector.collect_measurements(measurement_folder)
+            tool_aggregator.aggregate_runs(measurement_info, runs)
 
     def _collect_host_folders(self, resources: Path) -> Path:
         self._logger.info("Collecting input folders in: %s", resources)
