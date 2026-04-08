@@ -1,6 +1,6 @@
-from .aggregator import Aggregator
+from .run_aggregator import RunAggregator
 
 
 __all__ = [
-    "Aggregator",
+    "RunAggregator",
 ]

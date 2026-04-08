@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .aggregator import Aggregator
+from .aggregator import RunAggregator
 from .calculate import PowerCalculator
 
 
@@ -41,7 +41,7 @@ class Processor:
         host_folders = self._collect_host_folder(args.raw_data)
         resources_folder = Path("resources")
         resources_folder.mkdir(parents=True, exist_ok=True)
-        aggregator = Aggregator(resources_folder)
+        aggregator = RunAggregator(resources_folder)
         for host_folder in host_folders:
             aggregator.aggregate(host_folder.stem, host_folder)
 

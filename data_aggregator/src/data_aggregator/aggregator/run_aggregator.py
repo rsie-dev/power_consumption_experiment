@@ -8,7 +8,7 @@ from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
 
 
-class Aggregator:
+class RunAggregator:
     def __init__(self, resources_folder: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources_folder = resources_folder
