@@ -39,7 +39,7 @@ class Processor:
         if not self._valid_input_folder(args.raw_data):
             raise RuntimeError("not a valid resource folder: %s" % args.raw_data)
         host_folders = self._collect_host_folder(args.raw_data)
-        resources_folder = Path("resources")
+        resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         aggregator = RunAggregator(resources_folder)
         for host_folder in host_folders:
@@ -64,7 +64,7 @@ class Processor:
         return True
 
     def _calculate_power(self, args):
-        resources_folder = Path("resources")
+        resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         aggregator = PowerCalculator(resources_folder)
         aggregator.calculate(args.preprocessed_data)
@@ -74,6 +74,8 @@ class Processor:
         default = ' (default: %(default)s)'
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
+        parser.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                            help="resource output folder")
 
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
