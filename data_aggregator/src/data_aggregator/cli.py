@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .aggregator import RunAggregator
-from .calculate import PowerCalculator
+from .calculate import PowerCalculator, AverageCalculator
 
 
 class Processor:
@@ -66,8 +66,14 @@ class Processor:
     def _calculate_power(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        aggregator = PowerCalculator(resources_folder)
-        aggregator.calculate(args.preprocessed_data)
+        calculator = PowerCalculator(resources_folder)
+        calculator.calculate(args.preprocessed_data)
+
+    def _calculate_averages(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        calculator = AverageCalculator(resources_folder)
+        calculator.calculate(args.power_data)
 
     def main(self):
         parser = argparse.ArgumentParser()
@@ -85,11 +91,22 @@ class Processor:
                                        help="raw data measurement folder")
         parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
 
-        parser_calculate = subparsers.add_parser('calculate',
+        parser_calculate = subparsers.add_parser('calculate')
+        subparsers_calculate = parser_calculate.add_subparsers(required=True, dest="subcommand",
+                                                               title='calculate subcommands',
+                                                               description='valid subcommands', help='sub-command help')
+
+        parser_calculate_power = subparsers_calculate.add_parser('power',
                                                  help="calculate used power from preprocessed measurement data")
-        parser_calculate.add_argument('-d', '--preprocessed-data', type=Path, required=True,
+        parser_calculate_power.add_argument('-d', '--preprocessed-data', type=Path, required=True,
                                       help="preprocessed file")
-        parser_calculate.set_defaults(func=self._calculate_power)
+        parser_calculate_power.set_defaults(func=self._calculate_power)
+
+        parser_calculate_averages = subparsers_calculate.add_parser('averages',
+                                                                 help="calculate average power usages")
+        parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
+                                               help="power usage file")
+        parser_calculate_averages.set_defaults(func=self._calculate_averages)
 
         args = parser.parse_args()
 
