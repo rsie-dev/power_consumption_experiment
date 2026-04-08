@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
 
+from data_aggregator.util import FramePersist
+
 
 class PowerCalculator:
     def __init__(self, resources_folder: Path):
@@ -27,10 +29,6 @@ class PowerCalculator:
         df["power"] = df["energy"] * df["duration"]
 
         calculated_name = f"calculated_{preprocessed.stem[13:]}"
-        self._store(df, calculated_name)
-
-    def _store(self, df: pd.DataFrame, aggregated_name: str) -> None:
-        csv_file = self._resources_folder / f"{aggregated_name}.csv"
-        self._logger.info("Generate: %s", csv_file)
-        df = df.pint.dequantify()
-        df.to_csv(csv_file, encoding='UTF_8', index=False, header=True)
+        csv_file = self._resources_folder / f"{calculated_name}.csv"
+        frame_persist = FramePersist()
+        frame_persist.persist(df, csv_file)
