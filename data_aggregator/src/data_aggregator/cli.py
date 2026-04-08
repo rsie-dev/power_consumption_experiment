@@ -5,6 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .preprocess import Preprocessor
+from .calculate import PowerCalculator
 
 
 class Processor:
@@ -62,6 +63,12 @@ class Processor:
             return False
         return True
 
+    def _calculate_power(self, args):
+        resources_folder = Path("resources")
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        aggregator = PowerCalculator(resources_folder)
+        aggregator.calculate(args.preprocessed_data)
+
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
@@ -72,8 +79,15 @@ class Processor:
                                            description='valid subcommands', help='sub-command help')
 
         parser_preprocess = subparsers.add_parser('preprocess', help="preprocesses raw measurement data")
-        parser_preprocess.add_argument('-r', '--raw-data', type=Path, required=True, help="raw data measurement folder")
+        parser_preprocess.add_argument('-d', '--raw-data', type=Path, required=True,
+                                       help="raw data measurement folder")
         parser_preprocess.set_defaults(func=self._preprocess_raw_data)
+
+        parser_calculate = subparsers.add_parser('calculate',
+                                                 help="calculate used power from preprocessed measurement data")
+        parser_calculate.add_argument('-d', '--preprocessed-data', type=Path, required=True,
+                                      help="preprocessed file")
+        parser_calculate.set_defaults(func=self._calculate_power)
 
         args = parser.parse_args()
 
