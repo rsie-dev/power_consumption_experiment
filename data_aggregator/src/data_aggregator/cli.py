@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .aggregator import RunAggregator
+from .aggregator import RunAggregator, PowerAggregator
 from .calculate import PowerCalculator, AverageCalculator
 
 
@@ -63,6 +63,12 @@ class Processor:
             return False
         return True
 
+    def _aggregate_power(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        aggregator = PowerAggregator(resources_folder)
+        aggregator.aggregate(args.power_data)
+
     def _calculate_power(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
@@ -86,10 +92,20 @@ class Processor:
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
 
-        parser_aggregate_runs = subparsers.add_parser('aggregate', help="aggregate raw measurement data")
+        parser_aggregate = subparsers.add_parser('aggregate')
+        subparsers_aggregate = parser_aggregate.add_subparsers(required=True, dest="subcommand",
+                                                               title='aggregate subcommands',
+                                                               description='valid subcommands', help='sub-command help')
+
+        parser_aggregate_runs = subparsers_aggregate.add_parser('runs', help="aggregate raw measurement data")
         parser_aggregate_runs.add_argument('-d', '--raw-data', type=Path, required=True,
                                        help="raw data measurement folder")
         parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
+
+        parser_aggregate_power = subparsers_aggregate.add_parser('power', help="aggregate power of runs")
+        parser_aggregate_power.add_argument('-d', '--power-data', type=Path, required=True,
+                                            help="power usage file")
+        parser_aggregate_power.set_defaults(func=self._aggregate_power)
 
         parser_calculate = subparsers.add_parser('calculate')
         subparsers_calculate = parser_calculate.add_subparsers(required=True, dest="subcommand",
