@@ -7,12 +7,12 @@ from data_aggregator.ingest import RunCollector
 from .tool_preprocessor import ToolPreprocessor
 
 
-class Preprocessor:
+class Aggregator:
     def __init__(self, resources_folder: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources_folder = resources_folder
 
-    def preprocess_raw_data(self, host: str, host_folder: Path):
+    def aggregate(self, host: str, host_folder: Path):
         self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from .preprocess import Preprocessor
+from .aggregator import Aggregator
 from .calculate import PowerCalculator
 
 
@@ -35,15 +35,15 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
-    def _preprocess_raw_data(self, args):
+    def _aggregate_runs(self, args):
         if not self._valid_input_folder(args.raw_data):
             raise RuntimeError("not a valid resource folder: %s" % args.raw_data)
         host_folders = self._collect_host_folder(args.raw_data)
         resources_folder = Path("resources")
         resources_folder.mkdir(parents=True, exist_ok=True)
-        preprocessor = Preprocessor(resources_folder)
+        aggregator = Aggregator(resources_folder)
         for host_folder in host_folders:
-            preprocessor.preprocess_raw_data(host_folder.stem, host_folder)
+            aggregator.aggregate(host_folder.stem, host_folder)
 
     def _collect_host_folder(self, resources: Path) -> list[Path]:
         self._logger.info("Collecting host folder in: %s", resources)
@@ -78,10 +78,10 @@ class Processor:
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
 
-        parser_preprocess = subparsers.add_parser('preprocess', help="preprocesses raw measurement data")
-        parser_preprocess.add_argument('-d', '--raw-data', type=Path, required=True,
+        parser_aggregate_runs = subparsers.add_parser('aggregate', help="aggregate raw measurement data")
+        parser_aggregate_runs.add_argument('-d', '--raw-data', type=Path, required=True,
                                        help="raw data measurement folder")
-        parser_preprocess.set_defaults(func=self._preprocess_raw_data)
+        parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
 
         parser_calculate = subparsers.add_parser('calculate',
                                                  help="calculate used power from preprocessed measurement data")
