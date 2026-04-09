@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 
-class FramePersist:
+class FrameIO:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 

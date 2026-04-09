@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
 
-from data_aggregator.util import FramePersist
+from data_aggregator.util import FrameIO
 
 
 class PowerCalculator:
@@ -20,8 +20,8 @@ class PowerCalculator:
 
         calculated_name = f"calculated_{preprocessed.stem[13:]}"
         csv_file = self._resources_folder / f"{calculated_name}.csv"
-        frame_persist = FramePersist()
-        frame_persist.persist(df, csv_file)
+        frame_io = FrameIO()
+        frame_io.persist(df, csv_file)
 
     def _calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         df["duration"] = df.groupby("run")["timestamp"].diff().dt.total_seconds().astype("pint[second]")

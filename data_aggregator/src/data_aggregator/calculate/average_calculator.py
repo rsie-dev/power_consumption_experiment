@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pint_pandas  # needed to convert to pint columns
 
-from data_aggregator.util import FramePersist
+from data_aggregator.util import FrameIO
 
 
 class AverageCalculator:
@@ -20,8 +20,8 @@ class AverageCalculator:
 
         calculated_name = f"average_power_{power_file.stem[13:]}.csv"
         csv_file = self._resources_folder / calculated_name
-        frame_persist = FramePersist()
-        frame_persist.persist(df, csv_file)
+        frame_io = FrameIO()
+        frame_io.persist(df, csv_file)
 
     def _calculate_averages(self, df: pd.DataFrame) -> pd.DataFrame:
         print(df.dtypes)

@@ -6,7 +6,7 @@ import pandas as pd
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
-from data_aggregator.util import FramePersist
+from data_aggregator.util import FrameIO
 
 
 class RunAggregator:
@@ -59,8 +59,8 @@ class RunAggregator:
 
         preprocessed_name = self._build_preprocessed_path(measurement_info)
         csv_file = resources_folder / preprocessed_name
-        frame_persist = FramePersist()
-        frame_persist.persist(df_all, csv_file)
+        frame_io = FrameIO()
+        frame_io.persist(df_all, csv_file)
 
     def _calculate_energy(self, df_run: pd.DataFrame) -> pd.DataFrame:
         df_run["energy"] = df_run.voltage * df_run.current

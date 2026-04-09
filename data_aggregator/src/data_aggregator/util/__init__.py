@@ -1,6 +1,6 @@
-from .frame_persist import FramePersist
+from .frame_io import FrameIO
 
 
 __all__ = [
-    "FramePersist",
+    "FrameIO",
 ]
