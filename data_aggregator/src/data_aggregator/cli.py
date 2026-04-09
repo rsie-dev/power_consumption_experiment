@@ -79,7 +79,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         calculator = AverageCalculator(resources_folder)
-        calculator.calculate(args.single_run_data_frame)
+        calculator.calculate(args.run_data_frame)
 
     def main(self):
         parser = argparse.ArgumentParser()
