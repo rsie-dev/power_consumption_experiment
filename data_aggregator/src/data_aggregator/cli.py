@@ -75,11 +75,11 @@ class Processor:
         calculator = PowerCalculator(resources_folder)
         calculator.calculate(args.preprocessed_data)
 
-    def _calculate_averages(self, args):
+    def _calculate_average(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         calculator = AverageCalculator(resources_folder)
-        calculator.calculate(args.run_data_frame)
+        calculator.calculate(args.power_data)
 
     def main(self):
         parser = argparse.ArgumentParser()
@@ -118,11 +118,11 @@ class Processor:
                                       help="preprocessed file")
         parser_calculate_power.set_defaults(func=self._calculate_power)
 
-        parser_calculate_averages = subparsers_calculate.add_parser('averages',
-                                                                 help="calculate average power usages")
+        parser_calculate_averages = subparsers_calculate.add_parser('average',
+                                                                 help="calculate average power usage")
         parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
                                                help="power usage file")
-        parser_calculate_averages.set_defaults(func=self._calculate_averages)
+        parser_calculate_averages.set_defaults(func=self._calculate_average)
 
         args = parser.parse_args()
 
