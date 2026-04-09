@@ -67,7 +67,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         aggregator = PowerAggregator(resources_folder)
-        aggregator.aggregate(args.single_run_data_frame)
+        aggregator.aggregate(args.power_data)
 
     def _calculate_power(self, args):
         resources_folder = args.resources
