@@ -18,10 +18,10 @@ class AverageCalculator:
         df = self._load(power_file)
         df = self._calculate_averages(df)
 
-        #calculated_name = f"average_power_{preprocessed.stem[13:]}.csv"
-        #csv_file = self._resources_folder / calculated_name
-        #frame_persist = FramePersist()
-        #frame_persist.persist(df, csv_file)
+        calculated_name = f"average_power_{power_file.stem[13:]}.csv"
+        csv_file = self._resources_folder / calculated_name
+        frame_persist = FramePersist()
+        frame_persist.persist(df, csv_file)
 
     def _calculate_averages(self, df: pd.DataFrame) -> pd.DataFrame:
         print(df.dtypes)
@@ -44,7 +44,6 @@ class AverageCalculator:
         units = df.columns.get_level_values(1)
 
         df.columns = names  # flatten
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
         for col, unit in zip(names, units):  # apply units
             if unit != "No Unit":
                 df[col] = df[col].astype(f"pint[{unit}]")
