@@ -14,7 +14,22 @@ class PowerCalculator:
 
     def calculate(self, preprocessed: Path):
         self._logger.info("Calculate power for: %s", preprocessed)
-        df = pd.read_csv(preprocessed, header=[0, 1])
+        df = self._load(preprocessed)
+
+        df = self._calculate_power(df)
+
+        calculated_name = f"calculated_{preprocessed.stem[13:]}"
+        csv_file = self._resources_folder / f"{calculated_name}.csv"
+        frame_persist = FramePersist()
+        frame_persist.persist(df, csv_file)
+
+    def _calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["duration"] = df.groupby("run")["timestamp"].diff().dt.total_seconds().astype("pint[second]")
+        df["power"] = df["energy"] * df["duration"]
+        return df
+
+    def _load(self, in_file: Path) -> pd.DataFrame:
+        df = pd.read_csv(in_file, header=[0, 1])
 
         names = df.columns.get_level_values(0)
         units = df.columns.get_level_values(1)
@@ -25,10 +40,7 @@ class PowerCalculator:
             if unit != "No Unit":
                 df[col] = df[col].astype(f"pint[{unit}]")
 
-        df["duration"] = df["timestamp"].diff().dt.total_seconds().astype("pint[second]")
-        df["power"] = df["energy"] * df["duration"]
+        self._logger.warning(df.dtypes)
+        self._logger.warning(df.head())
 
-        calculated_name = f"calculated_{preprocessed.stem[13:]}"
-        csv_file = self._resources_folder / f"{calculated_name}.csv"
-        frame_persist = FramePersist()
-        frame_persist.persist(df, csv_file)
+        return df
