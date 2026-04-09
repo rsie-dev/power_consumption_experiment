@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
 	"pylint==3.3.0",
+	"pytest==9.0.3",
 ]
 
 [project.scripts]

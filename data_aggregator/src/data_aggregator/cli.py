@@ -67,7 +67,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         aggregator = PowerAggregator(resources_folder)
-        aggregator.aggregate(args.power_data)
+        aggregator.aggregate(args.single_run_data_frame)
 
     def _calculate_power(self, args):
         resources_folder = args.resources
@@ -79,7 +79,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         calculator = AverageCalculator(resources_folder)
-        calculator.calculate(args.power_data)
+        calculator.calculate(args.single_run_data_frame)
 
     def main(self):
         parser = argparse.ArgumentParser()

@@ -14,7 +14,8 @@ class PowerAggregator:
         df = self._aggregate_power(df)
 
     def _aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
-        return df
+        result = df.groupby("run")["power"].sum().reset_index()
+        return result
 
     def _load(self, in_file: Path) -> pd.DataFrame:
         df = pd.read_csv(in_file, header=[0, 1])
