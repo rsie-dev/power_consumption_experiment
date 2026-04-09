@@ -5,7 +5,6 @@ import datetime
 from typing import Generator
 
 import pandas as pd
-import pint_pandas  # needed to convert to pint columns
 
 from data_aggregator.common import OperationMode
 from data_aggregator.common import RunInfo
@@ -23,7 +22,7 @@ class RunCollector:
 
         run_folders = list(measurement_folder.iterdir())
         self._logger.info("Found %d runs", len(run_folders))
-        for run_folder in run_folders[:2]:
+        for run_folder in run_folders:
             run_info = self.collect_run(measurement_info.tool_config.mode, run_folder)
             yield run_info
 
