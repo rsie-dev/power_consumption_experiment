@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from data_aggregator.util import FramePersist
+
 
 class PowerAggregator:
     def __init__(self, resources_folder: Path):
@@ -12,6 +14,11 @@ class PowerAggregator:
     def aggregate(self, power_data: Path):
         df = self._load(power_data)
         df = self._aggregate_power(df)
+
+        calculated_name = f"used_power_{power_data.stem[13:]}.csv"
+        csv_file = self._resources_folder / calculated_name
+        frame_persist = FramePersist()
+        frame_persist.persist(df, csv_file)
 
     def _aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         result = df.groupby("run")["power"].sum().reset_index()
