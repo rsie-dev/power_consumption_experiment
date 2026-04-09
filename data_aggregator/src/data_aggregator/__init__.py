@@ -1,4 +1,5 @@
 from pint import UnitRegistry, set_application_registry
+import pint_pandas  # needed for initialization
 
 
 ureg = UnitRegistry()
