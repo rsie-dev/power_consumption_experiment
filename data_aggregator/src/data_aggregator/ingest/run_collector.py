@@ -17,7 +17,8 @@ class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def collect_runs(self, measurement_info: MeasurementInfo, measurement_folder: Path) -> Generator[RunInfo, None, None]:
+    def collect_runs(self, measurement_info: MeasurementInfo,
+                     measurement_folder: Path) -> Generator[RunInfo, None, None]:
         self._logger.debug("Collecting runs of: %s", measurement_info)
 
         run_folders = list(measurement_folder.iterdir())
