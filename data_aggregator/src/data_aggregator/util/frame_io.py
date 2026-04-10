@@ -25,10 +25,10 @@ class FrameIO:
 
     def persist(self, df: pd.DataFrame, target_path: Path) -> None:
         self._logger.info("Generate: %s", target_path)
-        cols = df.select_dtypes(include=["pint[unit]"]).columns
-        df[cols] = df[cols].pint.dequantify()
 
         if 'timestamp' in df.columns:
             df["timestamp"] = df["timestamp"].apply(lambda x: x.isoformat(timespec="milliseconds"))
+
+        df = df.pint.dequantify()
 
         df.to_csv(target_path, encoding='UTF_8', index=False, header=True)
