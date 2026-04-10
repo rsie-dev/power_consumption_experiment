@@ -68,7 +68,8 @@ class RunCollector:
 
     def _read_measurement(self, run_folder: Path, run: int) -> pd.DataFrame:
         #self._logger.debug("read: %s", (run_folder / 'multimeter.csv'))
-        df = pd.read_csv(run_folder / 'multimeter.csv', parse_dates=["timestamp"], skipinitialspace=True)
+        df = pd.read_csv(run_folder / 'multimeter.csv', parse_dates=["timestamp"], date_format="ISO8601",
+                         skipinitialspace=True)
         df["voltage_V"] = df["voltage_V"].astype("pint[volt]")
         df["current_A"] = df["current_A"].astype("pint[ampere]")
         df = df.rename(columns={'voltage_V': 'voltage', 'current_A': 'current'})

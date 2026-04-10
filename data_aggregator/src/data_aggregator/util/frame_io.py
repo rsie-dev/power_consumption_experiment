@@ -16,7 +16,7 @@ class FrameIO:
 
         df.columns = names  # flatten
         if 'timestamp' in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
         for col, unit in zip(names, units):  # apply units
             if unit != "No Unit":
                 df[col] = df[col].astype(f"pint[{unit}]")
@@ -25,5 +25,10 @@ class FrameIO:
 
     def persist(self, df: pd.DataFrame, target_path: Path) -> None:
         self._logger.info("Generate: %s", target_path)
-        df = df.pint.dequantify()
+        cols = df.select_dtypes(include=["pint[unit]"]).columns
+        df[cols] = df[cols].pint.dequantify()
+
+        if 'timestamp' in df.columns:
+            df["timestamp"] = df["timestamp"].apply(lambda x: x.isoformat(timespec="milliseconds"))
+
         df.to_csv(target_path, encoding='UTF_8', index=False, header=True)
