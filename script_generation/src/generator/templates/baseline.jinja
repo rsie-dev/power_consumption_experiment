@@ -8,6 +8,7 @@ experiment = (get_experiment_builder()
             .on_host("{{args.host}}", "{{args.ip}}")
 
               .measure_with_multimeter("{{args.multimeter}}")
+              .control_temperature(1.0)
 
               .measure_runs(run_count, "baseline")
                 .execute_with("/usr/bin/sleep {{sleep_time}}s")
