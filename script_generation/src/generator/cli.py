@@ -46,17 +46,21 @@ class Generator:
         sg.generate(tools, data_sets, args)
 
     def _get_tools(self, args) -> list[Tool]:
-        tools = list(Tool)
         if args.no_tool:
+            tools = list(Tool)
             skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
             tools = [t for t in tools if t not in skip_tools]
+        else:
+            tools = [Tool[tool.upper()] for tool in args.tool]
         return tools
 
     def _get_data_sets(self, args) -> list[DataSet]:
-        data_sets = list(DataSet)
         if args.no_data_set:
+            data_sets = list(DataSet)
             skip_ds = [DataSet[ds.upper()] for ds in args.no_data_set]
             data_sets = [ds for ds in data_sets if ds not in skip_ds]
+        else:
+            data_sets = [DataSet[ds.upper()] for ds in args.data_set]
         return data_sets
 
     def main(self):
@@ -76,12 +80,22 @@ class Generator:
         parser.add_argument('-t', '--type',
                             choices=[type.name.lower() for type in GeneratorType],
                             default=GeneratorType.HOST.name.lower(), help="generator type" + default)
-        parser.add_argument('--no-tool', nargs="*",
-                            choices=[tool.name.lower() for tool in Tool],
-                            help="tools to skip")
-        parser.add_argument('--no-data-set', nargs="*",
-                            choices=[ds.name.lower() for ds in DataSet],
-                            help="data sets to skip")
+        tool_group = parser.add_mutually_exclusive_group()
+        tool_group.add_argument('--tool', nargs="+",
+                                choices=[tool.name.lower() for tool in Tool],
+                                default=[tool.name.lower() for tool in Tool],
+                                help="tools to use")
+        tool_group.add_argument('--no-tool', nargs="*",
+                                choices=[tool.name.lower() for tool in Tool],
+                                help="tools to skip")
+        data_set_group = parser.add_mutually_exclusive_group()
+        data_set_group.add_argument('--data-set', nargs="*",
+                                    choices=[ds.name.lower() for ds in DataSet],
+                                    default=[ds.name.lower() for ds in DataSet],
+                                    help="data sets to skip")
+        data_set_group.add_argument('--no-data-set', nargs="*",
+                                    choices=[ds.name.lower() for ds in DataSet],
+                                    help="data sets to skip")
 
         args = parser.parse_args()
 
