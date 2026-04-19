@@ -56,7 +56,8 @@ class DataGenScriptGenerator(ScriptGenerator):
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
             decompress_file = data_set.value
-            decompress_file = decompress_file.with_stem(f"{data_set.value.stem}_{tool_config.strength.name.lower()}")
+            decompress_file = decompress_file.with_stem(f"{data_set.value.stem}_{tool.name.lower()}_"
+                                                        f"{tool_config.strength.name.lower()}")
             data_set_name = f"{data_set.name.lower()}"
             target_name = f"{data_set.name.lower()}_{tool.name.lower()}"
             if tool.value.threading == Threading.MULTI:
