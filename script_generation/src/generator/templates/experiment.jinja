@@ -33,7 +33,9 @@ experiment = (get_experiment_builder()
 {% endif %}
 
               .measure_with_multimeter("{{args.multimeter}}")
-              .control_temperature(1.0)
+{% if args.mon_temp %}
+              .control_temperature({{args.mon_temp}})
+{% endif %}
 
 {% for data_set in data_sets %}
               {% for tool in data_set.tools %}
