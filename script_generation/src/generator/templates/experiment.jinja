@@ -4,6 +4,12 @@ from pathlib import Path
 from experiment.api import get_experiment_builder
 
 run_count = {{args.runs}}
+{% if args.head_delay %}
+head_delay = {{args.head_delay}}
+{% endif %}
+{% if args.tail_delay %}
+tail_delay = {{args.tail_delay}}
+{% endif %}
 
 local_path = Path("{{args.data_folder}}")
 {% for data_set in data_sets %}

@@ -1,14 +1,14 @@
 {% macro measurement(args, tool, measurement_tags, tool_args, data_set_name) %}
 .measure_runs(run_count, "{{ measurement_tags | join("_") }}")
 {% if args.head_delay %}
-                .with_head_delay({{args.head_delay}})
+                .with_head_delay(head_delay)
 {% endif %}
                 .execute_with("{{tool.value.binary}} {{tool_args}} %s" % remote_{{data_set_name}})
                   .with_timings()
                   .count_stdout()
                 .done()
 {% if args.tail_delay %}
-                .with_tail_delay({{args.tail_delay}})
+                .with_tail_delay(tail_delay)
 {% endif %}
               .done()
 {% endmacro %}
