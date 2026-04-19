@@ -40,16 +40,24 @@ class Generator:
         generator_type = GeneratorType[args.type.upper()]
         script_folder = Path.cwd() / "scripts"
         sg = generator_type.create(script_folder)
+        tools = self._get_tools(args)
+        data_sets = self._get_data_sets(args)
+        script_folder.mkdir(parents=True, exist_ok=True)
+        sg.generate(tools, data_sets, args)
+
+    def _get_tools(self, args) -> list[Tool]:
         tools = list(Tool)
         if args.no_tool:
             skip_tools = [Tool[tool.upper()] for tool in args.no_tool]
             tools = [t for t in tools if t not in skip_tools]
+        return tools
+
+    def _get_data_sets(self, args) -> list[DataSet]:
         data_sets = list(DataSet)
         if args.no_data_set:
             skip_ds = [DataSet[ds.upper()] for ds in args.no_data_set]
             data_sets = [ds for ds in data_sets if ds not in skip_ds]
-        script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, args)
+        return data_sets
 
     def main(self):
         parser = argparse.ArgumentParser()
