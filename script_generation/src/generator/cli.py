@@ -7,6 +7,7 @@ from ruamel.yaml import YAML
 from generator.generator_type import GeneratorType
 from generator.tools import Tool
 from generator.data_set import DataSet
+from generator.tool_config import CompressionStrength
 
 
 class Generator:
@@ -42,8 +43,9 @@ class Generator:
         sg = generator_type.create(script_folder)
         tools = self._get_tools(args)
         data_sets = self._get_data_sets(args)
+        compression_strengths = self._get_compression_strength(args)
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, args)
+        sg.generate(tools, data_sets, compression_strengths, args)
 
     def _get_tools(self, args) -> list[Tool]:
         if args.no_tool:
@@ -62,6 +64,15 @@ class Generator:
         else:
             data_sets = [DataSet[ds.upper()] for ds in args.data_set]
         return data_sets
+
+    def _get_compression_strength(self, args) -> list[CompressionStrength]:
+        if args.no_data_set:
+            compression_strengths = list(CompressionStrength)
+            skip_cs = [CompressionStrength[cs.upper()] for cs in args.no_compression_strength]
+            compression_strengths = [cs for cs in compression_strengths if cs not in skip_cs]
+        else:
+            compression_strengths = [CompressionStrength[cs.upper()] for cs in args.compression_strength]
+        return compression_strengths
 
     def main(self):
         parser = argparse.ArgumentParser()
@@ -96,6 +107,14 @@ class Generator:
         data_set_group.add_argument('--no-data-set', nargs="*",
                                     choices=[ds.name.lower() for ds in DataSet],
                                     help="data sets to skip")
+        compression_strength_group = parser.add_mutually_exclusive_group()
+        compression_strength_group .add_argument('--compression-strength', nargs="*",
+                                                 choices=[cs.name.lower() for cs in CompressionStrength],
+                                                 default=[cs.name.lower() for cs in CompressionStrength],
+                                                 help="compression strength to use")
+        compression_strength_group .add_argument('--no-compression-strength', nargs="*",
+                                                 choices=[cs.name.lower() for cs in CompressionStrength],
+                                                 help="compression strength sets to skip")
 
         args = parser.parse_args()
 

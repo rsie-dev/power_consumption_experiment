@@ -4,6 +4,7 @@ from pathlib import Path
 from generator.host_script_generator import HostScriptGenerator
 from generator.tools import Tool
 from generator.data_set import DataSet
+from generator.tool_config import CompressionStrength
 
 
 class DataSetScriptGenerator(HostScriptGenerator):
@@ -11,9 +12,12 @@ class DataSetScriptGenerator(HostScriptGenerator):
         super().__init__(script_folder)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
+                       compression_strengths: list[CompressionStrength], template, args) -> None:
         for data_set in data_sets:
-            data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, [data_set])
+            data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools,
+                                                                                                [data_set],
+                                                                                                compression_strengths)
             data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, [data_set])
             all_data_sets = data_sets_compress + data_sets_decompress
             measurement_sets = measurement_sets_compress + measurement_sets_decompress

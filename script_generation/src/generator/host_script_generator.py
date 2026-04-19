@@ -15,8 +15,10 @@ class HostScriptGenerator(ScriptGenerator):
     def _get_template_name(self) -> str:
         return "experiment.jinja"
 
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet], template, args) -> None:
-        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets)
+    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
+                       compression_strengths: list[CompressionStrength], template, args) -> None:
+        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets,
+                                                                                            compression_strengths)
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
 
         all_data_sets = data_sets_compress + data_sets_decompress
@@ -31,11 +33,12 @@ class HostScriptGenerator(ScriptGenerator):
         host_script = self._script_folder / f"{args.host}_all.py"
         self._generate_script(host_script, template, data)
 
-    def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet]):
+    def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet],
+                                       compression_strengths: list[CompressionStrength]):
         measurement_sets = 0
         data_set_entries = []
         for data_set in data_sets:
-            entry, count = self._build_data_set_entry_compress(data_set, tools)
+            entry, count = self._build_data_set_entry_compress(data_set, tools, compression_strengths)
             data_set_entries.append(entry)
             measurement_sets += count
         return data_set_entries, measurement_sets
@@ -50,11 +53,12 @@ class HostScriptGenerator(ScriptGenerator):
                 measurement_sets += count
         return data_set_entries, measurement_sets
 
-    def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool]):
+    def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool],
+                                       compression_strengths: list[CompressionStrength]):
         count = 0
         tool_entries = []
         for tool in tools:
-            tool_configs = self._build_tool_configs(tool, OperationMode.COMPRESS)
+            tool_configs = self._build_tool_configs(tool, OperationMode.COMPRESS, compression_strengths)
             for tool_config in tool_configs:
                 tool_entry = self._build_tool_entry(tool, tool_config, data_set)
                 tool_entries.append(tool_entry)
@@ -69,7 +73,7 @@ class HostScriptGenerator(ScriptGenerator):
     def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool):
         entries = []
 
-        tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS)
+        tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, [])
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
             data_set_name = f"{data_set.name.lower()}_{tool.name.lower()}"
@@ -91,7 +95,7 @@ class HostScriptGenerator(ScriptGenerator):
 
         return entries, len(entries)
 
-    def _build_tool_configs(self, tool: Tool, mode: OperationMode):
+    def _build_tool_configs(self, tool: Tool, mode: OperationMode, compression_strengths: list[CompressionStrength]):
         tool_configs = []
         if tool.value.threading == Threading.SINGLE:
             threadings = [Threading.SINGLE]
@@ -99,7 +103,7 @@ class HostScriptGenerator(ScriptGenerator):
             threadings = list(Threading)
         for threading in threadings:
             if mode == OperationMode.COMPRESS:
-                for strength in CompressionStrength:
+                for strength in compression_strengths:
                     tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
                     tool_configs.append(tool_config)
             else:
