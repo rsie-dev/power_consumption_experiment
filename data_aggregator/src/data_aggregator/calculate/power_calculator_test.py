@@ -62,7 +62,7 @@ def calculator():
 
 def test_calculate_power_single(calculator, single_run_data_frame):
     data = """
-run,timestamp,voltage,current,energy,duration,power
+run,timestamp,voltage,current,energy,power_duration,power
 No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125,,
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316,0.01,0.025064607316
@@ -78,7 +78,7 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 
 def test_calculate_power_double(calculator, run_data_frame_two):
     data = """
-run,timestamp,voltage,current,energy,duration,power
+run,timestamp,voltage,current,energy,power_duration,power
 No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125,,
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316,0.01,0.025064607316

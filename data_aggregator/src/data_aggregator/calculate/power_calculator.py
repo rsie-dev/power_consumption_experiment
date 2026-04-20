@@ -8,6 +8,6 @@ class PowerCalculator:
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["duration"] = df.groupby("run")["timestamp"].diff().dt.total_seconds().astype("pint[second]")
-        df["power"] = df["energy"] * df["duration"]
+        df["power_duration"] = df.groupby("run")["timestamp"].diff().dt.total_seconds().astype("pint[second]")
+        df["power"] = df["energy"] * df["power_duration"]
         return df
