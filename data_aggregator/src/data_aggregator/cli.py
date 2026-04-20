@@ -36,8 +36,7 @@ class Processor:
             return yaml.load(f)
 
     def _aggregate_runs(self, args):
-        if not self._valid_input_folder(args.raw_data):
-            raise RuntimeError("not a valid resource folder: %s" % args.raw_data)
+        self._validate_input_folder(args.raw_data)
         host_folders = self._collect_host_folder(args.raw_data)
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
@@ -54,14 +53,14 @@ class Processor:
                 hosts.append(child)
         return hosts
 
-    def _valid_input_folder(self, folder: Path) -> bool:
+    def _validate_input_folder(self, folder: Path) -> None:
         log = folder / "experiment.log"
         if not log.exists():
-            return False
+            raise AssertionError("Not found in folder: %s" % "experiment.log")
         script = folder / f"{folder.stem}.py"
         if not script.exists():
-            return False
-        return True
+            raise AssertionError("Missing experiment file in folder: %s" % script.name)
+
 
     def _aggregate_power(self, args):
         resources_folder = args.resources
