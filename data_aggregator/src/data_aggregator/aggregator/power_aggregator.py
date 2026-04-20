@@ -21,5 +21,13 @@ class PowerAggregator:
         frame_io.persist(df, csv_file)
 
     def _aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
-        result = df.groupby("run")["power"].sum().reset_index()
+        result = (
+            df.groupby("run")
+            .agg(
+                power=("power", "sum"),
+                real=("real", "first"),
+                size=("size", "first"),
+            )
+            .reset_index()
+        )
         return result
