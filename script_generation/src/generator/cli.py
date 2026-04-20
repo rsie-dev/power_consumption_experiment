@@ -77,6 +77,11 @@ class Generator:
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
+
+        default_tools = [tool.name.lower() for tool in Tool]
+        default_data_sets = [ds.name.lower() for ds in DataSet if ds != DataSet.XML]
+        default_compression_strength = [cs.name.lower() for cs in CompressionStrength]
+
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
@@ -94,24 +99,24 @@ class Generator:
         tool_group = parser.add_mutually_exclusive_group()
         tool_group.add_argument('--tool', nargs="+",
                                 choices=[tool.name.lower() for tool in Tool],
-                                default=[tool.name.lower() for tool in Tool],
-                                help="tools to use")
+                                default=default_tools,
+                                help="tools to use" + default)
         tool_group.add_argument('--no-tool', nargs="*",
                                 choices=[tool.name.lower() for tool in Tool],
                                 help="tools to skip")
         data_set_group = parser.add_mutually_exclusive_group()
         data_set_group.add_argument('--data-set', nargs="*",
                                     choices=[ds.name.lower() for ds in DataSet],
-                                    default=[ds.name.lower() for ds in DataSet],
-                                    help="data sets to skip")
+                                    default=default_data_sets,
+                                    help="data sets to use" + default)
         data_set_group.add_argument('--no-data-set', nargs="*",
                                     choices=[ds.name.lower() for ds in DataSet],
                                     help="data sets to skip")
         compression_strength_group = parser.add_mutually_exclusive_group()
         compression_strength_group .add_argument('--compression-strength', nargs="*",
                                                  choices=[cs.name.lower() for cs in CompressionStrength],
-                                                 default=[cs.name.lower() for cs in CompressionStrength],
-                                                 help="compression strength to use")
+                                                 default=default_compression_strength,
+                                                 help="compression strength to use" + default)
         compression_strength_group .add_argument('--no-compression-strength', nargs="*",
                                                  choices=[cs.name.lower() for cs in CompressionStrength],
                                                  help="compression strength sets to skip")
