@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from data_aggregator.util import FrameIO
+from data_aggregator.calculate import AverageCalculator
 
 
 class PowerAggregator:
@@ -15,6 +16,8 @@ class PowerAggregator:
         frame_io = FrameIO()
         df = frame_io.load(power_data)
         df = self._aggregate_power(df)
+        average_calculator = AverageCalculator()
+        df = average_calculator.calculate_averages(df)
 
         calculated_name = f"used_power_{power_data.stem[13:]}.csv"
         csv_file = self._resources_folder / calculated_name

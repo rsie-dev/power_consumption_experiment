@@ -5,7 +5,6 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .aggregator import RunAggregator, PowerAggregator
-from .calculate import AverageCalculator
 
 
 class Processor:
@@ -68,12 +67,6 @@ class Processor:
         aggregator = PowerAggregator(resources_folder)
         aggregator.aggregate(args.power_data)
 
-    def _calculate_average(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
-        calculator = AverageCalculator(resources_folder)
-        calculator.calculate(args.power_data)
-
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
@@ -99,17 +92,6 @@ class Processor:
         parser_aggregate_power.add_argument('-d', '--power-data', type=Path, required=True,
                                             help="power usage file")
         parser_aggregate_power.set_defaults(func=self._aggregate_power)
-
-        parser_calculate = subparsers.add_parser('calculate')
-        subparsers_calculate = parser_calculate.add_subparsers(required=True, dest="subcommand",
-                                                               title='calculate subcommands',
-                                                               description='valid subcommands', help='sub-command help')
-
-        parser_calculate_averages = subparsers_calculate.add_parser('average',
-                                                                 help="calculate average power usage")
-        parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
-                                               help="power usage file")
-        parser_calculate_averages.set_defaults(func=self._calculate_average)
 
         args = parser.parse_args()
 

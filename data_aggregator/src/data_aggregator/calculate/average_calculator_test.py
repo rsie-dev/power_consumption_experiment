@@ -1,4 +1,3 @@
-from pathlib import Path
 from io import StringIO
 
 import pytest
@@ -44,19 +43,23 @@ def _as_dataframe(data: str, times=True) -> pd.DataFrame:
 
 @pytest.fixture
 def calculator():
-    return AverageCalculator(Path())
+    return AverageCalculator()
 
 
 def test_calculate_average(calculator, run_data_frame):
     data = """
-runs,average_power
-No Unit,ampere·second·volt
-3,4.48901921377253
+runs,power_average,power_std,power_var
+No Unit,ampere·second·volt,ampere·second·volt,ampere²·second²·volt²
+3,4.48901921377253,0.05411508639737879,0.002928442575795771
     """
     df_expected = _as_dataframe(data, times=False)
 
-    df_actual = calculator._calculate_averages(run_data_frame)
+    df_actual = calculator.calculate_averages(run_data_frame)
 
-    df_expected["average_power"] = df_expected["average_power"].astype("float")
-    df_actual["average_power"] = df_actual["average_power"].astype("float")
+    df_expected["power_average"] = df_expected["power_average"].astype("float")
+    df_expected["power_std"] = df_expected["power_std"].astype("float")
+    df_expected["power_var"] = df_expected["power_var"].astype("float")
+    df_actual["power_average"] = df_actual["power_average"].astype("float")
+    df_actual["power_std"] = df_actual["power_std"].astype("float")
+    df_actual["power_var"] = df_actual["power_var"].astype("float")
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
