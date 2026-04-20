@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .aggregator import RunAggregator, PowerAggregator
-from .calculate import PowerCalculator, AverageCalculator
+from .calculate import AverageCalculator
 
 
 class Processor:
@@ -68,12 +68,6 @@ class Processor:
         aggregator = PowerAggregator(resources_folder)
         aggregator.aggregate(args.power_data)
 
-    def _calculate_power(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
-        calculator = PowerCalculator(resources_folder)
-        calculator.calculate(args.preprocessed_data)
-
     def _calculate_average(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
@@ -110,12 +104,6 @@ class Processor:
         subparsers_calculate = parser_calculate.add_subparsers(required=True, dest="subcommand",
                                                                title='calculate subcommands',
                                                                description='valid subcommands', help='sub-command help')
-
-        parser_calculate_power = subparsers_calculate.add_parser('power',
-                                                 help="calculate used power from preprocessed measurement data")
-        parser_calculate_power.add_argument('-d', '--preprocessed-data', type=Path, required=True,
-                                      help="preprocessed file")
-        parser_calculate_power.set_defaults(func=self._calculate_power)
 
         parser_calculate_averages = subparsers_calculate.add_parser('average',
                                                                  help="calculate average power usage")

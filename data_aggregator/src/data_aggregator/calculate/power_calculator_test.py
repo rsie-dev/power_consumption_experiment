@@ -1,4 +1,3 @@
-from pathlib import Path
 from io import StringIO
 
 import pytest
@@ -58,7 +57,7 @@ def _as_dataframe(data: str, times=True) -> pd.DataFrame:
 
 @pytest.fixture
 def calculator():
-    return PowerCalculator(Path())
+    return PowerCalculator()
 
 
 def test_calculate_power_single(calculator, single_run_data_frame):
@@ -70,7 +69,7 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 1,2026-04-07 07:40:28.291,5.12401,0.4775,2.446714775,0.01,0.024467147749999998"""
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator._calculate_power(single_run_data_frame)
+    df_actual = calculator.calculate_power(single_run_data_frame)
 
     df_expected["power"] = df_expected["power"].astype("float")
     df_actual["power"] = df_actual["power"].astype("float")
@@ -89,7 +88,7 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 2,2026-04-07 07:41:05.533,5.12585,0.51322,2.630688737,0.01,0.02630688737"""
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator._calculate_power(run_data_frame_two)
+    df_actual = calculator.calculate_power(run_data_frame_two)
 
     df_expected["power"] = df_expected["power"].astype("float")
     df_actual["power"] = df_actual["power"].astype("float")

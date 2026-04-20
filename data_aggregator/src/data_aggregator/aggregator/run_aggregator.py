@@ -6,6 +6,7 @@ import pandas as pd
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
+from data_aggregator.calculate import PowerCalculator
 from data_aggregator.util import FrameIO
 
 
@@ -18,11 +19,13 @@ class RunAggregator:
         self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))
+        calculator = PowerCalculator()
         for measurement_folder in measurement_folders[:1]:
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
             df = self._preprocess_runs(measurement_info, runs)
+            df = calculator.calculate_power(df)
 
             preprocessed_name = self._build_preprocessed_path(measurement_info)
             csv_file = self._resources_folder / preprocessed_name
