@@ -22,12 +22,12 @@ class RunAggregator:
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
-            df_all = self._preprocess_runs(measurement_info, runs)
+            df = self._preprocess_runs(measurement_info, runs)
 
             preprocessed_name = self._build_preprocessed_path(measurement_info)
             csv_file = self._resources_folder / preprocessed_name
             frame_io = FrameIO()
-            frame_io.persist(df_all, csv_file)
+            frame_io.persist(df, csv_file)
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")
@@ -60,6 +60,7 @@ class RunAggregator:
             all_runs.append(energy_df)
 
         df_all = pd.concat(all_runs)
+        df_all = df_all.sort_values('run', kind="stable")
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
         return df_all
 
