@@ -22,7 +22,12 @@ class RunAggregator:
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
-            self._preprocess_runs(self._resources_folder, measurement_info, runs)
+            df_all = self._preprocess_runs(measurement_info, runs)
+
+            preprocessed_name = self._build_preprocessed_path(measurement_info)
+            csv_file = self._resources_folder / preprocessed_name
+            frame_io = FrameIO()
+            frame_io.persist(df_all, csv_file)
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")
@@ -43,7 +48,7 @@ class RunAggregator:
         measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
         return measurement_info
 
-    def _preprocess_runs(self, resources_folder: Path, measurement_info: MeasurementInfo, runs):
+    def _preprocess_runs(self, measurement_info: MeasurementInfo, runs):
         name = self._build_name(measurement_info)
         self._logger.info("Preprocess runs for: %s", name)
         all_runs = []
@@ -56,11 +61,7 @@ class RunAggregator:
 
         df_all = pd.concat(all_runs)
         self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
-
-        preprocessed_name = self._build_preprocessed_path(measurement_info)
-        csv_file = resources_folder / preprocessed_name
-        frame_io = FrameIO()
-        frame_io.persist(df_all, csv_file)
+        return df_all
 
     def _calculate_energy(self, df_run: pd.DataFrame) -> pd.DataFrame:
         df_run["energy"] = df_run.voltage * df_run.current
