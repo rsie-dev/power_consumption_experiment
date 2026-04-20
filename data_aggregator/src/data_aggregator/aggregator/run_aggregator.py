@@ -8,6 +8,7 @@ from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
 from data_aggregator.calculate import PowerCalculator
 from data_aggregator.util import FrameIO
+from data_aggregator import ureg
 
 
 class RunAggregator:
@@ -26,6 +27,8 @@ class RunAggregator:
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
             df = self._preprocess_runs(measurement_info, runs)
             df = calculator.calculate_power(df)
+            print(df.dtypes)
+            print(df.head())
 
             preprocessed_name = self._build_preprocessed_path(measurement_info)
             csv_file = self._resources_folder / preprocessed_name
@@ -60,6 +63,10 @@ class RunAggregator:
             entries_count += len(run.measurement.readings)
             cut_run = self._cut_lead_tail(run)
             energy_df = self._calculate_energy(cut_run)
+            energy_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
+            energy_df["real"] = energy_df["real"].astype("pint[second]")
+            energy_df["size"] = run.measurement.count
+            energy_df["size"] = energy_df["size"].astype("pint[byte]")
             all_runs.append(energy_df)
 
         df_all = pd.concat(all_runs)
