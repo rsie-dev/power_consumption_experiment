@@ -21,14 +21,14 @@ class RunAggregator:
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))
         calculator = PowerCalculator()
-        for measurement_folder in measurement_folders[:1]:
+        for measurement_folder in measurement_folders:
+            if not measurement_folder.is_dir():
+                continue
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
             df = self._preprocess_runs(measurement_info, runs)
             df = calculator.calculate_power(df)
-            print(df.dtypes)
-            print(df.head())
 
             preprocessed_name = self._build_preprocessed_path(measurement_info)
             csv_file = self._resources_folder / preprocessed_name
@@ -71,7 +71,7 @@ class RunAggregator:
 
         df_all = pd.concat(all_runs)
         df_all = df_all.sort_values('run', kind="stable")
-        self._logger.info("Raw entries: %d, cut: %d", entries_count, len(df_all))
+        self._logger.info("Raw entries: %d, after cut: %d", entries_count, len(df_all))
         return df_all
 
     def _calculate_energy(self, df_run: pd.DataFrame) -> pd.DataFrame:
