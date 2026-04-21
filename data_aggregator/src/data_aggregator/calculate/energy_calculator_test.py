@@ -2,7 +2,7 @@ from io import StringIO
 
 import pytest
 import pandas as pd
-from pandas.testing import assert_frame_equal
+from pint.testing import assert_allclose
 
 from .energy_calculator import EnergyCalculator
 
@@ -74,10 +74,13 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 
     df_actual = calculator.calculate_energy(single_run_data_frame)
 
-    for column in ["power", "energy_used"]:
-        df_expected[column] = df_expected[column].astype("float")
-        df_actual[column] = df_actual[column].astype("float")
-    assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
+    for column in ["voltage", "current", "power", "power_duration", "energy_used"]:
+        assert_allclose(
+            df_actual[column].pint.quantity,
+            df_expected[column].pint.quantity,
+            rtol=1e-7,
+            atol=1e-9,
+        )
 
 
 def test_calculate_power_double(calculator, run_data_frame_two):
@@ -95,7 +98,10 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 
     df_actual = calculator.calculate_energy(run_data_frame_two)
 
-    for column in ["power", "energy_used"]:
-        df_expected[column] = df_expected[column].astype("float")
-        df_actual[column] = df_actual[column].astype("float")
-    assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
+    for column in ["voltage", "current", "power", "power_duration", "energy_used"]:
+        assert_allclose(
+            df_actual[column].pint.quantity,
+            df_expected[column].pint.quantity,
+            rtol=1e-7,
+            atol=1e-9,
+        )

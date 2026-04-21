@@ -3,7 +3,7 @@ from io import StringIO
 
 import pytest
 import pandas as pd
-from pandas.testing import assert_frame_equal
+from pint.testing import assert_allclose
 
 from .average_calculator import AverageCalculator
 
@@ -58,6 +58,9 @@ No Unit,ampere·second·volt,ampere·second·volt,ampere²·second²·volt²
     df_actual = calculator._calculate_averages(run_data_frame)
 
     for column in ["power_average", "power_std", "power_var"]:
-        df_expected[column] = df_expected[column].astype("float")
-        df_actual[column] = df_actual[column].astype("float")
-    assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
+        assert_allclose(
+            df_actual[column].pint.quantity,
+            df_expected[column].pint.quantity,
+            rtol=1e-7,
+            atol=1e-9,
+        )
