@@ -23,9 +23,16 @@ class Tool(Enum):
     GZIP = ToolDefinition(binary="gzip", extension=".gz", compress="", decompress="-d", min="--fast", max="--best",
                           keep="-k", to_stdout="-c",
                           threading=Threading.SINGLE, single_thread="", multi_thread="")
+    PIGZ = ToolDefinition(binary="pigz", extension=".gz", compress="", decompress="-d", min="--fast", max="--best",
+                          keep="-k", to_stdout="-c",
+                          threading=Threading.MULTI, single_thread="-p 1", multi_thread="")
     BZIP2 = ToolDefinition(binary="bzip2", extension=".bz2", compress="-z", decompress="-d", min="--fast", max="--best",
                            keep="-k", to_stdout="-c",
                            threading=Threading.SINGLE, single_thread="", multi_thread="")
+    LBZIP2 = ToolDefinition(binary="lbzip2", extension=".bz2", compress="-z", decompress="-d",
+                            min="--fast", max="--best",
+                            keep="-k", to_stdout="-c",
+                            threading=Threading.MULTI, single_thread="-n 1", multi_thread="")
     BZIP3 = ToolDefinition(binary="bzip3", extension=".bz3", compress="-z", decompress="-d", min="-b 1",
                            max="-b 128",  # limit for 4GB although 511 is the max
                            keep="-k", to_stdout="-c",
