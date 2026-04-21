@@ -23,12 +23,12 @@ class AverageCalculator:
         frame_io.persist(df, csv_file)
 
     def _calculate_averages(self, df: pd.DataFrame) -> pd.DataFrame:
-        mean_power = df['power'].mean()
+        power_mean = df['power'].mean()
 
         df = pd.DataFrame(
             {
                 "runs": pd.Series([len(df.index)], dtype="int"),
-                "average_power": pd.Series([mean_power]).astype("pint[ampere·second·volt]"),
+                "power_average": pd.Series([power_mean]).astype("pint[ampere·second·volt]"),
             }
         )
         return df

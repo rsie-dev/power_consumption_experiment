@@ -49,7 +49,7 @@ def calculator():
 
 def test_calculate_average(calculator, run_data_frame):
     data = """
-runs,average_power
+runs,power_average
 No Unit,ampere·second·volt
 3,4.48901921377253
     """
@@ -57,6 +57,6 @@ No Unit,ampere·second·volt
 
     df_actual = calculator._calculate_averages(run_data_frame)
 
-    df_expected["average_power"] = df_expected["average_power"].astype("float")
-    df_actual["average_power"] = df_actual["average_power"].astype("float")
+    df_expected["power_average"] = df_expected["power_average"].astype("float")
+    df_actual["power_average"] = df_actual["power_average"].astype("float")
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
