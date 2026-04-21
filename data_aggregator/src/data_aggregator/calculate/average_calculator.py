@@ -30,9 +30,9 @@ class AverageCalculator:
         df = pd.DataFrame(
             {
                 "runs": pd.Series([len(df.index)], dtype="int"),
-                "power_average": pd.Series([power_mean]).astype("pint[ampere·second·volt]"),
-                "power_std": pd.Series([power_std]).astype("pint[ampere·second·volt]"),
-                "power_var": pd.Series([power_var]).astype("pint[(ampere·second·volt)^2]"),
+                "power_average": pd.Series([power_mean]).astype("pint[joule]"),
+                "power_std": pd.Series([power_std]).astype("pint[joule]"),
+                "power_var": pd.Series([power_var]).astype("pint[joule^2]"),
             }
         )
         return df

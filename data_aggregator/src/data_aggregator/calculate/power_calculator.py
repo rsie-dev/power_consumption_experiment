@@ -9,4 +9,5 @@ class PowerCalculator:
 
     def calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         df["power"] = df.voltage * df.current
+        df["power"] = df["power"].pint.to("watt")
         return df

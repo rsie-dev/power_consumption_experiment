@@ -14,7 +14,7 @@ from .energy_calculator import EnergyCalculator
 def run_data_single():
     data = """
 run,timestamp,voltage,current,power
-No Unit,No Unit,volt,ampere,ampere·volt
+No Unit,No Unit,volt,ampere,watt
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316
 1,2026-04-07 07:40:28.291,5.12401,0.4775,2.446714775
@@ -65,7 +65,7 @@ def calculator():
 def test_calculate_power_single(calculator, single_run_data_frame):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
-No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
+No Unit,No Unit,volt,ampere,watt,second,joule
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125,,
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316,0.01,0.025064607316
 1,2026-04-07 07:40:28.291,5.12401,0.4775,2.446714775,0.01,0.024467147749999998
@@ -86,7 +86,7 @@ No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
 def test_calculate_power_double(calculator, run_data_frame_two):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
-No Unit,No Unit,volt,ampere,ampere·volt,second,ampere·second·volt
+No Unit,No Unit,volt,ampere,watt,second,joule
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125,,
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316,0.01,0.025064607316
 1,2026-04-07 07:40:28.291,5.12401,0.4775,2.446714775,0.01,0.024467147749999998

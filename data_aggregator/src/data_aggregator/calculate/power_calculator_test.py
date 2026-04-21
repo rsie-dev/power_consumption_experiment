@@ -50,7 +50,7 @@ def calculator():
 def test_calculate_power_single(calculator, single_run_data_frame):
     data = """
 run,timestamp,voltage,current,power
-No Unit,No Unit,volt,ampere,ampere*volt
+No Unit,No Unit,volt,ampere,watt
 1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125
 1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316
 1,2026-04-07 07:40:28.291,5.12401,0.4775,2.446714775

@@ -50,7 +50,7 @@ def calculator():
 def test_calculate_average(calculator, run_data_frame):
     data = """
 runs,power_average,power_std,power_var
-No Unit,ampere·second·volt,ampere·second·volt,ampere²·second²·volt²
+No Unit,joule,joule,joule^2
 3,4.48901921377253,0.05411508639737879,0.002928442575795771
     """
     df_expected = _as_dataframe(data, times=False)
