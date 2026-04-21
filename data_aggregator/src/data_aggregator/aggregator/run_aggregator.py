@@ -6,7 +6,7 @@ import pandas as pd
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
-from data_aggregator.calculate import EnergyCalculator
+from data_aggregator.calculate import EnergyCalculator, PowerCalculator
 from data_aggregator.util import FrameIO
 from data_aggregator import ureg
 
@@ -59,24 +59,21 @@ class RunAggregator:
         self._logger.info("Preprocess runs for: %s", name)
         all_runs = []
         entries_count = 0
+        power_calculator = PowerCalculator()
         for run in runs:
             entries_count += len(run.measurement.readings)
             cut_run = self._cut_lead_tail(run)
-            energy_df = self._calculate_energy(cut_run)
-            energy_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
-            energy_df["real"] = energy_df["real"].astype("pint[second]")
-            energy_df["size"] = run.measurement.count
-            energy_df["size"] = energy_df["size"].astype("pint[byte]")
-            all_runs.append(energy_df)
+            power_df = power_calculator.calculate_power(cut_run)
+            power_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
+            power_df["real"] = power_df["real"].astype("pint[second]")
+            power_df["size"] = run.measurement.count
+            power_df["size"] = power_df["size"].astype("pint[byte]")
+            all_runs.append(power_df)
 
         df_all = pd.concat(all_runs)
         df_all = df_all.sort_values('run', kind="stable")
         self._logger.info("Raw entries: %d, after cut: %d", entries_count, len(df_all))
         return df_all
-
-    def _calculate_energy(self, df_run: pd.DataFrame) -> pd.DataFrame:
-        df_run["energy"] = df_run.voltage * df_run.current
-        return df_run
 
     def _cut_lead_tail(self, run) -> pd.DataFrame:
         measurement = run.measurement
