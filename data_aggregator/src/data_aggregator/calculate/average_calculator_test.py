@@ -49,14 +49,15 @@ def calculator():
 
 def test_calculate_average(calculator, run_data_frame):
     data = """
-runs,power_average
-No Unit,ampere·second·volt
-3,4.48901921377253
+runs,power_average,power_std,power_var
+No Unit,ampere·second·volt,ampere·second·volt,ampere²·second²·volt²
+3,4.48901921377253,0.05411508639737879,0.002928442575795771
     """
     df_expected = _as_dataframe(data, times=False)
 
     df_actual = calculator._calculate_averages(run_data_frame)
 
-    df_expected["power_average"] = df_expected["power_average"].astype("float")
-    df_actual["power_average"] = df_actual["power_average"].astype("float")
+    for column in ["power_average", "power_std", "power_var"]:
+        df_expected[column] = df_expected[column].astype("float")
+        df_actual[column] = df_actual[column].astype("float")
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
