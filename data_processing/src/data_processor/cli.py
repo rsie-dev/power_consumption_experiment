@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
+from .multimeter import MultimeterValidate
 
 class Processor:
     def __init__(self):
@@ -37,17 +38,35 @@ class Processor:
         default = ' (default: %(default)s)'
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
+
+        subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                           description='valid subcommands', help='sub-command help')
+
+        parser_multimeter = subparsers.add_parser('multimeter')
+        subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
+                                                                title='multimeter subcommands',
+                                                                description='valid subcommands',
+                                                                help='sub-command help')
+
+        parser_multimeter_validate = subparsers_multimeter.add_parser('validate',
+                                                                      help="calculate average power usage")
+        parser_multimeter_validate.set_defaults(func=self._multimeter_validate)
+
         args = parser.parse_args()
 
         self._start_logging(args)
         try:
-            #args.func(args)
+            args.func(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")
         except Exception as e:  # pylint: disable=broad-exception-caught
             self._logger.exception("Error: %s", e)
         return 1
+
+    def _multimeter_validate(self, args):
+        validate = MultimeterValidate()
+        validate.validate()
 
 
 def app():
