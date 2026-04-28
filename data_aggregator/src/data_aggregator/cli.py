@@ -92,12 +92,11 @@ class Processor:
 
         parser_aggregate_runs = subparsers_aggregate.add_parser('runs', help="aggregate raw measurement data")
         parser_aggregate_runs.add_argument('-d', '--raw-data', type=Path, required=True,
-                                       help="raw data measurement folder")
+                                           help="raw data measurement folder")
         parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
 
         parser_aggregate_power = subparsers_aggregate.add_parser('power', help="aggregate power of runs")
-        parser_aggregate_power.add_argument('-d', '--power-data', type=Path, required=True,
-                                            help="power usage file")
+        parser_aggregate_power.add_argument('power_data', type=Path, nargs="+", help="power usage file")
         parser_aggregate_power.set_defaults(func=self._aggregate_power)
 
         parser_calculate = subparsers.add_parser('calculate')
@@ -106,7 +105,7 @@ class Processor:
                                                                description='valid subcommands', help='sub-command help')
 
         parser_calculate_averages = subparsers_calculate.add_parser('average',
-                                                                 help="calculate average power usage")
+                                                                    help="calculate average power usage")
         parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
                                                help="power usage file")
         parser_calculate_averages.set_defaults(func=self._calculate_average)
