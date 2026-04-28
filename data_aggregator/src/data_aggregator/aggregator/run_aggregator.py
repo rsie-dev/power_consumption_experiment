@@ -29,6 +29,12 @@ class RunAggregator:
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
             df = self._preprocess_runs(measurement_info, runs)
             df = calculator.calculate_energy(df)
+            df.insert(loc=0, column='host', value=measurement_info.host)
+            df.insert(loc=1, column='tool', value=measurement_info.tool)
+            df.insert(loc=2, column='dataset', value=measurement_info.dataset)
+            df.insert(loc=3, column='mode', value=measurement_info.tool_config.mode.name.lower())
+            df.insert(loc=4, column='strength', value=measurement_info.tool_config.strength.name.lower())
+            df.insert(loc=5, column='threading', value=measurement_info.tool_config.threading.name.lower())
 
             preprocessed_name = self._build_preprocessed_path(measurement_info)
             csv_file = self._resources_folder / preprocessed_name
@@ -40,8 +46,8 @@ class RunAggregator:
         tool = tokens[0]
         mode = OperationMode[tokens[1].upper()]
         dataset = tokens[2]
-        threading = Threading.NONE
         strength = CompressionStrength[tokens[3].upper()]
+        threading = Threading.NONE
         if len(tokens) > 4:
             threading = Threading[tokens[4].upper()]
 
