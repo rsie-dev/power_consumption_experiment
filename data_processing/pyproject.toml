@@ -29,7 +29,7 @@ dev = [
 ]
 
 [project.scripts]
-collector = "data_collector.cli:app"
+processor = "data_processor.cli:app"
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.in"] }

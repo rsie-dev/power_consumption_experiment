@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 
-class Collector:
+class Processor:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -41,7 +41,7 @@ class Collector:
 
         self._start_logging(args)
         try:
-            args.func(args)
+            #args.func(args)
             return 0
         except KeyboardInterrupt:
             self._logger.warning("User cancel")
@@ -51,5 +51,5 @@ class Collector:
 
 
 def app():
-    collector = Collector()
-    return collector.main()
+    processor = Processor()
+    return processor.main()

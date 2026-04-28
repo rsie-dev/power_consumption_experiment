@@ -6,6 +6,6 @@ __pycache__
 dist/
 *.egg-info/
 
-src/data_collector/_version.py
+src/data_processor/_version.py
 
 resources/
