@@ -30,4 +30,6 @@ class PowerAggregator:
             )
             .reset_index()
         )
+        for i, column in enumerate(["host", "tool", "dataset", "mode", "strength", "threading"]):
+            result.insert(loc=i, column=column, value=df.iloc[0][column])
         return result
