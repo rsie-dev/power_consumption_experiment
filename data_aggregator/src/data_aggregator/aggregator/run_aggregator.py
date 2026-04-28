@@ -6,7 +6,7 @@ import pandas as pd
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
-from data_aggregator.calculate import EnergyCalculator, PowerCalculator
+from data_aggregator.calculate import TrapezoidEnergyCalculator, PowerCalculator
 from data_aggregator.util import FrameIO
 from data_aggregator import ureg
 
@@ -20,7 +20,7 @@ class RunAggregator:
         self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))
-        calculator = EnergyCalculator()
+        calculator = TrapezoidEnergyCalculator()
         for measurement_folder in measurement_folders:
             if not measurement_folder.is_dir():
                 continue
