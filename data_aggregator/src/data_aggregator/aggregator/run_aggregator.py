@@ -41,14 +41,9 @@ class RunAggregator:
         mode = OperationMode[tokens[1].upper()]
         dataset = tokens[2]
         threading = Threading.NONE
-        if mode == OperationMode.COMPRESS:
-            strength = CompressionStrength[tokens[3].upper()]
-            if len(tokens) > 4:
-                threading = Threading[tokens[4].upper()]
-        else:
-            strength = CompressionStrength.DEFAULT
-            if len(tokens) > 3:
-                threading = Threading[tokens[3].upper()]
+        strength = CompressionStrength[tokens[3].upper()]
+        if len(tokens) > 4:
+            threading = Threading[tokens[4].upper()]
 
         tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
         measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
