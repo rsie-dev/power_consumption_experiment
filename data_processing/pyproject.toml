@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=9.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "power-measurement-data-processor"
+dynamic = ["version"]
+description = "Tool to process aggregated power measurement data."
+readme = "README.md"
+requires-python = ">=3.12"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+dependencies = [
+	"ruamel.yaml==0.18.10",
+	"Pint-Pandas==0.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+	"pylint==3.3.0",
+	"pytest==9.0.3",
+]
+
+[project.scripts]
+collector = "data_collector.cli:app"
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.in"] }
+optional-dependencies.test = { file = ["requirements-test.txt"] }
+
+[tool.setuptools_scm]
+root = ".."
+version_file = "src/data_collector/_version.py"
+

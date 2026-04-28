@@ -3,3 +3,9 @@ venv
 __pycache__
 *.log
 
+dist/
+*.egg-info/
+
+src/data_collector/_version.py
+
+resources/
