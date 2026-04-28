@@ -67,7 +67,7 @@ class RunAggregator:
 
         df_all = pd.concat(all_runs)
         df_all = df_all.sort_values('run', kind="stable")
-        self._logger.info("Raw entries: %d, after cut: %d", entries_count, len(df_all))
+        self._logger.debug("Raw entries: %d, after cut: %d", entries_count, len(df_all))
         return df_all
 
     def _cut_lead_tail(self, run) -> pd.DataFrame:
