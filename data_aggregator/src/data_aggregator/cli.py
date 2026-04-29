@@ -96,7 +96,7 @@ class Processor:
         parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
 
         parser_aggregate_power = subparsers_aggregate.add_parser('power', help="aggregate power of runs")
-        parser_aggregate_power.add_argument('power_data', type=Path, nargs="+", help="power usage file")
+        parser_aggregate_power.add_argument('power_data', type=Path, nargs="+", help="preprocessed files")
         parser_aggregate_power.set_defaults(func=self._aggregate_power)
 
         parser_calculate = subparsers.add_parser('calculate')
