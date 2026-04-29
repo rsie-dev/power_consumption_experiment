@@ -13,13 +13,18 @@ class PowerAggregator:
 
     def aggregate(self, power_datas: list[Path]):
         frame_io = FrameIO()
+        all_df = []
         for power_data in power_datas:
             df = frame_io.load(power_data)
             df = self._aggregate_power(df)
+            all_df.append(df)
 
             calculated_name = f"used_power_{power_data.stem[13:]}.csv"
             csv_file = self._resources_folder / calculated_name
             frame_io.persist(df, csv_file)
+        df_all = pd.concat(all_df)
+        csv_file = self._resources_folder / "used_power.csv"
+        frame_io.persist(df_all, csv_file)
 
     def _aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         result = (
