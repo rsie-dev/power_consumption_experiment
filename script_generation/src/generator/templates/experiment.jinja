@@ -3,10 +3,11 @@ from pathlib import Path
 
 from experiment.api import get_experiment_builder
 
-# Generate scripts for: {{ args.host }}
-# Using tools:          {{ tools | join(', ') }}
-# Using data sets:      {{ input_sets | join(', ') }}
-# Using strengths:      {{ strengths | join(', ') }}
+# Generate scripts for:  {{ args.host }}
+# Using tools:           {{ tools | join(', ') }}
+# Using data sets:       {{ input_sets | join(', ') }}
+# Using strengths:       {{ strengths | join(', ') }}
+# Using operation modes: {{ modes | join(', ') }}
 
 
 run_count = {{args.runs}}

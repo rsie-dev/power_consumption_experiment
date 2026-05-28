@@ -4,7 +4,7 @@ from pathlib import Path
 from generator.host_script_generator import HostScriptGenerator
 from generator.tools import Tool
 from generator.data_set import DataSet
-from generator.tool_config import CompressionStrength
+from generator.tool_config import CompressionStrength, OperationMode
 
 
 class ToolScriptGenerator(HostScriptGenerator):
@@ -13,20 +13,28 @@ class ToolScriptGenerator(HostScriptGenerator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], template, args) -> None:
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                       template, args) -> None:
         base_data = {
             "args": args,
             "input_sets": [ds.name for ds in data_sets],
             "strengths": [s.name for s in compression_strengths],
+            "modes": [mode.name for mode in modes],
         }
         for tool in tools:
-            data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress([tool],
-                                                                                                data_sets,
-                                                                                                compression_strengths)
-            data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress([tool], data_sets)
-            all_data_sets = data_sets_compress + data_sets_decompress
-            measurement_sets = measurement_sets_compress + measurement_sets_decompress
-
+            all_data_sets = []
+            measurement_sets = 0
+            if OperationMode.COMPRESS in modes:
+                data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress([tool],
+                                                                                                    data_sets,
+                                                                                                    compression_strengths)
+                all_data_sets += data_sets_compress
+                measurement_sets += measurement_sets_compress
+            if OperationMode.DECOMPRESS in modes:
+                data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress([tool],
+                                                                                                          data_sets)
+                all_data_sets += data_sets_decompress
+                measurement_sets += measurement_sets_decompress
             self._logger.info("Generating %d %s measurement sets", measurement_sets,
                               tool.name.lower())
             self._write_measurement_sets(base_data, template, args, all_data_sets, tool)

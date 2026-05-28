@@ -7,7 +7,7 @@ from ruamel.yaml import YAML
 from generator.generator_type import GeneratorType
 from generator.tools import Tool
 from generator.data_set import DataSet
-from generator.tool_config import CompressionStrength
+from generator.tool_config import CompressionStrength, OperationMode
 
 
 class Generator:
@@ -44,8 +44,9 @@ class Generator:
         tools = self._get_tools(args)
         data_sets = self._get_data_sets(args)
         compression_strengths = self._get_compression_strength(args)
+        modes = [OperationMode[mode.upper()] for mode in args.modes]
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, compression_strengths, args)
+        sg.generate(tools, data_sets, compression_strengths, modes, args)
 
     def _get_tools(self, args) -> list[Tool]:
         if args.no_tool:
@@ -81,6 +82,7 @@ class Generator:
         default_tools = [tool.name.lower() for tool in Tool]
         default_data_sets = [ds.name.lower() for ds in DataSet if ds != DataSet.XML]
         default_compression_strength = [cs.name.lower() for cs in CompressionStrength]
+        default_modes = [mode.name.lower() for mode in OperationMode]
 
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
@@ -120,6 +122,10 @@ class Generator:
         compression_strength_group .add_argument('--no-compression-strength', nargs="*",
                                                  choices=[cs.name.lower() for cs in CompressionStrength],
                                                  help="compression strength sets to skip")
+        parser.add_argument('--modes', nargs="*",
+                            choices=default_modes,
+                            default=default_modes,
+                            help="operation modes to use" + default)
 
         args = parser.parse_args()
 

@@ -16,13 +16,19 @@ class HostScriptGenerator(ScriptGenerator):
         return "experiment.jinja"
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], template, args) -> None:
-        data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets,
-                                                                                            compression_strengths)
-        data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
-
-        all_data_sets = data_sets_compress + data_sets_decompress
-        measurement_sets = measurement_sets_compress + measurement_sets_decompress
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                       template, args) -> None:
+        all_data_sets = []
+        measurement_sets = 0
+        if OperationMode.COMPRESS in modes:
+            data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets,
+                                                                                                compression_strengths)
+            all_data_sets += data_sets_compress
+            measurement_sets += measurement_sets_compress
+        if OperationMode.DECOMPRESS in modes:
+            data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
+            all_data_sets += data_sets_decompress
+            measurement_sets += measurement_sets_decompress
         self._logger.info("Generating %d measurement sets", measurement_sets)
 
         data = {
@@ -30,6 +36,7 @@ class HostScriptGenerator(ScriptGenerator):
             "tools": [tool.name for tool in tools],
             "input_sets": [ds.name for ds in data_sets],
             "strengths": [s.name for s in compression_strengths],
+            "modes": [mode.name for mode in modes],
             "data_sets": all_data_sets,
         }
 

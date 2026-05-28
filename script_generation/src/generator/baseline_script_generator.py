@@ -4,7 +4,7 @@ from pathlib import Path
 from generator.script_generator import ScriptGenerator
 from generator.tools import Tool
 from generator.data_set import DataSet
-from generator.tool_config import CompressionStrength
+from generator.tool_config import CompressionStrength, OperationMode
 
 
 class BaselineScriptGenerator(ScriptGenerator):
@@ -16,7 +16,8 @@ class BaselineScriptGenerator(ScriptGenerator):
         return "baseline.jinja"
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], template, args) -> None:
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                       template, args) -> None:
         data = {
             "args": args,
             "sleep_time": 15,
