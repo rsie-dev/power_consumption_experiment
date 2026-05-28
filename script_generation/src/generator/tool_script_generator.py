@@ -13,7 +13,12 @@ class ToolScriptGenerator(HostScriptGenerator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                        compression_strengths: list[CompressionStrength], template, args) -> None:
+                       compression_strengths: list[CompressionStrength], template, args) -> None:
+        base_data = {
+            "args": args,
+            "input_sets": [ds.name for ds in data_sets],
+            "strengths": [s.name for s in compression_strengths],
+        }
         for tool in tools:
             data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress([tool],
                                                                                                 data_sets,
@@ -24,12 +29,12 @@ class ToolScriptGenerator(HostScriptGenerator):
 
             self._logger.info("Generating %d %s measurement sets", measurement_sets,
                               tool.name.lower())
-            self._write_measurement_sets(template, args, all_data_sets, tool)
+            self._write_measurement_sets(base_data, template, args, all_data_sets, tool)
 
-    def _write_measurement_sets(self, template, args, data_sets, tool: Tool):
-        data = {
-            "args": args,
-            "data_sets": data_sets,
+    def _write_measurement_sets(self, base_data, template, args, all_data_sets, tool: Tool):
+        data = base_data | {
+            "tools": [tool.name],
+            "data_sets": all_data_sets,
         }
         host_script = self._script_folder / f"{args.host}_{tool.name.lower()}.py"
         self._generate_script(host_script, template, data)

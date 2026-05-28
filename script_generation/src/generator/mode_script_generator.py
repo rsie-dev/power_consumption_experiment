@@ -14,21 +14,26 @@ class ModeScriptGenerator(HostScriptGenerator):
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength], template, args) -> None:
+        base_data = {
+            "args": args,
+            "tools": [tool.name for tool in tools],
+            "input_sets": [ds.name for ds in data_sets],
+            "strengths": [s.name for s in compression_strengths],
+        }
         data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools,
                                                                                             data_sets,
                                                                                             compression_strengths)
         self._logger.info("Generating %d %s measurement sets", measurement_sets_compress,
                           OperationMode.COMPRESS.name.lower())
-        self._write_measurement_sets(template, args, data_sets_compress, OperationMode.COMPRESS)
+        self._write_measurement_sets(base_data, template, args, data_sets_compress, OperationMode.COMPRESS)
 
         data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
         self._logger.info("Generating %d %s measurement sets", measurement_sets_decompress,
                           OperationMode.DECOMPRESS.name.lower())
-        self._write_measurement_sets(template, args, data_sets_decompress, OperationMode.DECOMPRESS)
+        self._write_measurement_sets(base_data, template, args, data_sets_decompress, OperationMode.DECOMPRESS)
 
-    def _write_measurement_sets(self, template, args, data_sets, mode: OperationMode):
-        data = {
-            "args": args,
+    def _write_measurement_sets(self, base_data, template, args, data_sets, mode: OperationMode):
+        data = base_data | {
             "data_sets": data_sets,
         }
         host_script = self._script_folder / f"{args.host}_{mode.name.lower()}.py"

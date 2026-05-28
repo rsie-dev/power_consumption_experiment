@@ -27,6 +27,9 @@ class HostScriptGenerator(ScriptGenerator):
 
         data = {
             "args": args,
+            "tools": [tool.name for tool in tools],
+            "input_sets": [ds.name for ds in data_sets],
+            "strengths": [s.name for s in compression_strengths],
             "data_sets": all_data_sets,
         }
 

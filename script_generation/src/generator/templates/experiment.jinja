@@ -3,6 +3,12 @@ from pathlib import Path
 
 from experiment.api import get_experiment_builder
 
+# Generate scripts for: {{ args.host }}
+# Using tools:          {{ tools | join(', ') }}
+# Using data sets:      {{ input_sets | join(', ') }}
+# Using strengths:      {{ strengths | join(', ') }}
+
+
 run_count = {{args.runs}}
 {% if args.head_delay %}
 head_delay = {{args.head_delay}}
