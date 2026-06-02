@@ -60,7 +60,7 @@ No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,ampere·second·volt,sec
 raspi5,bzip2,sensor,compress,default,single,1,0.21341973333599978,13.96,1.0"""
     df_expected = _as_dataframe(data, times=False)
 
-    df_actual = aggregator._aggregate_power(single_run_data_frame)
+    df_actual = aggregator.aggregate_power(single_run_data_frame)
 
     df_expected["power"] = df_expected["power"].astype("float")
     df_actual["power"] = df_actual["power"].astype("float")

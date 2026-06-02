@@ -3,9 +3,11 @@ import argparse
 from pathlib import Path
 
 from ruamel.yaml import YAML
+import pandas as pd
 
 from .aggregator import RunAggregator, PowerAggregator
 from .calculate import AverageCalculator
+from .util import FrameIO
 
 
 class Processor:
@@ -35,6 +37,24 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
+    def _collect(self, args):
+        self._validate_input_folder(args.raw_data)
+        host_folders = self._collect_host_folder(args.raw_data)
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        run_aggregator = RunAggregator(resources_folder)
+        power_aggregator = PowerAggregator(resources_folder)
+        all_df = []
+        for host_folder in host_folders:
+            for _, df in run_aggregator.collect_runs(host_folder.stem, host_folder):
+                df = power_aggregator.aggregate_power(df)
+                all_df.append(df)
+
+        frame_io = FrameIO()
+        df_all = pd.concat(all_df)
+        csv_file = resources_folder / f"used_power_{args.raw_data.stem}.csv"
+        frame_io.persist(df_all, csv_file)
+
     def _aggregate_runs(self, args):
         self._validate_input_folder(args.raw_data)
         host_folders = self._collect_host_folder(args.raw_data)
@@ -61,7 +81,6 @@ class Processor:
         if not script.exists():
             raise AssertionError("Missing experiment file in folder: %s" % script.name)
 
-
     def _aggregate_power(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
@@ -84,6 +103,11 @@ class Processor:
 
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
+
+        parser_collect = subparsers.add_parser('collect', help="aggregate runs and power in one step")
+        parser_collect.add_argument('-d', '--raw-data', type=Path, required=True,
+                                    help="raw data measurement folder")
+        parser_collect.set_defaults(func=self._collect)
 
         parser_aggregate = subparsers.add_parser('aggregate')
         subparsers_aggregate = parser_aggregate.add_subparsers(required=True, dest="subcommand",

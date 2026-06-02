@@ -17,6 +17,16 @@ class RunAggregator:
         self._resources_folder = resources_folder
 
     def aggregate(self, host: str, host_folder: Path):
+        frame_io = FrameIO()
+        for measurement_info, df in self.collect_runs(host, host_folder):
+            preprocessed_name = self._build_preprocessed_path(measurement_info)
+            csv_file = self._resources_folder / preprocessed_name
+            frame_io.persist(df, csv_file)
+
+    def collect_runs(self, host: str, host_folder: Path):
+        # ToDo:
+        #log run duration, real time, measurement count per run and after clean
+
         self._logger.info("Aggregate measurements of: %s", host)
         measurement_folders = list(host_folder.iterdir())
         self._logger.info("Found %d measurements", len(measurement_folders))
@@ -35,11 +45,7 @@ class RunAggregator:
             df.insert(loc=3, column='mode', value=measurement_info.tool_config.mode.name.lower())
             df.insert(loc=4, column='strength', value=measurement_info.tool_config.strength.name.lower())
             df.insert(loc=5, column='threading', value=measurement_info.tool_config.threading.name.lower())
-
-            preprocessed_name = self._build_preprocessed_path(measurement_info)
-            csv_file = self._resources_folder / preprocessed_name
-            frame_io = FrameIO()
-            frame_io.persist(df, csv_file)
+            yield measurement_info, df
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         tokens = tags.split("_")

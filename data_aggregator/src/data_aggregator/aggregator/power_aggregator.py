@@ -16,7 +16,7 @@ class PowerAggregator:
         all_df = []
         for power_data in power_datas:
             df = frame_io.load(power_data)
-            df = self._aggregate_power(df)
+            df = self.aggregate_power(df)
             all_df.append(df)
 
             calculated_name = f"used_power_{power_data.stem[13:]}.csv"
@@ -26,7 +26,7 @@ class PowerAggregator:
         csv_file = self._resources_folder / "used_power.csv"
         frame_io.persist(df_all, csv_file)
 
-    def _aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
+    def aggregate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         result = (
             df.groupby("run")
             .agg(
