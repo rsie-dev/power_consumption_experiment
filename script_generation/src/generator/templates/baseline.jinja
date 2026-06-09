@@ -14,6 +14,9 @@ experiment = (get_experiment_builder()
 {% if not args.with_timers %}
               .disable_timers()
 {% endif %}
+{% if not args.with_caches %}
+              .with_clear_cache()
+{% endif %}
 
               .measure_runs(run_count, "baseline")
                 .execute_with("/usr/bin/sleep {{sleep_time}}s")
