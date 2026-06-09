@@ -49,6 +49,9 @@ experiment = (get_experiment_builder()
 {% if args.mon_temp %}
               .control_temperature({{args.mon_temp}})
 {% endif %}
+{% if not args.with_timers %}
+              .disable_timers()
+{% endif %}
 
 {% for data_set in data_sets %}
               {% for tool in data_set.tools %}

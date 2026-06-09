@@ -11,6 +11,9 @@ experiment = (get_experiment_builder()
 {% if args.mon_temp %}
               .control_temperature({{args.mon_temp}})
 {% endif %}
+{% if not args.with_timers %}
+              .disable_timers()
+{% endif %}
 
               .measure_runs(run_count, "baseline")
                 .execute_with("/usr/bin/sleep {{sleep_time}}s")

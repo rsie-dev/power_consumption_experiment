@@ -91,6 +91,7 @@ class Generator:
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
         parser.add_argument('--warmup', type=int, default=120, help="warmup task time in S, 0 to disable" + default)
         parser.add_argument('--mon-temp', type=float, help="activate temperature monitoring with max MON_TEMP delta")
+        parser.add_argument('--with-timers', action="store_true", help="Do not disable systemd timers during measurement")
         parser.add_argument('--data-folder', default=Path("data"), help="data folder" + default)
         parser.add_argument('--host', required=True, help="DUT host name")
         parser.add_argument('--ip', required=True, help="DUT ip address")
