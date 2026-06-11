@@ -16,7 +16,8 @@ class DataGenScriptGenerator(ScriptGenerator):
         return "data_gen.jinja"
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], template, args) -> None:
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                       template, args) -> None:
         data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets)
 
         measurement_sets = measurement_sets_decompress
