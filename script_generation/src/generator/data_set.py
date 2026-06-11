@@ -6,5 +6,6 @@ class DataSet(Enum):
     TEXT = Path("dickens")
     XML = Path("xml")
     XML2 = Path("xml2")
+    WEBSTER = Path("webster")
     IMAGE = Path("x-ray")
     SENSOR = Path("data.txt")
