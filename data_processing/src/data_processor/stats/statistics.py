@@ -34,7 +34,7 @@ class Statistics:
 
         stats_power = self._get_stats(values_power)
         stats_times = self._get_stats(values_times)
-        stats_sizes = [humanize.naturalsize(s) for s in self._get_stats(values_size)]
+        stats_sizes = [humanize.naturalsize(s, binary=True) for s in self._get_stats(values_size)]
 
         table_entries = []
         table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
