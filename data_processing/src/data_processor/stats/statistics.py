@@ -29,19 +29,22 @@ class Statistics:
             values_size = group_df["size"].pint.magnitude
 
             table_entries = []
-            table_entries.append(self._get_stats("power", unit_power, values_power))
-            table_entries.append(self._get_stats("times", unit_times, values_times))
-            size_entries = self._get_stats("size", unit_size, values_size)
-            entries = list(size_entries[:2]) + [humanize.naturalsize(s) for s in size_entries[2:]]
-            table_entries.append(entries)
+            stats_power = self._get_stats("power", unit_power, values_power)[2:]
+            stats_times = self._get_stats("times", unit_times, values_times)[2:]
+            stats_sizes = self._get_stats("size", unit_size, values_size)[2:]
+            stats_sizes = [humanize.naturalsize(s) for s in stats_sizes]
 
-            headers = ["item", "unit", "min", "max", "mean", "std"]
+            table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
+            table_entries.append(("max", stats_power[1], stats_times[1], stats_sizes[1]))
+            table_entries.append(("mean", stats_power[2], stats_times[2], stats_sizes[2]))
+            table_entries.append(("std", stats_power[3], stats_times[3], stats_sizes[3]))
+
+            headers = ["stat", "power (%s)" % unit_power, "times (%s)" % unit_times, "size (%s)" % unit_size]
             table_str = tabulate.tabulate(table_entries,
                                           headers=headers,
                                           tablefmt="simple"
                                           )
             print(f"Group: {"_".join(group_name)}")
             print(table_str)
-
     def _get_stats(self, name: str, unit: str, values):
         return name, unit, min(values), max(values), mean(values), stdev(values)
