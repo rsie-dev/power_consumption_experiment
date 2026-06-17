@@ -21,29 +21,34 @@ class Statistics:
     def _list_statistics(self, df):
         group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
         for group_name, group_df in df.groupby(group_cols):
-            unit_power = str(group_df["power"].dtype.units)
-            values_power = group_df["power"].pint.magnitude
-            unit_times = str(group_df["real"].dtype.units)
-            values_times = group_df["real"].pint.magnitude
-            unit_size = str(group_df["size"].dtype.units)
-            values_size = group_df["size"].pint.magnitude
+            group = "_".join(group_name)
+            self._process_group(group, group_df)
 
-            table_entries = []
-            stats_power = self._get_stats(values_power)
-            stats_times = self._get_stats(values_times)
-            stats_sizes = [humanize.naturalsize(s) for s in self._get_stats(values_size)]
+    def _process_group(self, group: str, df):
+        unit_power = str(df["power"].dtype.units)
+        values_power = df["power"].pint.magnitude
+        unit_times = str(df["real"].dtype.units)
+        values_times = df["real"].pint.magnitude
+        unit_size = str(df["size"].dtype.units)
+        values_size = df["size"].pint.magnitude
 
-            table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
-            table_entries.append(("max", stats_power[1], stats_times[1], stats_sizes[1]))
-            table_entries.append(("mean", stats_power[2], stats_times[2], stats_sizes[2]))
-            table_entries.append(("std", stats_power[3], stats_times[3], stats_sizes[3]))
+        stats_power = self._get_stats(values_power)
+        stats_times = self._get_stats(values_times)
+        stats_sizes = [humanize.naturalsize(s) for s in self._get_stats(values_size)]
 
-            headers = ["stat", "power (%s)" % unit_power, "times (%s)" % unit_times, "size (%s)" % unit_size]
-            table_str = tabulate.tabulate(table_entries,
-                                          headers=headers,
-                                          tablefmt="simple"
-                                          )
-            print(f"Group: {"_".join(group_name)}")
-            print(table_str)
+        table_entries = []
+        table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
+        table_entries.append(("max", stats_power[1], stats_times[1], stats_sizes[1]))
+        table_entries.append(("mean", stats_power[2], stats_times[2], stats_sizes[2]))
+        table_entries.append(("std", stats_power[3], stats_times[3], stats_sizes[3]))
+
+        headers = ["stat", "power (%s)" % unit_power, "times (%s)" % unit_times, "size (%s)" % unit_size]
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple"
+                                      )
+        print(f"Group: {group}")
+        print(table_str)
+
     def _get_stats(self, values):
         return min(values), max(values), mean(values), stdev(values)
