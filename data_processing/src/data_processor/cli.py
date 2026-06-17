@@ -5,6 +5,8 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
+from .stats import Statistics
+
 
 class Processor:
     def __init__(self):
@@ -42,6 +44,10 @@ class Processor:
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
 
+        parser_stats = subparsers.add_parser('stats', help="calculate basic statistics")
+        parser_stats.add_argument('used_power_file', type=Path)
+        parser_stats.set_defaults(func=self._stats)
+
         parser_multimeter = subparsers.add_parser('multimeter')
         subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
                                                                 title='multimeter subcommands',
@@ -68,6 +74,9 @@ class Processor:
         validate = MultimeterValidate()
         validate.validate()
 
+    def _stats(self, args):
+        statistics = Statistics()
+        statistics.process(args.used_power_file)
 
 def app():
     processor = Processor()
