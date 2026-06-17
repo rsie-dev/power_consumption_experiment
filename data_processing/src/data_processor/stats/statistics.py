@@ -29,10 +29,9 @@ class Statistics:
             values_size = group_df["size"].pint.magnitude
 
             table_entries = []
-            stats_power = self._get_stats("power", unit_power, values_power)[2:]
-            stats_times = self._get_stats("times", unit_times, values_times)[2:]
-            stats_sizes = self._get_stats("size", unit_size, values_size)[2:]
-            stats_sizes = [humanize.naturalsize(s) for s in stats_sizes]
+            stats_power = self._get_stats(values_power)
+            stats_times = self._get_stats(values_times)
+            stats_sizes = [humanize.naturalsize(s) for s in self._get_stats(values_size)]
 
             table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
             table_entries.append(("max", stats_power[1], stats_times[1], stats_sizes[1]))
@@ -46,5 +45,5 @@ class Statistics:
                                           )
             print(f"Group: {"_".join(group_name)}")
             print(table_str)
-    def _get_stats(self, name: str, unit: str, values):
-        return name, unit, min(values), max(values), mean(values), stdev(values)
+    def _get_stats(self, values):
+        return min(values), max(values), mean(values), stdev(values)
