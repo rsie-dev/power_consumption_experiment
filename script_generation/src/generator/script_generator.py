@@ -79,6 +79,8 @@ class ScriptGenerator:
         tags.append(config.strength.name.lower())
         if tool.value.threading == Threading.MULTI:
             tags.append(config.threading.name.lower())
+        else:
+            tags.append(Threading.SINGLE.name.lower())
         return tags
 
     def _generate_script(self, script_file: Path, template, data):
