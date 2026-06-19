@@ -31,6 +31,8 @@ class PowerAggregator:
             df.groupby("run")
             .agg(
                 power=("power", "sum"),
+                power_duration=("power_duration", "sum"),
+                #energy_used=("energy_used", "sum"),
                 real=("real", "first"),
                 size=("size", "first"),
             )
