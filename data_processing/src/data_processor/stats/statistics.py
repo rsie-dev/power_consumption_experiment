@@ -34,13 +34,21 @@ class Statistics:
 
         stats_power = self._get_stats(values_power)
         stats_times = self._get_stats(values_times)
-        stats_sizes = [humanize.naturalsize(s, binary=True) for s in self._get_stats(values_size)]
+        stats_sizes = {}
+        for k,v in self._get_stats(values_size).items():
+            if k == "stdev":
+                if v == "n/a":
+                    stats_sizes[k] = v
+                else:
+                    stats_sizes[k] = humanize.naturalsize(v, binary=True)
+            else:
+                stats_sizes[k] = humanize.naturalsize(v, binary=True)
 
         table_entries = []
-        table_entries.append(("min", stats_power[0], stats_times[0], stats_sizes[0]))
-        table_entries.append(("max", stats_power[1], stats_times[1], stats_sizes[1]))
-        table_entries.append(("mean", stats_power[2], stats_times[2], stats_sizes[2]))
-        table_entries.append(("std", stats_power[3], stats_times[3], stats_sizes[3]))
+        table_entries.append(("min", stats_power["min"], stats_times["min"], stats_sizes["min"]))
+        table_entries.append(("max", stats_power["max"], stats_times["max"], stats_sizes["max"]))
+        table_entries.append(("mean", stats_power["mean"], stats_times["mean"], stats_sizes["mean"]))
+        table_entries.append(("std", stats_power["stdev"], stats_times["stdev"], stats_sizes["stdev"]))
 
         headers = ["stat", "power (%s)" % unit_power, "times (%s)" % unit_times, "size (%s)" % unit_size]
         table_str = tabulate.tabulate(table_entries,
@@ -51,4 +59,13 @@ class Statistics:
         print(table_str)
 
     def _get_stats(self, values):
-        return min(values), max(values), mean(values), stdev(values)
+        result = {
+            "min": min(values),
+            "max": max(values),
+            "mean": mean(values),
+        }
+        if len(values) >= 2:
+            result["stdev"] = stdev(values)
+        else:
+            result["stdev"] = "n/a"
+        return result
