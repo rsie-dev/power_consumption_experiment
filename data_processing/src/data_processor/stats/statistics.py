@@ -17,19 +17,15 @@ class Statistics:
         frameio = FrameIO()
         self._logger.debug("loading %s", used_power_file)
         df = frameio.load(used_power_file)
-        self._list_statistics(df)
+        groups = self._collect_statistics(df)
+        table_entries = []
+        for group in groups:
+            table_entries.extend(group)
+            table_entries.append(SEPARATING_LINE)
 
-    def _list_statistics(self, df):
-        group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
         unit_energy = str(df["energy"].dtype.units)
         unit_times = str(df["real"].dtype.units)
         unit_size = str(df["size"].dtype.units)
-        table_entries = []
-        for _, group_df in df.groupby(group_cols):
-            entries = self._process_group(group_df)
-            table_entries.extend(entries)
-            table_entries.append(SEPARATING_LINE)
-
         headers = ["stat", "host", "tool", "dataset", "mode", "strength", "threading",
                    "energy (%s)" % unit_energy, "times (%s)" % unit_times, "size (%s)" % unit_size]
         table_str = tabulate.tabulate(table_entries,
@@ -37,6 +33,14 @@ class Statistics:
                                       tablefmt="simple"
                                       )
         print(table_str)
+
+    def _collect_statistics(self, df) -> list:
+        group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
+        groups = []
+        for _, group_df in df.groupby(group_cols):
+            entries = self._process_group(group_df)
+            groups.append(entries)
+        return groups
 
     def _process_group(self, df) -> list:
         values_energy = df["energy"].pint.magnitude
