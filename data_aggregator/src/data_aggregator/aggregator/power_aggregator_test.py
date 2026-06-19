@@ -55,17 +55,14 @@ def aggregator():
 
 def test_aggregate_power_single(aggregator, single_run_data_frame):
     data = """
-host,tool,dataset,mode,strength,threading,run,power,power_duration,energy,real,size
+host,tool,dataset,mode,strength,threading,run,power,duration,energy,real,size
 No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,ampere·second·volt,second,joules,second,byte
 raspi5,bzip2,sensor,compress,default,single,1,23.8879569461,0.07,0.21341973333599978,13.96,1.0"""
     df_expected = _as_dataframe(data, times=False)
 
     df_actual = aggregator.aggregate_power(single_run_data_frame)
 
-    df_expected["power"] = df_expected["power"].astype("float")
-    df_expected["power_duration"] = df_expected["power_duration"].astype("float")
-    df_expected["energy"] = df_expected["energy"].astype("float")
-    df_actual["power"] = df_actual["power"].astype("float")
-    df_actual["power_duration"] = df_actual["power_duration"].astype("float")
-    df_actual["energy"] = df_actual["energy"].astype("float")
+    for key in ["power", "duration", "energy"]:
+        df_expected[key] = df_expected[key].astype("float")
+        df_actual[key] = df_actual[key].astype("float")
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
