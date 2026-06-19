@@ -57,7 +57,7 @@ class Processor:
         frame_io = FrameIO()
         df_all = pd.concat(all_df)
         description = "_".join([str(raw.stem) for raw in args.raw_data])
-        csv_file = resources_folder / f"used_power_{description}.csv"
+        csv_file = resources_folder / f"used_energy_{description}.csv"
         frame_io.persist(df_all, csv_file)
 
     def _aggregate_runs(self, args):
