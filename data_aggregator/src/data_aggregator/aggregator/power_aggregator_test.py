@@ -15,7 +15,7 @@ from .power_aggregator import PowerAggregator
 def run_data_single():
     # pylint: disable=line-too-long
     data = """
-host,tool,dataset,mode,strength,threading,run,timestamp,voltage,current,energy,real,size,power_duration,power
+host,tool,dataset,mode,strength,threading,run,timestamp,voltage,current,power,real,size,power_duration,energy
 No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,volt,ampere,ampere·volt,second,byte,second,ampere·second·volt
 raspi5,bzip2,sensor,compress,default,single,1,2026-04-07 07:40:28.271,5.12425,0.49685,2.5459836125,13.96,1.0,,
 raspi5,bzip2,sensor,compress,default,single,1,2026-04-07 07:40:28.281,5.12401,0.48916,2.5064607316,13.96,1.0,0.01,0.025064607316
@@ -57,7 +57,8 @@ def test_aggregate_power_single(aggregator, single_run_data_frame):
     data = """
 host,tool,dataset,mode,strength,threading,run,power,power_duration,real,size
 No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,ampere·second·volt,second,second,byte
-raspi5,bzip2,sensor,compress,default,single,1,0.21341973333599978,0.07,13.96,1.0"""
+raspi5,bzip2,sensor,compress,default,single,1,23.8879569461,0.07,13.96,1.0"""
+    # energy: 0.21341973333599978
     df_expected = _as_dataframe(data, times=False)
 
     df_actual = aggregator.aggregate_power(single_run_data_frame)
