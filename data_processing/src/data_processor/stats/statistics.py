@@ -32,13 +32,13 @@ class Statistics:
         unit_size = str(df["size"].dtype.units)
         values_size = df["size"].pint.magnitude
 
-        stats_power = self._get_stats(values_power)
-        stats_times = self._get_stats(values_times)
+        stats_power = self._post_process_stats(self._get_stats(values_power))
+        stats_times = self._post_process_stats(self._get_stats(values_times))
         stats_sizes = {}
-        for k,v in self._get_stats(values_size).items():
+        for k, v in self._get_stats(values_size).items():
             if k == "stdev":
                 if v == "n/a":
-                    stats_sizes[k] = v
+                    stats_sizes[k] = None
                 else:
                     stats_sizes[k] = humanize.naturalsize(v, binary=True)
             else:
@@ -57,6 +57,15 @@ class Statistics:
                                       )
         print(f"Group: {group}")
         print(table_str)
+
+    def _post_process_stats(self, stats: dict) -> dict:
+        processed_stats = {}
+        for k, v in stats.items():
+            if v == "n/a":
+                processed_stats[k] = None
+            else:
+                processed_stats[k] = v
+        return processed_stats
 
     def _get_stats(self, values):
         result = {
