@@ -38,8 +38,12 @@ class Processor:
             return yaml.load(f)
 
     def _collect(self, args):
-        self._validate_input_folder(args.raw_data)
-        host_folders = self._collect_host_folder(args.raw_data)
+        host_folders = []
+        for raw in args.raw_data:
+            self._logger.debug("look for host folders in: %s", raw)
+            self._validate_input_folder(raw)
+            folders = self._collect_host_folder(raw)
+            host_folders.extend(folders)
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         run_aggregator = RunAggregator(resources_folder)
@@ -52,7 +56,8 @@ class Processor:
 
         frame_io = FrameIO()
         df_all = pd.concat(all_df)
-        csv_file = resources_folder / f"used_power_{args.raw_data.stem}.csv"
+        description = "_".join([str(raw.stem) for raw in args.raw_data])
+        csv_file = resources_folder / f"used_power_{description}.csv"
         frame_io.persist(df_all, csv_file)
 
     def _aggregate_runs(self, args):
@@ -76,10 +81,10 @@ class Processor:
     def _validate_input_folder(self, folder: Path) -> None:
         log = folder / "experiment.log"
         if not log.exists():
-            raise AssertionError("Not found in folder: %s" % "experiment.log")
+            raise AssertionError("%s not found in: %s" % ("experiment.log", folder))
         script = folder / f"{folder.stem}.py"
         if not script.exists():
-            raise AssertionError("Missing experiment file in folder: %s" % script.name)
+            raise AssertionError("Missing experiment file %s in: %s" % (script.name, folder))
 
     def _aggregate_power(self, args):
         resources_folder = args.resources
@@ -105,7 +110,7 @@ class Processor:
                                            description='valid subcommands', help='sub-command help')
 
         parser_collect = subparsers.add_parser('collect', help="aggregate runs and power in one step")
-        parser_collect.add_argument('-d', '--raw-data', type=Path, required=True,
+        parser_collect.add_argument('-d', '--raw-data', type=Path, nargs='+',
                                     help="raw data measurement folder")
         parser_collect.set_defaults(func=self._collect)
 
