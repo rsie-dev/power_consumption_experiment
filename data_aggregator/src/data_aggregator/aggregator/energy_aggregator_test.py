@@ -5,7 +5,7 @@ import pytest
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from .power_aggregator import PowerAggregator
+from .energy_aggregator import EnergyAggregator
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -50,7 +50,7 @@ def _as_dataframe(data: str, times=True) -> pd.DataFrame:
 
 @pytest.fixture
 def aggregator():
-    return PowerAggregator(Path())
+    return EnergyAggregator(Path())
 
 
 def test_aggregate_power_single(aggregator, single_run_data_frame):
@@ -60,7 +60,7 @@ No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,ampere·second·volt,sec
 raspi5,bzip2,sensor,compress,default,single,1,23.8879569461,0.07,0.21341973333599978,13.96,1.0"""
     df_expected = _as_dataframe(data, times=False)
 
-    df_actual = aggregator.aggregate_power(single_run_data_frame)
+    df_actual = aggregator.aggregate_energy(single_run_data_frame)
 
     for key in ["power", "duration", "energy"]:
         df_expected[key] = df_expected[key].astype("float")

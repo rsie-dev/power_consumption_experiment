@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 import pandas as pd
 
-from .aggregator import RunAggregator, PowerAggregator
+from .aggregator import RunAggregator, EnergyAggregator
 from .calculate import AverageCalculator
 from .util import FrameIO
 
@@ -47,11 +47,11 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         run_aggregator = RunAggregator(resources_folder)
-        power_aggregator = PowerAggregator(resources_folder)
+        energy_aggregator = EnergyAggregator(resources_folder)
         all_df = []
         for host_folder in host_folders:
             for _, df in run_aggregator.collect_runs(host_folder.stem, host_folder):
-                df = power_aggregator.aggregate_power(df)
+                df = energy_aggregator.aggregate_energy(df)
                 all_df.append(df)
 
         frame_io = FrameIO()
@@ -89,7 +89,7 @@ class Processor:
     def _aggregate_power(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        aggregator = PowerAggregator(resources_folder)
+        aggregator = EnergyAggregator(resources_folder)
         aggregator.aggregate(args.power_data)
 
     def _calculate_average(self, args):

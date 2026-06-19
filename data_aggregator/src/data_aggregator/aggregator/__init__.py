@@ -1,8 +1,8 @@
 from .run_aggregator import RunAggregator
-from .power_aggregator import PowerAggregator
+from .energy_aggregator import EnergyAggregator
 
 
 __all__ = [
     "RunAggregator",
-    "PowerAggregator",
+    "EnergyAggregator",
 ]
