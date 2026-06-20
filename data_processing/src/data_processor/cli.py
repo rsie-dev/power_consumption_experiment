@@ -46,6 +46,8 @@ class Processor:
 
         parser_stats = subparsers.add_parser('stats', help="calculate basic statistics")
         parser_stats.add_argument('used_power_file', type=Path)
+        parser_stats.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                                  help="resource output folder")
         parser_stats.set_defaults(func=self._stats)
 
         parser_multimeter = subparsers.add_parser('multimeter')
@@ -75,7 +77,9 @@ class Processor:
         validate.validate()
 
     def _stats(self, args):
-        statistics = Statistics()
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        statistics = Statistics(resources_folder)
         statistics.process(args.used_power_file)
 
 def app():

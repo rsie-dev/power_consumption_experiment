@@ -22,3 +22,13 @@ class FrameIO:
                 df[col] = df[col].astype(f"pint[{unit}]")
 
         return df
+
+    def persist(self, df: pd.DataFrame, target_path: Path) -> None:
+        self._logger.info("Generate: %s", target_path)
+
+        if 'timestamp' in df.columns:
+            df["timestamp"] = df["timestamp"].apply(lambda x: x.isoformat(timespec="milliseconds"))
+
+        df = df.pint.dequantify()
+
+        df.to_csv(target_path, encoding='UTF_8', index=False, header=True)
