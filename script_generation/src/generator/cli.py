@@ -79,7 +79,7 @@ class Generator:
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
 
-        default_tools = [tool.name.lower() for tool in Tool]
+        default_tools = [tool.name.lower() for tool in Tool if tool not in [Tool.BROTLI]]
         default_data_sets = [ds.name.lower() for ds in DataSet if ds not in [DataSet.XML, DataSet.XML2]]
         default_compression_strength = [cs.name.lower() for cs in CompressionStrength]
         default_modes = [mode.name.lower() for mode in OperationMode]
