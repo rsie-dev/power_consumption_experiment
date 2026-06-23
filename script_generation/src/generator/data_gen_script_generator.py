@@ -18,7 +18,8 @@ class DataGenScriptGenerator(ScriptGenerator):
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength], modes: list[OperationMode],
                        template, args) -> None:
-        data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets)
+        data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets,
+                                                                                       compression_strengths)
 
         measurement_sets = measurement_sets_decompress
         self._logger.info("Generating %d data sets", measurement_sets)
@@ -32,7 +33,8 @@ class DataGenScriptGenerator(ScriptGenerator):
         host_script = self._script_folder / f"{args.host}_data_gen.py"
         self._generate_script(host_script, template, data)
 
-    def _get_data_sets(self, tools: list[Tool], data_sets: list[DataSet]):
+    def _get_data_sets(self, tools: list[Tool], data_sets: list[DataSet],
+                       compression_strengths: list[CompressionStrength]):
         data_sets_in = []
         for data_set in data_sets:
             data_set_name = f"{data_set.name.lower()}"
@@ -46,15 +48,15 @@ class DataGenScriptGenerator(ScriptGenerator):
         data_sets_out = []
         for tool in tools:
             for data_set in data_sets:
-                entries, count = self._build_data_set_entry(data_set, tool)
+                entries, count = self._build_data_set_entry(data_set, tool, compression_strengths)
                 data_sets_out.extend(entries)
                 measurement_sets += count
         return data_sets_in, data_sets_out, measurement_sets
 
-    def _build_data_set_entry(self, data_set: DataSet, tool: Tool):
+    def _build_data_set_entry(self, data_set: DataSet, tool: Tool, compression_strengths: list[CompressionStrength]):
         entries = []
 
-        tool_configs = self._build_tool_configs(tool)
+        tool_configs = self._build_tool_configs(tool, compression_strengths)
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
             decompress_file = data_set.value
@@ -79,14 +81,14 @@ class DataGenScriptGenerator(ScriptGenerator):
 
         return entries, len(entries)
 
-    def _build_tool_configs(self, tool: Tool):
+    def _build_tool_configs(self, tool: Tool, compression_strengths: list[CompressionStrength]):
         tool_configs = []
         if tool.value.threading == Threading.SINGLE:
             threadings = [Threading.SINGLE]
         else:
             threadings = list(Threading)
         for threading in threadings:
-            tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=CompressionStrength.DEFAULT,
-                                     threading=threading)
-            tool_configs.append(tool_config)
+            for strength in compression_strengths:
+                tool_config = ToolConfig(mode=OperationMode.COMPRESS, strength=strength, threading=threading)
+                tool_configs.append(tool_config)
         return tool_configs
