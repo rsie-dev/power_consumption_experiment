@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
+from .calc import CompressionRatio
 
 
 class Processor:
@@ -44,11 +45,21 @@ class Processor:
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
 
-        parser_stats = subparsers.add_parser('stats', help="calculate basic statistics")
+        parser_stats = subparsers.add_parser('stats', help="basic statistics")
         parser_stats.add_argument('used_power_file', type=Path)
         parser_stats.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                   help="resource output folder")
         parser_stats.set_defaults(func=self._stats)
+
+        parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
+        subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                                     description='valid subcommands', help='sub-command help')
+
+        parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio")
+        parser_calc_cr.add_argument('used_power_file', type=Path)
+        parser_calc_cr.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                                    help="resource output folder")
+        parser_calc_cr.set_defaults(func=self._calc_cr)
 
         parser_multimeter = subparsers.add_parser('multimeter')
         subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
@@ -81,6 +92,13 @@ class Processor:
         resources_folder.mkdir(parents=True, exist_ok=True)
         statistics = Statistics(resources_folder)
         statistics.process(args.used_power_file)
+
+    def _calc_cr(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        cr = CompressionRatio(resources_folder)
+        cr.process(args.used_power_file)
+
 
 def app():
     processor = Processor()
