@@ -12,13 +12,14 @@ class CompressionRatio:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources = resources
 
-    def process(self, used_energy_file: Path, create_tex: bool):
+    def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list):
         frameio = FrameIO()
         self._logger.debug("loading %s", used_energy_file)
         df = frameio.load(used_energy_file)
         first_host = df.loc[0, "host"]
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
+        df = df[~df["dataset"].isin(no_dataset)]
         # ToDo: validate single vs multi
         df = df[df["threading"] == "single"]
 
@@ -37,6 +38,8 @@ class CompressionRatio:
             .reset_index()
         )
         result_df.columns.name = None
+        for tool in no_tool:
+            result_df = result_df.drop(tool, axis=1)
 
         table_entries = []
         tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
@@ -58,7 +61,7 @@ class CompressionRatio:
         if create_tex:
             self._create_tex(used_energy_file, result_df, tool_names)
 
-    def _create_tex(self, used_energy_file, result_df, tool_names):
+    def _create_tex(self, used_energy_file: Path, result_df, tool_names):
         tex_file = self._resources / ("cr_" + used_energy_file.stem.removeprefix("used_energy_") + ".tex")
         self._logger.info("Generate: %s", tex_file)
         lines = []
