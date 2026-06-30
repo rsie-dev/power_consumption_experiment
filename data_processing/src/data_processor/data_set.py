@@ -17,3 +17,15 @@ def dataset_from_str(s: str) -> DataSet:
         return DataSet[s.strip().upper()]
     except KeyError:
         raise ValueError(f"Unknown dataset: {s}")
+
+
+def get_data_file(dataset: DataSet) -> str:
+    files = {
+        DataSet.TEXT: "dickens",
+        DataSet.XML: "xml",
+        DataSet.XML2: "xml2",
+        DataSet.WEBSTER: "webster",
+        DataSet.IMAGE: "x-ray",
+        DataSet.SENSOR: "data.txt",
+    }
+    return files[dataset]

@@ -5,7 +5,7 @@ import tabulate
 import pandas as pd
 
 from data_processor.util import FrameIO
-from data_processor.data_set import DataSet, dataset_from_str
+from data_processor.data_set import dataset_from_str, get_data_file
 
 
 class CompressionRatio:
@@ -49,7 +49,7 @@ class CompressionRatio:
         result_df.columns.name = None
 
         def dataset_map(str_ds):
-            return self._get_data_file(dataset_from_str(str_ds))
+            return get_data_file(dataset_from_str(str_ds))
 
         result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
         result_df = result_df.sort_values(
@@ -133,10 +133,10 @@ class CompressionRatio:
         )
         result_df.columns.name = None
 
-        def f_map(str_ds):
-            return self._get_data_file(dataset_from_str(str_ds))
+        def dataset_map(str_ds):
+            return get_data_file(dataset_from_str(str_ds))
 
-        result_df = result_df.sort_values("dataset", key=lambda s: s.map(f_map))
+        result_df = result_df.sort_values("dataset", key=lambda s: s.map(dataset_map))
         tool_names = result_df.columns.drop(fixed_columns).tolist()
         tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
         self._create_tex(used_energy_file, result_df, threading, tool_names)
@@ -158,7 +158,7 @@ class CompressionRatio:
         lines.append("\\midrule")
         used_datasets = set()
         for _, row in result_df.iterrows():
-            dataset = self._get_data_file(dataset_from_str(row["dataset"]))
+            dataset = get_data_file(dataset_from_str(row["dataset"]))
             strength = row["strength"]
             values = ["%f" % row[tool] for tool in tool_names]
             entries = []
@@ -175,14 +175,3 @@ class CompressionRatio:
         with tex_file.open(mode="w", encoding="UTF_8") as f:
             for line in lines:
                 f.write(line + "\n")
-
-    def _get_data_file(self, dataset: DataSet) -> str:
-        files = {
-            DataSet.TEXT: "dickens",
-            DataSet.XML: "xml",
-            DataSet.XML2: "xml2",
-            DataSet.WEBSTER: "webster",
-            DataSet.IMAGE: "x-ray",
-            DataSet.SENSOR: "data.txt",
-        }
-        return files[dataset]
