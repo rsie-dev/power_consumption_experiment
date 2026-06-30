@@ -122,9 +122,10 @@ class CompressionRatio:
     def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
 
+        fixed_columns = ["dataset", "strength"]
         result_df = (
             df.pivot(
-                index=["dataset", "strength"],
+                index=fixed_columns,
                 columns="tool",
                 values="compression_ratio"
             )
@@ -136,7 +137,7 @@ class CompressionRatio:
             return self._get_data_file(dataset_from_str(str_ds))
 
         result_df = result_df.sort_values("dataset", key=lambda s: s.map(f_map))
-        tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
+        tool_names = result_df.columns.drop(fixed_columns).tolist()
         tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
         self._create_tex(used_energy_file, result_df, threading, tool_names)
 
