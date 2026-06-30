@@ -48,11 +48,14 @@ class CompressionRatio:
         )
         result_df.columns.name = None
 
-        def f_map(str_ds):
+        def dataset_map(str_ds):
             return self._get_data_file(dataset_from_str(str_ds))
 
-        result_df["_dataset_key"] = result_df["dataset"].apply(f_map)
-        result_df = result_df.sort_values(by=["_dataset_key", "strength", "threading"]).drop(columns="_dataset_key")
+        result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
+        result_df = result_df.sort_values(
+            by=["_dataset_key", "strength", "threading"],
+            ascending=[True, True, False]
+        ).drop(columns="_dataset_key")
 
         table_entries = []
         tool_names = result_df.columns.drop(fixed_columns).tolist()
