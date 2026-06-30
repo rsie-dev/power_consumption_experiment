@@ -12,7 +12,7 @@ class CompressionRatio:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources = resources
 
-    def process(self, used_energy_file: Path):
+    def process(self, used_energy_file: Path, create_tex: bool):
         frameio = FrameIO()
         self._logger.debug("loading %s", used_energy_file)
         df = frameio.load(used_energy_file)
@@ -54,3 +54,33 @@ class CompressionRatio:
         print(table_str)
         cr_file = self._resources / ("cr_" + used_energy_file.stem.removeprefix("used_energy_") + ".csv")
         frameio.persist(result_df, cr_file)
+
+        if create_tex:
+            self._create_tex(used_energy_file, result_df, tool_names)
+
+    def _create_tex(self, used_energy_file, result_df, tool_names):
+        tex_file = self._resources / ("cr_" + used_energy_file.stem.removeprefix("used_energy_") + ".tex")
+        self._logger.info("Generate: %s", tex_file)
+        lines = []
+        lines.append("\\begin{tabular}")
+        lines.append("{")
+        lines.append("l")
+        lines.append("c")
+        for _ in tool_names:
+            lines.append("S[round-mode=places, round-precision=2, table-format=2.2]")
+        lines.append("}")
+        lines.append("\\toprule")
+        header_entries = ["Dataset", "Strength"] + ["{%s}" % tool for tool in tool_names]
+        lines.append(" & ".join(header_entries) + "\\\\")
+        lines.append("\\midrule")
+        for _, row in result_df.iterrows():
+            dataset = row["dataset"]
+            strength = row["strength"]
+            values = ["%f" % row[tool] for tool in tool_names]
+            entries = [dataset, strength] + values
+            lines.append(" & ".join(entries) + "\\\\")
+        lines.append("\\bottomrule")
+        lines.append("\\end{tabular}")
+        with tex_file.open(mode="w", encoding="UTF_8") as f:
+            for line in lines:
+                f.write(line + "\n")

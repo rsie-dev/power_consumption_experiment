@@ -59,6 +59,7 @@ class Processor:
         parser_calc_cr.add_argument('used_power_file', type=Path)
         parser_calc_cr.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                     help="resource output folder")
+        parser_calc_cr.add_argument('--tex', action='store_true', help="create latex table")
         parser_calc_cr.set_defaults(func=self._calc_cr)
 
         parser_multimeter = subparsers.add_parser('multimeter')
@@ -97,7 +98,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         cr = CompressionRatio(resources_folder)
-        cr.process(args.used_power_file)
+        cr.process(args.used_power_file, args.tex)
 
 
 def app():
