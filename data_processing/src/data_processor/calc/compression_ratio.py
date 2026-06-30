@@ -70,7 +70,7 @@ class CompressionRatio:
         lines.append("l")
         lines.append("c")
         for _ in tool_names:
-            lines.append("S[round-mode=places, round-precision=2, table-format=2.2]")
+            lines.append("S[round-mode=places, round-precision=2, table-format=1.2]")
         lines.append("}")
         lines.append("\\toprule")
         header_entries = ["Dataset", "Strength"] + ["{%s}" % tool for tool in tool_names]
