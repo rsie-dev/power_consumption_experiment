@@ -31,18 +31,16 @@ class CompressionRatio:
         )
         df["compression_ratio"] = df["compression_ratio"].astype(float)
 
-        self._process_threading(used_energy_file, df, "single")
-        self._process_threading(used_energy_file, df, "multi")
+        self._process_threading(used_energy_file, df)
 
         if create_tex:
             self._process_tex(used_energy_file, df)
 
-    def _process_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
-        df = df[df["threading"] == threading]
-
+    def _process_threading(self, used_energy_file: Path, df: pd.DataFrame):
+        fixed_columns = ["dataset", "strength", "threading"]
         result_df = (
             df.pivot(
-                index=["dataset", "strength"],
+                index=fixed_columns,
                 columns="tool",
                 values="compression_ratio"
             )
@@ -53,25 +51,27 @@ class CompressionRatio:
         def f_map(str_ds):
             return self._get_data_file(dataset_from_str(str_ds))
 
-        result_df = result_df.sort_values("dataset", key=lambda s: s.map(f_map))
+        result_df["_dataset_key"] = result_df["dataset"].apply(f_map)
+        result_df = result_df.sort_values(by=["_dataset_key", "strength", "threading"]).drop(columns="_dataset_key")
 
         table_entries = []
-        tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
+        tool_names = result_df.columns.drop(fixed_columns).tolist()
         tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
             strength = row["strength"]
-            values = [row[tool] for tool in tool_names]
-            table_entries.append([dataset, strength] + values)
+            threading = row["threading"]
+            values = ["" if pd.isna(row[tool]) else row[tool] for tool in tool_names]
+            table_entries.append([dataset, strength, threading] + values)
 
-        headers = ["dataset", "strength"] + tool_names
+        headers = fixed_columns + tool_names
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
                                       )
-        print("%s entries:" % threading)
+        print("entries:")
         print(table_str)
-        cr_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".csv")
+        cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
         frameio = FrameIO()
         frameio.persist(result_df, cr_file)
 
