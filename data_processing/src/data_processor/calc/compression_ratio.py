@@ -81,11 +81,19 @@ class CompressionRatio:
         header_entries = ["Dataset", "Strength"] + ["{%s}" % tool for tool in tool_names]
         lines.append(" & ".join(header_entries) + "\\\\")
         lines.append("\\midrule")
+        used_datasets = set()
         for _, row in result_df.iterrows():
             dataset = self._get_data_file(dataset_from_str(row["dataset"]))
             strength = row["strength"]
             values = ["%f" % row[tool] for tool in tool_names]
-            entries = [dataset, strength] + values
+            entries = []
+            if dataset in used_datasets:
+                entries.append("")
+            else:
+                entries.append(dataset)
+                used_datasets.add(dataset)
+            entries.append(strength)
+            entries.extend(values)
             lines.append(" & ".join(entries) + "\\\\")
         lines.append("\\bottomrule")
         lines.append("\\end{tabular}")
