@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import tabulate
+import pandas as pd
 
 from data_processor.util import FrameIO
 from data_processor.data_set import DataSet, dataset_from_str
@@ -20,8 +21,13 @@ class CompressionRatio:
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
         df = df[~df["dataset"].isin(no_dataset)]
-        # ToDo: validate single vs multi
-        df = df[df["threading"] == "single"]
+        #self._validate_multi(df)
+        self._process_threading(used_energy_file, create_tex, no_tool, df, "single")
+        self._process_threading(used_energy_file, create_tex, no_tool, df, "multi")
+
+    def _process_threading(self, used_energy_file: Path, create_tex: bool, no_tool: list, df: pd.DataFrame,
+                           threading: str):
+        df = df[df["threading"] == threading]
 
         df["compression_ratio"] = df.apply(
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
@@ -39,7 +45,8 @@ class CompressionRatio:
         )
         result_df.columns.name = None
         for tool in no_tool:
-            result_df = result_df.drop(tool, axis=1)
+            if tool in result_df.columns:
+                result_df = result_df.drop(tool, axis=1)
 
         def f_map(str_ds):
             return self._get_data_file(dataset_from_str(str_ds))
@@ -48,6 +55,8 @@ class CompressionRatio:
 
         table_entries = []
         tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
+        tool_order = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
+        tool_names = sorted(tool_names, key=lambda x: tool_order.index(x))
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
             strength = row["strength"]
@@ -59,15 +68,54 @@ class CompressionRatio:
                                       headers=headers,
                                       tablefmt="simple"
                                       )
+        print("%s entries:" % threading)
         print(table_str)
-        cr_file = self._resources / ("cr_" + used_energy_file.stem.removeprefix("used_energy_") + ".csv")
+        cr_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".csv")
+        frameio = FrameIO()
         frameio.persist(result_df, cr_file)
 
         if create_tex:
-            self._create_tex(used_energy_file, result_df, tool_names)
+            self._create_tex(used_energy_file, result_df, threading, tool_names)
 
-    def _create_tex(self, used_energy_file: Path, result_df, tool_names):
-        tex_file = self._resources / ("cr_" + used_energy_file.stem.removeprefix("used_energy_") + ".tex")
+    def _validate_multi(self, df):
+        print(df)
+        group_cols = ["host", "tool", "dataset", "mode", "strength"]
+        valid_groups = (
+            df.groupby(group_cols)["threading"]
+            .nunique()
+            .loc[lambda x: x == 2]
+            .index
+        )
+        df = df.set_index(group_cols).loc[valid_groups].reset_index()
+        df = df.drop(columns=["run", "real", "duration", "average_power", "energy"])
+        print(df)
+
+        size_mismatch = (
+            df.groupby(group_cols)["size"]
+            .nunique()
+            .loc[lambda x: x > 1]
+            .index
+        )
+
+        result = (
+            df.set_index(group_cols)
+            .loc[size_mismatch]
+            .reset_index()
+        )
+
+        unique_tools = df["tool"].unique()
+        mismatch_tools = result["tool"].unique()
+        print("multi:          %s" % ", ".join(unique_tools))
+        print("mismatch tools: %s" % ", ".join(mismatch_tools))
+        with pd.option_context(
+                "display.max_rows", None,
+                "display.max_columns", None,
+                "display.width", None
+        ):
+            print(result)
+
+    def _create_tex(self, used_energy_file: Path, result_df, threading, tool_names):
+        tex_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex")
         self._logger.info("Generate: %s", tex_file)
         lines = []
         lines.append("\\begin{tabular}")
