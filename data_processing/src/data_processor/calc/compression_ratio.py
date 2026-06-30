@@ -22,6 +22,7 @@ class CompressionRatio:
         first_host = df.loc[0, "host"]
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
+        df = df[~df["tool"].isin(no_tool)]
         df = df[~df["dataset"].isin(no_dataset)]
         #self._validate_multi(df)
         df["compression_ratio"] = df.apply(
@@ -30,14 +31,13 @@ class CompressionRatio:
         )
         df["compression_ratio"] = df["compression_ratio"].astype(float)
 
-        self._process_threading(used_energy_file, create_tex, no_tool, df, "single")
-        self._process_threading(used_energy_file, create_tex, no_tool, df, "multi")
+        self._process_threading(used_energy_file, df, "single")
+        self._process_threading(used_energy_file, df, "multi")
 
         if create_tex:
-            self._process_tex(used_energy_file, no_tool, df)
+            self._process_tex(used_energy_file, df)
 
-    def _process_threading(self, used_energy_file: Path, create_tex: bool, no_tool: list, df: pd.DataFrame,
-                           threading: str):
+    def _process_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
 
         result_df = (
@@ -49,9 +49,6 @@ class CompressionRatio:
             .reset_index()
         )
         result_df.columns.name = None
-        for tool in no_tool:
-            if tool in result_df.columns:
-                result_df = result_df.drop(tool, axis=1)
 
         def f_map(str_ds):
             return self._get_data_file(dataset_from_str(str_ds))
@@ -115,8 +112,7 @@ class CompressionRatio:
         ):
             print(result)
 
-    def _process_tex(self, used_energy_file: Path, no_tool: list, df: pd.DataFrame):
-        df = df[~df["tool"].isin(no_tool)]
+    def _process_tex(self, used_energy_file: Path, df: pd.DataFrame):
         self._process_tex_threading(used_energy_file, df, "single")
         self._process_tex_threading(used_energy_file, df, "multi")
 
