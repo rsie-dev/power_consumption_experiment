@@ -41,6 +41,11 @@ class CompressionRatio:
         for tool in no_tool:
             result_df = result_df.drop(tool, axis=1)
 
+        def f_map(str_ds):
+            return self._get_data_file(dataset_from_str(str_ds))
+
+        result_df = result_df.sort_values("dataset", key=lambda s: s.map(f_map))
+
         table_entries = []
         tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
         for _, row in result_df.iterrows():
