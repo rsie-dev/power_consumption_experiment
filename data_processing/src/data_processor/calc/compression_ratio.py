@@ -4,7 +4,7 @@ from pathlib import Path
 import tabulate
 
 from data_processor.util import FrameIO
-from data_processor.data_set import dataset_from_str
+from data_processor.data_set import DataSet, dataset_from_str
 
 
 class CompressionRatio:
@@ -77,7 +77,7 @@ class CompressionRatio:
         lines.append(" & ".join(header_entries) + "\\\\")
         lines.append("\\midrule")
         for _, row in result_df.iterrows():
-            dataset = row["dataset"]
+            dataset = self._get_data_file(dataset_from_str(row["dataset"]))
             strength = row["strength"]
             values = ["%f" % row[tool] for tool in tool_names]
             entries = [dataset, strength] + values
@@ -87,3 +87,14 @@ class CompressionRatio:
         with tex_file.open(mode="w", encoding="UTF_8") as f:
             for line in lines:
                 f.write(line + "\n")
+
+    def _get_data_file(self, dataset: DataSet) -> str:
+        files = {
+            DataSet.TEXT: "dickens",
+            DataSet.XML: "xml",
+            DataSet.XML2: "xml2",
+            DataSet.WEBSTER: "webster",
+            DataSet.IMAGE: "x-ray",
+            DataSet.SENSOR: "data.txt",
+        }
+        return files[dataset]
