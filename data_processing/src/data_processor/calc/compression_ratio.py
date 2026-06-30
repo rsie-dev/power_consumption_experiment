@@ -9,6 +9,8 @@ from data_processor.data_set import DataSet, dataset_from_str
 
 
 class CompressionRatio:
+    TOOL_ORDER = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources = resources
@@ -22,18 +24,21 @@ class CompressionRatio:
         df = df[df["run"] == 1]
         df = df[~df["dataset"].isin(no_dataset)]
         #self._validate_multi(df)
-        self._process_threading(used_energy_file, create_tex, no_tool, df, "single")
-        self._process_threading(used_energy_file, create_tex, no_tool, df, "multi")
-
-    def _process_threading(self, used_energy_file: Path, create_tex: bool, no_tool: list, df: pd.DataFrame,
-                           threading: str):
-        df = df[df["threading"] == threading]
-
         df["compression_ratio"] = df.apply(
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
             axis=1,
         )
         df["compression_ratio"] = df["compression_ratio"].astype(float)
+
+        self._process_threading(used_energy_file, create_tex, no_tool, df, "single")
+        self._process_threading(used_energy_file, create_tex, no_tool, df, "multi")
+
+        if create_tex:
+            self._process_tex(used_energy_file, no_tool, df)
+
+    def _process_threading(self, used_energy_file: Path, create_tex: bool, no_tool: list, df: pd.DataFrame,
+                           threading: str):
+        df = df[df["threading"] == threading]
 
         result_df = (
             df.pivot(
@@ -55,8 +60,7 @@ class CompressionRatio:
 
         table_entries = []
         tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
-        tool_order = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
-        tool_names = sorted(tool_names, key=lambda x: tool_order.index(x))
+        tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
             strength = row["strength"]
@@ -73,9 +77,6 @@ class CompressionRatio:
         cr_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".csv")
         frameio = FrameIO()
         frameio.persist(result_df, cr_file)
-
-        if create_tex:
-            self._create_tex(used_energy_file, result_df, threading, tool_names)
 
     def _validate_multi(self, df):
         print(df)
@@ -113,6 +114,32 @@ class CompressionRatio:
                 "display.width", None
         ):
             print(result)
+
+    def _process_tex(self, used_energy_file: Path, no_tool: list, df: pd.DataFrame):
+        df = df[~df["tool"].isin(no_tool)]
+        self._process_tex_threading(used_energy_file, df, "single")
+        self._process_tex_threading(used_energy_file, df, "multi")
+
+    def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
+        df = df[df["threading"] == threading]
+
+        result_df = (
+            df.pivot(
+                index=["dataset", "strength"],
+                columns="tool",
+                values="compression_ratio"
+            )
+            .reset_index()
+        )
+        result_df.columns.name = None
+
+        def f_map(str_ds):
+            return self._get_data_file(dataset_from_str(str_ds))
+
+        result_df = result_df.sort_values("dataset", key=lambda s: s.map(f_map))
+        tool_names = result_df.columns.drop(["dataset", "strength"]).tolist()
+        tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
+        self._create_tex(used_energy_file, result_df, threading, tool_names)
 
     def _create_tex(self, used_energy_file: Path, result_df, threading, tool_names):
         tex_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex")
