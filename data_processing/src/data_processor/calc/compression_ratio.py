@@ -38,30 +38,8 @@ class CompressionRatio:
             self._process_tex(used_energy_file, df)
 
     def _process_threading(self, used_energy_file: Path, df: pd.DataFrame):
-        fixed_columns = ["dataset", "strength", "threading"]
-        result_df = (
-            df.pivot(
-                index=fixed_columns,
-                columns="tool",
-                values="compression_ratio"
-            )
-            .reset_index()
-        )
-        result_df.columns.name = None
-
-        def dataset_map(str_ds):
-            return get_data_file(dataset_from_str(str_ds))
-
-        result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
-        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
-        result_df = result_df.sort_values(
-            by=["_dataset_key", "_strength_key", "threading"],
-            ascending=[True, True, False]
-        ).drop(columns=["_dataset_key", "_strength_key"])
-
+        result_df, fixed_columns, tool_names = self._restructure_data(df)
         table_entries = []
-        tool_names = result_df.columns.drop(fixed_columns).tolist()
-        tool_names = sorted(tool_names, key=lambda x: self.ORDER_TOOL.index(x))
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
             strength = row["strength"]
@@ -123,7 +101,10 @@ class CompressionRatio:
 
     def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
+        result_df, _, tool_names = self._restructure_data(df)
+        self._create_tex(used_energy_file, result_df, threading, tool_names)
 
+    def _restructure_data(self, df: pd.DataFrame) -> tuple[pd.DataFrame, list, list]:
         fixed_columns = ["dataset", "strength", "threading"]
         result_df = (
             df.pivot(
@@ -146,8 +127,8 @@ class CompressionRatio:
         ).drop(columns=["_dataset_key", "_strength_key"])
 
         tool_names = result_df.columns.drop(fixed_columns).tolist()
-        tool_names = sorted(tool_names, key=lambda x: self.ORDER_TOOL.index(x))
-        self._create_tex(used_energy_file, result_df, threading, tool_names)
+        tool_names = sorted(tool_names, key=self.ORDER_TOOL.index)
+        return result_df, fixed_columns, tool_names
 
     def _create_tex(self, used_energy_file: Path, result_df, threading, tool_names):
         tex_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex")
