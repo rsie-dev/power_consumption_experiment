@@ -101,8 +101,8 @@ class CompressionRatio:
 
     def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
-        result_df, _, tool_names = self._restructure_data(df)
-        self._create_tex(used_energy_file, result_df, threading, tool_names)
+        result_df, fixed_columns, _ = self._restructure_data(df)
+        self._create_tex(used_energy_file, result_df, threading, fixed_columns)
 
     def _restructure_data(self, df: pd.DataFrame) -> tuple[pd.DataFrame, list, list]:
         fixed_columns = ["dataset", "strength", "threading"]
@@ -126,11 +126,13 @@ class CompressionRatio:
             ascending=[True, True, False]
         ).drop(columns=["_dataset_key", "_strength_key"])
 
+        cols = list(result_df.columns)
         tool_names = result_df.columns.drop(fixed_columns).tolist()
         tool_names = sorted(tool_names, key=self.ORDER_TOOL.index)
+        result_df = result_df[cols[:len(fixed_columns)] + tool_names]
         return result_df, fixed_columns, tool_names
 
-    def _create_tex(self, used_energy_file: Path, result_df, threading, tool_names):
+    def _create_tex(self, used_energy_file: Path, result_df, threading, fixed_columns):
         tex_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex")
         self._logger.info("Generate: %s", tex_file)
         lines = []
@@ -138,6 +140,7 @@ class CompressionRatio:
         lines.append("{")
         lines.append("l")
         lines.append("c")
+        tool_names = result_df.columns.drop(fixed_columns).tolist()
         for _ in tool_names:
             lines.append("S[round-mode=places, round-precision=2, table-format=1.2]")
         lines.append("}")
