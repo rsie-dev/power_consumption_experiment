@@ -9,7 +9,8 @@ from data_processor.data_set import dataset_from_str, get_data_file
 
 
 class CompressionRatio:
-    TOOL_ORDER = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
+    ORDER_TOOL = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
+    ORDER_STRENGTH = ["min", "default", "max"]
 
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -52,14 +53,15 @@ class CompressionRatio:
             return get_data_file(dataset_from_str(str_ds))
 
         result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
+        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
-            by=["_dataset_key", "strength", "threading"],
+            by=["_dataset_key", "_strength_key", "threading"],
             ascending=[True, True, False]
-        ).drop(columns="_dataset_key")
+        ).drop(columns=["_dataset_key", "_strength_key"])
 
         table_entries = []
         tool_names = result_df.columns.drop(fixed_columns).tolist()
-        tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
+        tool_names = sorted(tool_names, key=lambda x: self.ORDER_TOOL.index(x))
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
             strength = row["strength"]
@@ -136,9 +138,15 @@ class CompressionRatio:
         def dataset_map(str_ds):
             return get_data_file(dataset_from_str(str_ds))
 
-        result_df = result_df.sort_values("dataset", key=lambda s: s.map(dataset_map))
+        result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
+        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
+        result_df = result_df.sort_values(
+            by=["_dataset_key", "_strength_key"],
+            ascending=[True, True]
+        ).drop(columns=["_dataset_key", "_strength_key"])
+
         tool_names = result_df.columns.drop(fixed_columns).tolist()
-        tool_names = sorted(tool_names, key=lambda x: self.TOOL_ORDER.index(x))
+        tool_names = sorted(tool_names, key=lambda x: self.ORDER_TOOL.index(x))
         self._create_tex(used_energy_file, result_df, threading, tool_names)
 
     def _create_tex(self, used_energy_file: Path, result_df, threading, tool_names):
