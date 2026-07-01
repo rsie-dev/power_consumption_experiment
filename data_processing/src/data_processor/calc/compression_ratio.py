@@ -124,7 +124,7 @@ class CompressionRatio:
     def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
 
-        fixed_columns = ["dataset", "strength"]
+        fixed_columns = ["dataset", "strength", "threading"]
         result_df = (
             df.pivot(
                 index=fixed_columns,
@@ -141,8 +141,8 @@ class CompressionRatio:
         result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
         result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
-            by=["_dataset_key", "_strength_key"],
-            ascending=[True, True]
+            by=["_dataset_key", "_strength_key", "threading"],
+            ascending=[True, True, False]
         ).drop(columns=["_dataset_key", "_strength_key"])
 
         tool_names = result_df.columns.drop(fixed_columns).tolist()
