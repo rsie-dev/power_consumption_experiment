@@ -10,9 +10,10 @@ from generator.data_set import DataSet
 
 
 class ScriptGenerator:
-    def __init__(self, script_folder: Path):
+    def __init__(self, script_folder: Path, prefix: str):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._script_folder = script_folder
+        self._prefix = prefix
 
     def generate(self, tools: list[Tool], data_sets: list[DataSet],
                  compression_strengths: list[CompressionStrength], modes: list[OperationMode], args):

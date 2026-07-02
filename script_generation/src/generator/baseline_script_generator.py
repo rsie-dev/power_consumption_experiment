@@ -8,8 +8,8 @@ from generator.tool_config import CompressionStrength, OperationMode
 
 
 class BaselineScriptGenerator(ScriptGenerator):
-    def __init__(self, script_folder: Path):
-        super().__init__(script_folder)
+    def __init__(self, script_folder: Path, prefix: str):
+        super().__init__(script_folder, prefix)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
@@ -23,5 +23,5 @@ class BaselineScriptGenerator(ScriptGenerator):
             "sleep_time": 15,
         }
 
-        host_script = self._script_folder / f"{args.host}_baseline.py"
+        host_script = self._script_folder / f"{self._prefix}{args.host}_baseline.py"
         self._generate_script(host_script, template, data)

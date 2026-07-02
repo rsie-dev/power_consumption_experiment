@@ -8,8 +8,8 @@ from generator.tool_config import OperationMode, CompressionStrength
 
 
 class ModeScriptGenerator(HostScriptGenerator):
-    def __init__(self, script_folder: Path):
-        super().__init__(script_folder)
+    def __init__(self, script_folder: Path, prefix: str):
+        super().__init__(script_folder, prefix)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
@@ -40,5 +40,5 @@ class ModeScriptGenerator(HostScriptGenerator):
             "modes": [mode.name],
             "data_sets": data_sets,
         }
-        host_script = self._script_folder / f"{args.host}_{mode.name.lower()}.py"
+        host_script = self._script_folder / f"{self._prefix}{args.host}_{mode.name.lower()}.py"
         self._generate_script(host_script, template, data)

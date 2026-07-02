@@ -8,8 +8,8 @@ from generator.data_set import DataSet
 
 
 class HostScriptGenerator(ScriptGenerator):
-    def __init__(self, script_folder: Path):
-        super().__init__(script_folder)
+    def __init__(self, script_folder: Path, prefix: str):
+        super().__init__(script_folder, prefix)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
@@ -44,7 +44,7 @@ class HostScriptGenerator(ScriptGenerator):
             post_info = "all"
         else:
             post_info = "_".join([tool.name.lower() for tool in tools])
-        host_script = self._script_folder / f"{args.host}_{post_info}.py"
+        host_script = self._script_folder / f"{self._prefix}{args.host}_{post_info}.py"
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet],

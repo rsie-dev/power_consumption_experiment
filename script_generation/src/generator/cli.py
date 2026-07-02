@@ -40,7 +40,7 @@ class Generator:
     def _generate(self, args):
         generator_type = GeneratorType[args.type.upper()]
         script_folder = Path.cwd() / "scripts"
-        sg = generator_type.create(script_folder)
+        sg = generator_type.create(script_folder, args.prefix if args.prefix else "")
         tools = self._get_tools(args)
         data_sets = self._get_data_sets(args)
         compression_strengths = self._get_compression_strength(args)
@@ -86,6 +86,7 @@ class Generator:
 
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
+        parser.add_argument('--prefix', type=str, help="script name prefix")
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")

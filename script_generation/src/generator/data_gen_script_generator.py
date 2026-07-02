@@ -8,8 +8,8 @@ from generator.data_set import DataSet
 
 
 class DataGenScriptGenerator(ScriptGenerator):
-    def __init__(self, script_folder: Path):
-        super().__init__(script_folder)
+    def __init__(self, script_folder: Path, prefix: str):
+        super().__init__(script_folder, prefix)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
@@ -30,7 +30,7 @@ class DataGenScriptGenerator(ScriptGenerator):
             "data_sets": data_sets_out,
         }
 
-        host_script = self._script_folder / f"{args.host}_data_gen.py"
+        host_script = self._script_folder / f"{self._prefix}{args.host}_data_gen.py"
         self._generate_script(host_script, template, data)
 
     def _get_data_sets(self, tools: list[Tool], data_sets: list[DataSet],

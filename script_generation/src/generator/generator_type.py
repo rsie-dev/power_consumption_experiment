@@ -19,6 +19,6 @@ class GeneratorType(Enum):
     DATAGEN = DataGenScriptGenerator
     BASELINE = BaselineScriptGenerator
 
-    def create(self, script_folder: Path) -> ScriptGenerator:
+    def create(self, script_folder: Path, prefix: str) -> ScriptGenerator:
         generator_class: Type[ScriptGenerator] = self.value
-        return generator_class(script_folder)
+        return generator_class(script_folder, prefix)
