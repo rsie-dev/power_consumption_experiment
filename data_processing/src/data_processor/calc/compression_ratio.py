@@ -21,6 +21,7 @@ class CompressionRatio:
         self._logger.debug("loading %s", used_energy_file)
         df = frameio.load(used_energy_file)
         first_host = df.loc[0, "host"]
+        df = df[df["mode"] == "compress"]
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
         df = df[~df["tool"].isin(no_tool)]
