@@ -33,12 +33,28 @@ class CompressionRatio:
         )
         df["compression_ratio"] = df["compression_ratio"].astype(float)
 
-        self._process_threading(used_energy_file, df)
-
+        self._show_tables(df)
+        self._create_csv(used_energy_file, df)
         if create_tex:
             self._process_tex(used_energy_file, df)
 
-    def _process_threading(self, used_energy_file: Path, df: pd.DataFrame):
+    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
+        result_df, _, _ = self._restructure_data(df)
+        cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
+        frameio = FrameIO()
+        # Reshape to long format
+        csv_df = (
+            result_df.melt(
+                id_vars=["dataset", "strength", "threading"],
+                var_name="tool",
+                value_name="cr",
+            )
+            .reset_index(drop=True)
+        )
+        csv_df = csv_df[csv_df["cr"].notna()]
+        frameio.persist(csv_df, cr_file)
+
+    def _show_tables(self, df: pd.DataFrame):
         result_df, fixed_columns, tool_names = self._restructure_data(df)
         table_entries = []
         for _, row in result_df.iterrows():
@@ -56,9 +72,6 @@ class CompressionRatio:
 
         print("entries:")
         print(table_str)
-        cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        frameio = FrameIO()
-        frameio.persist(result_df, cr_file)
 
     def _validate_multi(self, df):
         print(df)
