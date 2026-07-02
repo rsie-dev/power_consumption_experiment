@@ -45,7 +45,7 @@ class CompressionRatio:
             dataset = row["dataset"]
             strength = row["strength"]
             threading = row["threading"]
-            values = ["" if pd.isna(row[tool]) else row[tool] for tool in tool_names]
+            values = [None if pd.isna(row[tool]) else row[tool] for tool in tool_names]
             table_entries.append([dataset, strength, threading] + values)
 
         headers = fixed_columns + tool_names
@@ -53,6 +53,7 @@ class CompressionRatio:
                                       headers=headers,
                                       tablefmt="simple"
                                       )
+
         print("entries:")
         print(table_str)
         cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
