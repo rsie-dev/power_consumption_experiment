@@ -22,8 +22,7 @@ class Throughput:
 
         result_df = self._calculate_throughput(df)
         self._print_table(result_df)
-        tp_file = self._resources / ("tp_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        frameio.persist(result_df, tp_file)
+        self._create_csv(used_energy_file, result_df)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.drop(columns=["num_runs"])
@@ -43,6 +42,11 @@ class Throughput:
                                       tablefmt="simple"
                                       )
         print(table_str)
+
+    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
+        tp_file = self._resources / ("tp_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
+        frameio = FrameIO()
+        frameio.persist(df, tp_file)
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
         group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
