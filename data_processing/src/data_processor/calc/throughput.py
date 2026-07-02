@@ -25,16 +25,21 @@ class Throughput:
         self._create_csv(used_energy_file, result_df)
 
     def _print_table(self, df: pd.DataFrame):
-        table_df = df.drop(columns=["num_runs"])
+        table_df = df.drop(columns=[])
         table_df["average_real"] = table_df["average_real"].astype(float)
         table_df["throughput"] = table_df["throughput"].pint.to("MiB/s")
         table_df["throughput"] = table_df["throughput"].astype(float)
+
+        cols = table_df.columns.tolist()
+        i = cols.index("num_runs")
+        cols.insert(i - 1, cols.pop(i))
+        table_df = table_df[cols]
 
         table_entries = []
         for _, row in table_df.iterrows():
             table_entries.append(row.values[:])
 
-        headers = list(table_df.columns)[:-2]
+        headers = cols[:-2]
         headers.append("average_real (s)")
         headers.append("throughput (MiB/s")
         table_str = tabulate.tabulate(table_entries,
