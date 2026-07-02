@@ -22,6 +22,8 @@ class Throughput:
 
         result_df = self._calculate_throughput(df)
         self._print_table(result_df)
+        tp_file = self._resources / ("tp_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
+        frameio.persist(result_df, tp_file)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.drop(columns=["num_runs"])
