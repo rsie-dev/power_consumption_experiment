@@ -26,7 +26,7 @@ class CompressionRatio:
         df = df[df["run"] == 1]
         df = df[~df["tool"].isin(no_tool)]
         df = df[~df["dataset"].isin(no_dataset)]
-        #self._validate_multi(df)
+        self._validate_multi(df)
         df["compression_ratio"] = df.apply(
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
             axis=1,
@@ -71,6 +71,42 @@ class CompressionRatio:
                                       )
 
         print("entries:")
+        print(table_str)
+        self._show_mode_deviations(result_df)
+
+    def _show_mode_deviations(self, df: pd.DataFrame):
+        multi = df["threading"] == "multi"
+        cols_to_drop = df.columns[df.loc[multi].isna().any()]
+        df = df.drop(columns=cols_to_drop)
+
+        # Remove tools where CR multi == CR single
+        single = df[df["threading"] == "single"].set_index(["dataset", "strength"])
+        multi = df[df["threading"] == "multi"].set_index(["dataset", "strength"])
+        single, multi = single.align(multi, join="inner")
+        tool_cols = [c for c in df.columns if c not in ["dataset", "strength", "threading"]]
+        equal_cols = single[tool_cols].eq(multi[tool_cols]).all()
+        cols_to_drop = equal_cols[equal_cols].index
+        df = df.drop(columns=cols_to_drop)
+
+        # Calculate the difference between multi and single
+        keys = ["dataset", "strength"]
+        single = df[df["threading"] == "single"].set_index(keys)
+        multi = df[df["threading"] == "multi"].set_index(keys)
+        single, multi = single.align(multi, join="inner")
+        tool_cols = [c for c in df.columns if c not in keys + ["threading"]]
+        diff = multi[tool_cols] - single[tool_cols]
+        diff_df = diff.reset_index()
+
+        headers = list(diff_df.columns)
+        table_entries = []
+        for _, row in diff_df.iterrows():
+            table_entries.append(row.values[:])
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple"
+                                      )
+
+        print("differences:")
         print(table_str)
 
     def _validate_multi(self, df):
