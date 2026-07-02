@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import tabulate
+from tabulate import SEPARATING_LINE
 import pandas as pd
 
 from data_processor.util import FrameIO
@@ -101,6 +102,11 @@ class CompressionRatio:
         table_entries = []
         for _, row in diff_df.iterrows():
             table_entries.append(row.values[:])
+
+        table_entries.append(SEPARATING_LINE)
+        mean_diff = diff.mean(axis=0)
+        table_entries.append(["mean", None] + mean_diff.tolist())
+
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
