@@ -40,6 +40,8 @@ class RunCollector:
         timings = self._read_timings(run_folder)
 
         readings = frame_io.load(run_folder / 'multimeter.csv')
+        if readings.empty:
+            raise ValueError("no samples in: %s" % (run_folder / 'multimeter.csv'))
         readings['run'] = run
         measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
         return RunInfo(run=run, measurement=measurement)
