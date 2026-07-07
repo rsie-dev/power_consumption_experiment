@@ -26,7 +26,8 @@ class HostScriptGenerator(ScriptGenerator):
             all_data_sets += data_sets_compress
             measurement_sets += measurement_sets_compress
         if OperationMode.DECOMPRESS in modes:
-            data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets)
+            data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets,
+                                                                                                      compression_strengths)
             all_data_sets += data_sets_decompress
             measurement_sets += measurement_sets_decompress
         self._logger.info("Generating %d measurement sets", measurement_sets)
@@ -57,12 +58,13 @@ class HostScriptGenerator(ScriptGenerator):
             measurement_sets += count
         return data_set_entries, measurement_sets
 
-    def _get_measurement_sets_decompress(self, tools: list[Tool], data_sets: list[DataSet]):
+    def _get_measurement_sets_decompress(self, tools: list[Tool], data_sets: list[DataSet],
+                                         compression_strengths: list[CompressionStrength]):
         measurement_sets = 0
         data_set_entries = []
         for tool in tools:
             for data_set in data_sets:
-                entries, count = self._build_data_set_entry_decompress(data_set, tool)
+                entries, count = self._build_data_set_entry_decompress(data_set, tool, compression_strengths)
                 data_set_entries.extend(entries)
                 measurement_sets += count
         return data_set_entries, measurement_sets
@@ -84,10 +86,11 @@ class HostScriptGenerator(ScriptGenerator):
         }
         return entry, count
 
-    def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool):
+    def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool,
+                                         compression_strengths: list[CompressionStrength]):
         entries = []
 
-        tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, [])
+        tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, compression_strengths)
         for tool_config in tool_configs:
             tool_entry = self._build_tool_entry(tool, tool_config, data_set)
             data_set_name = f"{data_set.name.lower()}_{tool.name.lower()}_{tool_config.strength.name.lower()}"
@@ -116,11 +119,7 @@ class HostScriptGenerator(ScriptGenerator):
         else:
             threadings = list(Threading)
         for threading in threadings:
-            if mode == OperationMode.COMPRESS:
-                for strength in compression_strengths:
-                    tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
-                    tool_configs.append(tool_config)
-            else:
-                tool_config = ToolConfig(mode=mode, strength=CompressionStrength.DEFAULT, threading=threading)
+            for strength in compression_strengths:
+                tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
                 tool_configs.append(tool_config)
         return tool_configs
