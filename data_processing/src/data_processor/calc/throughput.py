@@ -9,6 +9,8 @@ from data_processor.data_set import dataset_from_str
 
 
 class Throughput:
+    ORDER_STRENGTH = ["min", "default", "max"]
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
@@ -21,6 +23,12 @@ class Throughput:
         df = df[~df["dataset"].isin(no_dataset)]
 
         result_df = self._calculate_throughput(df)
+        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
+        result_df = result_df.sort_values(
+            by=["host", "tool", "dataset", "mode", "_strength_key"],
+            #ascending=[True]
+        ).drop(columns=["_strength_key"])
+
         self._print_table(result_df)
         self._create_csv(used_energy_file, result_df)
 
