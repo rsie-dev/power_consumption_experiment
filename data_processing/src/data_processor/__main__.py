@@ -1,3 +1,3 @@
 if __name__ == "__main__":
-    from data_collector.cli import app
+    from data_processor.cli import app
     app()
