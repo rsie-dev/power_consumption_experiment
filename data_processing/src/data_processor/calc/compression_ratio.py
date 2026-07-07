@@ -98,7 +98,6 @@ class CompressionRatio:
         diff = multi[tool_cols] - single[tool_cols]
         diff_df = diff.reset_index()
 
-        headers = list(diff_df.columns)
         table_entries = []
         for _, row in diff_df.iterrows():
             table_entries.append(row.values[:])
@@ -110,7 +109,7 @@ class CompressionRatio:
         table_entries.append(["std", None] + std_diff.tolist())
 
         table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
+                                      headers=list(diff_df.columns),
                                       tablefmt="simple"
                                       )
 
