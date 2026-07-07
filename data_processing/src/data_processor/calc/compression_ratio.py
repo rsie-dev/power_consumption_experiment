@@ -196,12 +196,19 @@ class CompressionRatio:
         filename = "cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex"
         tex_file = self._resources / filename
         self._logger.info("Generate: %s", tex_file)
+
+        lines = self._build_lines(result_df, fixed_columns)
+        with tex_file.open(mode="w", encoding="UTF_8") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+    def _build_lines(self, df: pd.DataFrame, fixed_columns: list) -> list[str]:
         lines = []
         lines.append("\\begin{tabular}")
         lines.append("{")
         lines.append("l")
         lines.append("c")
-        tool_names = result_df.columns.drop(fixed_columns).tolist()
+        tool_names = df.columns.drop(fixed_columns).tolist()
         for _ in tool_names:
             lines.append("S[round-mode=places, round-precision=2, table-format=1.2]")
         lines.append("}")
@@ -210,7 +217,7 @@ class CompressionRatio:
         lines.append(" & ".join(header_entries) + "\\\\")
         lines.append("\\midrule")
         used_datasets = set()
-        for _, row in result_df.iterrows():
+        for _, row in df.iterrows():
             dataset = get_data_file(dataset_from_str(row["dataset"]))
             strength = row["strength"]
             values = ["%f" % row[tool] for tool in tool_names]
@@ -225,6 +232,4 @@ class CompressionRatio:
             lines.append(" & ".join(entries) + "\\\\")
         lines.append("\\bottomrule")
         lines.append("\\end{tabular}")
-        with tex_file.open(mode="w", encoding="UTF_8") as f:
-            for line in lines:
-                f.write(line + "\n")
+        return lines
