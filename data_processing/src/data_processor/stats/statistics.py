@@ -93,13 +93,21 @@ class Statistics:
             else:
                 stats_sizes[k] = humanize.naturalsize(v, binary=True)
 
-        entry.append(("min", group["host"], group["tool"], group["dataset"], group["mode"], group["strength"], group["threading"],
+        entry.append(("min",
+                      group["host"], group["tool"], group["dataset"],
+                      group["mode"], group["strength"], group["threading"],
                       stats_energy["min"], stats_times["min"], stats_sizes["min"]))
-        entry.append(("max", group["host"], group["tool"], group["dataset"], group["mode"], group["strength"], group["threading"],
+        entry.append(("max",
+                      group["host"], group["tool"], group["dataset"],
+                      group["mode"], group["strength"], group["threading"],
                       stats_energy["max"], stats_times["max"], stats_sizes["max"]))
-        entry.append(("mean", group["host"], group["tool"], group["dataset"], group["mode"], group["strength"], group["threading"],
+        entry.append(("mean",
+                      group["host"], group["tool"], group["dataset"],
+                      group["mode"], group["strength"], group["threading"],
                       stats_energy["mean"], stats_times["mean"], stats_sizes["mean"]))
-        entry.append(("stdev", group["host"], group["tool"], group["dataset"], group["mode"], group["strength"], group["threading"],
+        entry.append(("stdev",
+                      group["host"], group["tool"], group["dataset"],
+                      group["mode"], group["strength"], group["threading"],
                       stats_energy["stdev"], stats_times["stdev"], stats_sizes["stdev"]))
 
         return entry
