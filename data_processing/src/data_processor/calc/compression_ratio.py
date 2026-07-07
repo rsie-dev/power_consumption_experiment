@@ -105,7 +105,9 @@ class CompressionRatio:
 
         table_entries.append(SEPARATING_LINE)
         mean_diff = diff.mean(axis=0)
+        std_diff = diff.std(axis=0)
         table_entries.append(["mean", None] + mean_diff.tolist())
+        table_entries.append(["std", None] + std_diff.tolist())
 
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
@@ -114,6 +116,7 @@ class CompressionRatio:
 
         print("differences:")
         print(table_str)
+        #print(diff.describe())
 
     def _validate_multi(self, df):
         print(df)
