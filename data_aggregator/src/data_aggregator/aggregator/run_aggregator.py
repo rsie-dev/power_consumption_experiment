@@ -70,6 +70,8 @@ class RunAggregator:
         for run in runs:
             entries_count += len(run.measurement.readings)
             cut_run = self._cut_lead_tail(run)
+            if len(cut_run.index) < 3:
+                raise ValueError("no or too few samples after cutting: %s" % len(cut_run.index))
             power_df = power_calculator.calculate_power(cut_run)
             power_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
             power_df["real"] = power_df["real"].astype("pint[second]")
@@ -86,7 +88,7 @@ class RunAggregator:
         measurement = run.measurement
         df = measurement.readings
         filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
-        return  filtered_df
+        return filtered_df
 
     def _build_name(self, measurement_info: MeasurementInfo) -> str:
         tokens = self._build_name_tokens(measurement_info)
