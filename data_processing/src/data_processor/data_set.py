@@ -15,8 +15,8 @@ class DataSet(Enum):
 def dataset_from_str(s: str) -> DataSet:
     try:
         return DataSet[s.strip().upper()]
-    except KeyError:
-        raise ValueError(f"Unknown dataset: {s}")
+    except KeyError as e:
+        raise ValueError(f"Unknown dataset: {s}") from e
 
 
 def get_data_file(dataset: DataSet) -> str:
