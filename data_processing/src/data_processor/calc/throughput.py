@@ -27,8 +27,8 @@ class Throughput:
     def _print_table(self, df: pd.DataFrame):
         table_df = df.drop(columns=[])
         table_df["average_real"] = table_df["average_real"].astype(float)
-        table_df["throughput"] = table_df["throughput"].pint.to("MiB/s")
-        table_df["throughput"] = table_df["throughput"].astype(float)
+        table_df["average_throughput"] = table_df["average_throughput"].pint.to("MiB/s")
+        table_df["average_throughput"] = table_df["average_throughput"].astype(float)
 
         cols = table_df.columns.tolist()
         i = cols.index("num_runs")
@@ -40,8 +40,8 @@ class Throughput:
             table_entries.append(row.values[:])
 
         headers = cols[:-2]
-        headers.append("average_real (s)")
-        headers.append("throughput (MiB/s")
+        headers.append("average real (s)")
+        headers.append("average throughput (MiB/s")
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
@@ -55,18 +55,19 @@ class Throughput:
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
         group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
-        result_df = (
-            df.groupby(group_cols, as_index=False)
-            .agg(
-                average_real=("real", "mean"),
-                num_runs=("run", "count"),
-            )
-        )
 
         def dataset_map(str_ds):
             return dataset_from_str(str_ds).value
 
-        result_df["throughput"] = (
-                result_df["dataset"].map(dataset_map) / result_df["average_real"]
+        df["throughput"] = df["dataset"].map(dataset_map) / df["real"]
+
+        result_df = (
+            df.groupby(group_cols, as_index=False)
+            .agg(
+                num_runs=("run", "count"),
+                average_real=("real", "mean"),
+                average_throughput=("throughput", "mean"),
+            )
         )
+
         return result_df
