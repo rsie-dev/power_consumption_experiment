@@ -193,7 +193,8 @@ class CompressionRatio:
         return result_df, fixed_columns, tool_names
 
     def _create_tex(self, used_energy_file: Path, result_df, threading, fixed_columns):
-        tex_file = self._resources / ("cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex")
+        filename = "cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex"
+        tex_file = self._resources / filename
         self._logger.info("Generate: %s", tex_file)
         lines = []
         lines.append("\\begin{tabular}")
