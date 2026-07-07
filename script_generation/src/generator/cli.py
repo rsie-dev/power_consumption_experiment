@@ -8,6 +8,7 @@ from generator.generator_type import GeneratorType
 from generator.tools import Tool
 from generator.data_set import DataSet
 from generator.tool_config import CompressionStrength, OperationMode
+from generator.template_args import TemplateArgs
 
 
 class Generator:
@@ -40,13 +41,26 @@ class Generator:
     def _generate(self, args):
         generator_type = GeneratorType[args.type.upper()]
         script_folder = Path.cwd() / "scripts"
-        sg = generator_type.create(script_folder, args.prefix if args.prefix else "")
+        template_args = TemplateArgs(
+            host=args.host,
+            ip=args.ip,
+            runs=args.runs,
+            data_folder=args.data_folder,
+            multimeter=args.multimeter,
+            with_timers=args.with_timers,
+            with_caches=args.with_caches,
+            warmup = args.warmup,
+            mon_temp = args.mon_temp,
+            head_delay=args.head_delay,
+            tail_delay=args.tail_delay,
+        )
+        sg = generator_type.create(script_folder, args.prefix if args.prefix else "", template_args)
         tools = self._get_tools(args)
         data_sets = self._get_data_sets(args)
         compression_strengths = self._get_compression_strength(args)
         modes = [OperationMode[mode.upper()] for mode in args.modes]
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, compression_strengths, modes, args)
+        sg.generate(tools, data_sets, compression_strengths, modes, args.host)
 
     def _get_tools(self, args) -> list[Tool]:
         if args.no_tool:

@@ -5,11 +5,12 @@ from generator.script_generator import ScriptGenerator
 from generator.tools import Tool
 from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
 from generator.data_set import DataSet
+from generator.template_args import TemplateArgs
 
 
 class HostScriptGenerator(ScriptGenerator):
-    def __init__(self, script_folder: Path, prefix: str):
-        super().__init__(script_folder, prefix)
+    def __init__(self, script_folder: Path, prefix: str, template_args: TemplateArgs):
+        super().__init__(script_folder, prefix, template_args)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
@@ -17,7 +18,7 @@ class HostScriptGenerator(ScriptGenerator):
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template, args) -> None:
+                       template) -> None:
         all_data_sets = []
         measurement_sets = 0
         if OperationMode.COMPRESS in modes:
@@ -33,7 +34,7 @@ class HostScriptGenerator(ScriptGenerator):
         self._logger.info("Generating %d measurement sets", measurement_sets)
 
         data = {
-            "args": args,
+            "template_args": self._template_args,
             "tools": [tool.name for tool in tools],
             "input_sets": [ds.name for ds in data_sets],
             "strengths": [s.name for s in compression_strengths],
@@ -45,7 +46,7 @@ class HostScriptGenerator(ScriptGenerator):
             post_info = "all"
         else:
             post_info = "_".join([tool.name.lower() for tool in tools])
-        host_script = self._script_folder / f"{self._prefix}{args.host}_{post_info}.py"
+        host_script = self._script_folder / f"{self._prefix}{self._template_args.host}_{post_info}.py"
         self._generate_script(host_script, template, data)
 
     def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet],

@@ -7,16 +7,18 @@ from jinja2 import Environment, PackageLoader, StrictUndefined
 from generator.tools import Tool
 from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading, OperationMode
 from generator.data_set import DataSet
+from generator.template_args import TemplateArgs
 
 
 class ScriptGenerator:
-    def __init__(self, script_folder: Path, prefix: str):
+    def __init__(self, script_folder: Path, prefix: str, template_args: TemplateArgs):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._script_folder = script_folder
         self._prefix = prefix
+        self._template_args = template_args
 
     def generate(self, tools: list[Tool], data_sets: list[DataSet],
-                 compression_strengths: list[CompressionStrength], modes: list[OperationMode], args):
+                 compression_strengths: list[CompressionStrength], modes: list[OperationMode], host: str):
         env = Environment(
             loader=PackageLoader("generator"),
             trim_blocks=True,
@@ -24,14 +26,14 @@ class ScriptGenerator:
             undefined=StrictUndefined,
         )
 
-        self._logger.info("Generate scripts for:  %s", args.host)
+        self._logger.info("Generate scripts for:  %s", host)
         self._logger.info("Using tools:           %s", ", ".join([tool.name for tool in tools]))
         self._logger.info("Using data sets:       %s", ", ".join([data_set.name for data_set in data_sets]))
         self._logger.info("Using strengths:       %s", ", ".join([cs.name for cs in compression_strengths]))
         self._logger.info("Using operation modes: %s", ", ".join([mode.name for mode in modes]))
         template_name = self._get_template_name()
         template = env.get_template(template_name)
-        self._write_scripts(tools, data_sets, compression_strengths, modes, template, args)
+        self._write_scripts(tools, data_sets, compression_strengths, modes, template)
 
     @abstractmethod
     def _get_template_name(self) -> str:
@@ -40,7 +42,7 @@ class ScriptGenerator:
     @abstractmethod
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template, args) -> None:
+                       template) -> None:
         pass
 
     def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):

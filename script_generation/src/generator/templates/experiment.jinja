@@ -3,22 +3,22 @@ from pathlib import Path
 
 from experiment.api import get_experiment_builder
 
-# Generate scripts for:  {{ args.host }}
+# Generate scripts for:  {{ template_args.host }}
 # Using tools:           {{ tools | join(', ') }}
 # Using data sets:       {{ input_sets | join(', ') }}
 # Using strengths:       {{ strengths | join(', ') }}
 # Using operation modes: {{ modes | join(', ') }}
 
 
-run_count = {{args.runs}}
-{% if args.head_delay %}
-head_delay = {{args.head_delay}}
+run_count = {{template_args.runs}}
+{% if template_args.head_delay %}
+head_delay = {{template_args.head_delay}}
 {% endif %}
-{% if args.tail_delay %}
-tail_delay = {{args.tail_delay}}
+{% if template_args.tail_delay %}
+tail_delay = {{template_args.tail_delay}}
 {% endif %}
 
-local_path = Path("{{args.data_folder}}")
+local_path = Path("{{template_args.data_folder}}")
 {% for data_set in data_sets %}
 local_{{data_set.data_set_name}} = local_path / "{{data_set.data_set_file}}"
 {% endfor %}
@@ -30,35 +30,35 @@ remote_{{data_set.data_set_name}} = remote_path / "{{data_set.data_set_file}}"
 
 
 experiment = (get_experiment_builder()
-            .on_host("{{args.host}}", "{{args.ip}}")
+            .on_host("{{template_args.host}}", "{{template_args.ip}}")
               .initialize()
 {% for data_set in data_sets %}
                 .upload(local_{{data_set.data_set_name}}, remote_path)
 {% endfor %}
               .done()
 
-{% if args.warmup %}
+{% if template_args.warmup %}
               .with_warmup()
-                .execute_with("stress-ng --cpu 0 --timeout {{args.warmup}}s")
+                .execute_with("stress-ng --cpu 0 --timeout {{template_args.warmup}}s")
                   .with_work_dir("/tmp")
                 .done()
               .done()
 {% endif %}
 
-              .measure_with_multimeter("{{args.multimeter}}")
-{% if args.mon_temp %}
-              .control_temperature({{args.mon_temp}})
+              .measure_with_multimeter("{{template_args.multimeter}}")
+{% if template_args.mon_temp %}
+              .control_temperature({{template_args.mon_temp}})
 {% endif %}
-{% if not args.with_timers %}
+{% if not template_args.with_timers %}
               .disable_timers()
 {% endif %}
-{% if not args.with_caches %}
+{% if not template_args.with_caches %}
               .with_clear_cache()
 {% endif %}
 
 {% for data_set in data_sets %}
               {% for tool in data_set.tools %}
-              {{ measurement(args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set_name) }}
+              {{ measurement(template_args, tool.tool, tool.measurement_tags, tool.tool_args, data_set.data_set_name) }}
               {% endfor %}
 {% endfor %}
               .shutdown()

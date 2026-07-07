@@ -5,11 +5,12 @@ from generator.script_generator import ScriptGenerator
 from generator.tools import Tool
 from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
 from generator.data_set import DataSet
+from generator.template_args import TemplateArgs
 
 
 class DataGenScriptGenerator(ScriptGenerator):
-    def __init__(self, script_folder: Path, prefix: str):
-        super().__init__(script_folder, prefix)
+    def __init__(self, script_folder: Path, prefix: str, template_args: TemplateArgs):
+        super().__init__(script_folder, prefix, template_args)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def _get_template_name(self) -> str:
@@ -17,7 +18,7 @@ class DataGenScriptGenerator(ScriptGenerator):
 
     def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template, args) -> None:
+                       template) -> None:
         data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets,
                                                                                        compression_strengths)
 
@@ -25,12 +26,12 @@ class DataGenScriptGenerator(ScriptGenerator):
         self._logger.info("Generating %d data sets", measurement_sets)
 
         data = {
-            "args": args,
+            "template_args": self._template_args,
             "data_sets_in": data_sets_in,
             "data_sets": data_sets_out,
         }
 
-        host_script = self._script_folder / f"{self._prefix}{args.host}_data_gen.py"
+        host_script = self._script_folder / f"{self._prefix}{self._template_args.host}_data_gen.py"
         self._generate_script(host_script, template, data)
 
     def _get_data_sets(self, tools: list[Tool], data_sets: list[DataSet],
