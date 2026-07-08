@@ -5,7 +5,7 @@ from abc import abstractmethod
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from generator.tools import Tool
-from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading, OperationMode
+from generator.tool_config import ToolConfig, OperationMode, CompressionStrength, Threading
 from generator.data_set import DataSet
 from generator.template_args import TemplateArgs
 
