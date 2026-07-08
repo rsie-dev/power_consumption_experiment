@@ -20,6 +20,8 @@ class Statistics:
         self._logger.debug("loading %s", used_power_file)
         df = frameio.load(used_power_file)
         groups = self._collect_statistics(df)
+        if not groups:
+            raise ValueError("could not find any groups")
 
         table_entries = self._create_table_entries(groups)
         unit_energy = str(df["energy"].dtype.units)
@@ -85,11 +87,8 @@ class Statistics:
         stats_times = group["times"]
         stats_sizes = {}
         for k, v in group["sizes"].items():
-            if k == "stdev":
-                if v is None:
-                    stats_sizes[k] = None
-                else:
-                    stats_sizes[k] = humanize.naturalsize(v, binary=True)
+            if v is None:
+                stats_sizes[k] = None
             else:
                 stats_sizes[k] = humanize.naturalsize(v, binary=True)
 
@@ -151,6 +150,14 @@ class Statistics:
         return processed_stats
 
     def _get_stats(self, values):
+        if values.isna().all():
+            return {
+                "min": "n/a",
+                "max": "n/a",
+                "mean": "n/a",
+                "stdev": "n/a",
+            }
+
         result = {
             "min": min(values),
             "max": max(values),
