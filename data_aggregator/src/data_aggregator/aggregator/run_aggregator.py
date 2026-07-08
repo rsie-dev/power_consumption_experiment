@@ -61,7 +61,7 @@ class RunAggregator:
             tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
             measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
             return measurement_info
-        except Exception as e:
+        except IndexError as e:
             raise ValueError(f"host {host} invalid tags: {tags}") from e
 
     def _preprocess_runs(self, measurement_info: MeasurementInfo, runs):
