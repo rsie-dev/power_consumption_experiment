@@ -22,15 +22,15 @@ class HostScriptGenerator(ScriptGenerator):
         all_data_sets = []
         measurement_sets = 0
         if OperationMode.COMPRESS in modes:
-            data_sets_compress, measurement_sets_compress = self._get_measurement_sets_compress(tools, data_sets,
-                                                                                                compression_strengths)
+            data_sets_compress, sets_compress = self._get_measurement_sets_compress(tools, data_sets,
+                                                                                    compression_strengths)
             all_data_sets += data_sets_compress
-            measurement_sets += measurement_sets_compress
+            measurement_sets += sets_compress
         if OperationMode.DECOMPRESS in modes:
-            data_sets_decompress, measurement_sets_decompress = self._get_measurement_sets_decompress(tools, data_sets,
-                                                                                                      compression_strengths)
+            data_sets_decompress, sets_decompress = self._get_measurement_sets_decompress(tools, data_sets,
+                                                                                          compression_strengths)
             all_data_sets += data_sets_decompress
-            measurement_sets += measurement_sets_decompress
+            measurement_sets += sets_decompress
         self._logger.info("Generating %d measurement sets", measurement_sets)
 
         data = {
