@@ -49,11 +49,11 @@ class ScriptGenerator:
         entry = {
             "tool": tool,
             "measurement_tags": self._get_measurement_tags(tool, tool_config, data_set),
-            "tool_args": self._get_tool_config(tool, tool_config),
+            "tool_args": self._get_tool_args(tool, tool_config),
         }
         return entry
 
-    def _get_tool_config(self, tool: Tool, config: ToolConfig):
+    def _get_tool_args(self, tool: Tool, config: ToolConfig) -> str:
         tool_args = []
         if config.mode == OperationMode.COMPRESS:
             tool_args.append(tool.value.compress)
