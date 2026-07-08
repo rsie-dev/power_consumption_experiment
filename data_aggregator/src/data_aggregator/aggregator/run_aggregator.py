@@ -48,6 +48,11 @@ class RunAggregator:
             yield measurement_info, df
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
+        if tags == "baseline":
+            tool_config = ToolConfig(mode=OperationMode.BASELINE, strength=CompressionStrength.DEFAULT, threading=Threading.NONE)
+            measurement_info = MeasurementInfo(host=host, tool="time", dataset="", tool_config=tool_config)
+            return measurement_info
+
         try:
             tokens = tags.split("_")
             tool = tokens[0]
