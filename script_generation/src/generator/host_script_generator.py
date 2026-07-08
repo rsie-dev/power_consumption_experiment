@@ -63,8 +63,8 @@ class HostScriptGenerator(ScriptGenerator):
                                          compression_strengths: list[CompressionStrength]):
         measurement_sets = 0
         data_set_entries = []
-        for tool in tools:
-            for data_set in data_sets:
+        for data_set in data_sets:
+            for tool in tools:
                 entries, count = self._build_data_set_entry_decompress(data_set, tool, compression_strengths)
                 data_set_entries.extend(entries)
                 measurement_sets += count
