@@ -48,18 +48,21 @@ class RunAggregator:
             yield measurement_info, df
 
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
-        tokens = tags.split("_")
-        tool = tokens[0]
-        mode = OperationMode[tokens[1].upper()]
-        dataset = tokens[2]
-        strength = CompressionStrength[tokens[3].upper()]
-        threading = Threading.NONE
-        if len(tokens) > 4:
-            threading = Threading[tokens[4].upper()]
+        try:
+            tokens = tags.split("_")
+            tool = tokens[0]
+            mode = OperationMode[tokens[1].upper()]
+            dataset = tokens[2]
+            strength = CompressionStrength[tokens[3].upper()]
+            threading = Threading.NONE
+            if len(tokens) > 4:
+                threading = Threading[tokens[4].upper()]
 
-        tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
-        measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
-        return measurement_info
+            tool_config = ToolConfig(mode=mode, strength=strength, threading=threading)
+            measurement_info = MeasurementInfo(host=host, tool=tool, dataset=dataset, tool_config=tool_config)
+            return measurement_info
+        except Exception as e:
+            raise ValueError(f"host {host} invalid tags: {tags}") from e
 
     def _preprocess_runs(self, measurement_info: MeasurementInfo, runs):
         name = self._build_name(measurement_info)
