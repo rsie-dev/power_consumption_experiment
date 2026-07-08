@@ -64,10 +64,9 @@ class HostScriptGenerator(ScriptGenerator):
         measurement_sets = 0
         data_set_entries = []
         for data_set in data_sets:
-            for tool in tools:
-                entries, count = self._build_data_set_entry_decompress(data_set, tool, compression_strengths)
-                data_set_entries.extend(entries)
-                measurement_sets += count
+            entries, count = self._build_data_set_entry_decompress(data_set, tools, compression_strengths)
+            data_set_entries.extend(entries)
+            measurement_sets += count
         return data_set_entries, measurement_sets
 
     def _build_data_set_entry_compress(self, data_set: DataSet, tools: list[Tool],
@@ -87,29 +86,30 @@ class HostScriptGenerator(ScriptGenerator):
         }
         return entry, count
 
-    def _build_data_set_entry_decompress(self, data_set: DataSet, tool: Tool,
+    def _build_data_set_entry_decompress(self, data_set: DataSet, tools: list[Tool],
                                          compression_strengths: list[CompressionStrength]):
         entries = []
 
-        tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, compression_strengths)
-        for tool_config in tool_configs:
-            tool_entry = self._build_tool_entry(tool, tool_config, data_set)
-            data_set_name = f"{data_set.name.lower()}_{tool.name.lower()}_{tool_config.strength.name.lower()}"
-            decompress_file = data_set.value
-            decompress_file = decompress_file.with_stem(f"{data_set.value.stem}_{tool.name.lower()}_"
-                                                        f"{tool_config.strength.name.lower()}")
-            if tool.value.threading == Threading.MULTI:
-                threading_name = tool_config.threading.name.lower()
-                decompress_file = decompress_file.with_stem(f"{decompress_file.stem}_{threading_name}")
-                data_set_name = f"{data_set_name}_{threading_name}"
-            suffixes = decompress_file.suffixes + [tool.value.extension]
-            decompress_file = decompress_file.with_suffix("".join(suffixes))
-            entry = {
-                "data_set_name": data_set_name,
-                "data_set_file": f"{decompress_file}",
-                "tools": [tool_entry],
-            }
-            entries.append(entry)
+        for tool in tools:
+            tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, compression_strengths)
+            for tool_config in tool_configs:
+                tool_entry = self._build_tool_entry(tool, tool_config, data_set)
+                data_set_name = f"{data_set.name.lower()}_{tool.name.lower()}_{tool_config.strength.name.lower()}"
+                decompress_file = data_set.value
+                decompress_file = decompress_file.with_stem(f"{data_set.value.stem}_{tool.name.lower()}_"
+                                                            f"{tool_config.strength.name.lower()}")
+                if tool.value.threading == Threading.MULTI:
+                    threading_name = tool_config.threading.name.lower()
+                    decompress_file = decompress_file.with_stem(f"{decompress_file.stem}_{threading_name}")
+                    data_set_name = f"{data_set_name}_{threading_name}"
+                suffixes = decompress_file.suffixes + [tool.value.extension]
+                decompress_file = decompress_file.with_suffix("".join(suffixes))
+                entry = {
+                    "data_set_name": data_set_name,
+                    "data_set_file": f"{decompress_file}",
+                    "tools": [tool_entry],
+                }
+                entries.append(entry)
 
         return entries, len(entries)
 
