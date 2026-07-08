@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 
 class OperationMode(Enum):
+    BASELINE = auto()
     COMPRESS = auto()
     DECOMPRESS = auto()
 
