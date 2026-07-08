@@ -89,7 +89,6 @@ class HostScriptGenerator(ScriptGenerator):
     def _build_data_set_entry_decompress(self, data_set: DataSet, tools: list[Tool],
                                          compression_strengths: list[CompressionStrength]):
         entries = []
-
         for tool in tools:
             tool_configs = self._build_tool_configs(tool, OperationMode.DECOMPRESS, compression_strengths)
             for tool_config in tool_configs:
