@@ -50,7 +50,7 @@ class RunAggregator:
     def _get_measurement_info(self, host: str, tags: str) -> MeasurementInfo:
         if tags == "baseline":
             tool_config = ToolConfig(mode=OperationMode.BASELINE, strength=CompressionStrength.DEFAULT, threading=Threading.NONE)
-            measurement_info = MeasurementInfo(host=host, tool="time", dataset="", tool_config=tool_config)
+            measurement_info = MeasurementInfo(host=host, tool="sleep", dataset="none", tool_config=tool_config)
             return measurement_info
 
         try:
