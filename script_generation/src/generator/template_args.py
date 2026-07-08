@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class TemplateArgs:
+class TemplateArgs:  # pylint: disable=too-many-instance-attributes
     host: str
     ip: str
     runs: int
