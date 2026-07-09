@@ -37,8 +37,8 @@ class EnergyAggregator:
             )
             .reset_index()
         )
-        result["average_power"] = result["energy"] / result["duration"]
-        result["average_power"] = result["average_power"].pint.to("watt")
+        result["average_run_power"] = result["energy"] / result["duration"]
+        result["average_run_power"] = result["average_run_power"].pint.to("watt")
         for i, column in enumerate(["host", "tool", "dataset", "mode", "strength", "threading"]):
             result.insert(loc=i, column=column, value=df.iloc[0][column])
         return result
