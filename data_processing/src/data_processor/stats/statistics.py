@@ -62,7 +62,6 @@ class Statistics:
             self.GROUP_COLS + ["stat"],
             ignore_index=True,
         )
-        print(stats_df)
 
         return stats_df
 
