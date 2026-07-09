@@ -23,6 +23,13 @@ class Statistics:
         if not groups:
             raise ValueError("could not find any groups")
 
+        self._print_table(groups, df)
+
+        stat_file = self._resources / ("stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv")
+        stats_df = self._create_stats_df(groups)
+        frameio.persist(stats_df, stat_file)
+
+    def _print_table(self, groups, df):
         table_entries = self._create_table_entries(groups)
         unit_energy = str(df["energy"].dtype.units)
         unit_times = str(df["real"].dtype.units)
@@ -34,9 +41,6 @@ class Statistics:
                                       tablefmt="simple"
                                       )
         print(table_str)
-        stat_file = self._resources / ("stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv")
-        stats_df = self._create_stats_df(groups)
-        frameio.persist(stats_df, stat_file)
 
     def _create_stats_df(self, groups) -> pd.DataFrame:
         all_df = []
