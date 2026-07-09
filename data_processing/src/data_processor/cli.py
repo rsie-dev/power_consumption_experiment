@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
-from .calc import CompressionRatio, Throughput
+from .calc import CompressionRatio, Throughput, Power
 
 
 class Processor:
@@ -46,7 +46,7 @@ class Processor:
                                            description='valid subcommands', help='sub-command help')
 
         parser_stats = subparsers.add_parser('stats', help="basic statistics")
-        parser_stats.add_argument('used_power_file', type=Path)
+        parser_stats.add_argument('used_energy_file', type=Path)
         parser_stats.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                   help="resource output folder")
         parser_stats.set_defaults(func=self._stats)
@@ -56,7 +56,7 @@ class Processor:
                                                      description='valid subcommands', help='sub-command help')
 
         parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio")
-        parser_calc_cr.add_argument('used_power_file', type=Path)
+        parser_calc_cr.add_argument('used_energy_file', type=Path)
         parser_calc_cr.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                     help="resource output folder")
         parser_calc_cr.add_argument('--tex', action='store_true', help="create latex table")
@@ -65,13 +65,22 @@ class Processor:
         parser_calc_cr.set_defaults(func=self._calc_cr)
 
         parser_calc_trough = subparsers_calc.add_parser('tp', help="calculate throughput")
-        parser_calc_trough.add_argument('used_power_file', type=Path)
+        parser_calc_trough.add_argument('used_energy_file', type=Path)
         parser_calc_trough.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                         help="resource output folder")
         parser_calc_trough.add_argument('--tex', action='store_true', help="create latex table")
         parser_calc_trough.add_argument('--no-tool', nargs="*", help="tools to skip")
         parser_calc_trough.add_argument('--no-data-set', nargs="*", help="data sets to skip")
         parser_calc_trough.set_defaults(func=self._calc_through)
+
+        parser_calc_power = subparsers_calc.add_parser('power', help="calculate power")
+        parser_calc_power.add_argument('used_energy_file', type=Path)
+        parser_calc_power.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                                        help="resource output folder")
+        parser_calc_power.add_argument('--tex', action='store_true', help="create latex table")
+        parser_calc_power.add_argument('--no-tool', nargs="*", help="tools to skip")
+        parser_calc_power.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        parser_calc_power.set_defaults(func=self._calc_power)
 
         parser_multimeter = subparsers.add_parser('multimeter')
         subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
@@ -103,13 +112,13 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         statistics = Statistics(resources_folder)
-        statistics.process(args.used_power_file)
+        statistics.process(args.used_energy_file)
 
     def _calc_cr(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         cr = CompressionRatio(resources_folder)
-        cr.process(args.used_power_file, args.tex,
+        cr.process(args.used_energy_file, args.tex,
                    args.no_tool if args.no_tool else [],
                    args.no_data_set if args.no_data_set else []
                    )
@@ -118,10 +127,20 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         tp = Throughput(resources_folder)
-        tp.process(args.used_power_file, args.tex,
+        tp.process(args.used_energy_file, args.tex,
                    args.no_tool if args.no_tool else [],
                    args.no_data_set if args.no_data_set else []
                    )
+
+    def _calc_power(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        tp = Power(resources_folder)
+        tp.process(args.used_energy_file, args.tex,
+                   args.no_tool if args.no_tool else [],
+                   args.no_data_set if args.no_data_set else []
+                   )
+
 
 def app():
     processor = Processor()
