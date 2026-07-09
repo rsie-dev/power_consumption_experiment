@@ -31,21 +31,26 @@ class Statistics:
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(
             [
-                df.groupby(self.GROUP_COLS, as_index=False)[self.VALUE_COLS]
-                .agg(stat)
+                df.groupby(self.GROUP_COLS, as_index=False)
+                .agg(
+                    num_runs=("run", "size"),
+                    energy=("energy", stat),
+                    real=("real", stat),
+                    size=("size", stat),
+                )
                 .assign(stat=name)
                 for name, stat in [
-                    ("min", "min"),
-                    ("max", "max"),
-                    ("mean", "mean"),
-                    ("stdev", "std"),
+                   ("min", "min"),
+                   ("max", "max"),
+                   ("mean", "mean"),
+                   ("stdev", "std"),
                 ]
             ],
             ignore_index=True,
         )
 
         stats_df = stats_df[
-            ["stat"] + self.GROUP_COLS + self.VALUE_COLS
+            ["stat"] + self.GROUP_COLS + ["num_runs"] + self.VALUE_COLS
         ]
 
         stats_df["stat"] = pd.Categorical(
@@ -57,6 +62,7 @@ class Statistics:
             self.GROUP_COLS + ["stat"],
             ignore_index=True,
         )
+        print(stats_df)
 
         return stats_df
 
@@ -65,7 +71,7 @@ class Statistics:
         unit_energy = str(df["energy"].dtype.units)
         unit_times = str(df["real"].dtype.units)
         unit_size = str(df["size"].dtype.units)
-        headers = ["stat", "host", "tool", "dataset", "mode", "strength", "threading",
+        headers = ["stat", "host", "tool", "dataset", "mode", "strength", "threading", "num runs",
                    "energy (%s)" % unit_energy, "real (%s)" % unit_times, "size (%s)" % unit_size]
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
@@ -74,14 +80,14 @@ class Statistics:
         print(table_str)
 
     def _create_table_entries(self, df):
-        table_df = df.drop(columns=[])
+        table_df = df.copy()
         for col in self.VALUE_COLS:
             table_df[col] = table_df[col].astype(float)
         table_entries = []
         groups = list(table_df.groupby(self.GROUP_COLS, sort=False))
         for i, (_, block) in enumerate(groups):
             for _, row in block.iterrows():
-                entry = list(row.values[:1 + len(self.GROUP_COLS) + 2])
+                entry = list(row.values[:1 + len(self.GROUP_COLS) + 1 + len(self.VALUE_COLS) - 1])
                 if pd.isna(row["size"]):
                     entry.append(None)
                 else:
