@@ -5,12 +5,10 @@ import tabulate
 import pandas as pd
 
 from data_processor.util import FrameIO
+from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
 
 
 class Power:
-    ORDER_TOOL = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli", "sleep"]
-    ORDER_STRENGTH = ["min", "default", "max"]
-
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
@@ -25,8 +23,8 @@ class Power:
         power_df = self._calculate_power(df)
         power_df["average_power"] = power_df["average_power"].pint.to("watt")
 
-        power_df["_tool_key"] = power_df["tool"].apply(self.ORDER_TOOL.index)
-        power_df["_strength_key"] = power_df["strength"].apply(self.ORDER_STRENGTH.index)
+        power_df["_tool_key"] = power_df["tool"].apply(ORDER_TOOL.index)
+        power_df["_strength_key"] = power_df["strength"].apply(ORDER_STRENGTH.index)
         power_df = power_df.sort_values(
             by=["host", "_tool_key", "dataset", "mode", "_strength_key"],
         ).drop(columns=["_tool_key", "_strength_key"])
@@ -62,10 +60,8 @@ class Power:
         self._frameio.persist(df, tp_file)
 
     def _calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
-        group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
-
         result_df = (
-            df.groupby(group_cols, as_index=False)
+            df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "size"),
                 sum_energy=("energy", "sum"),

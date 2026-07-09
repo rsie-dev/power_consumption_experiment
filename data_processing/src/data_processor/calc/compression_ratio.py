@@ -7,12 +7,10 @@ import pandas as pd
 
 from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str, get_data_file
+from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
 
 
 class CompressionRatio:
-    ORDER_TOOL = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
-    ORDER_STRENGTH = ["min", "default", "max"]
-
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources = resources
@@ -179,7 +177,7 @@ class CompressionRatio:
             return get_data_file(dataset_from_str(str_ds))
 
         result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
-        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
+        result_df["_strength_key"] = result_df["strength"].apply(ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
             by=["_dataset_key", "_strength_key", "threading"],
             ascending=[True, True, False]
@@ -187,7 +185,7 @@ class CompressionRatio:
 
         cols = list(result_df.columns)
         tool_names = result_df.columns.drop(fixed_columns).tolist()
-        tool_names = sorted(tool_names, key=self.ORDER_TOOL.index)
+        tool_names = sorted(tool_names, key=ORDER_TOOL.index)
         result_df = result_df[cols[:len(fixed_columns)] + tool_names]
         return result_df, fixed_columns, tool_names
 

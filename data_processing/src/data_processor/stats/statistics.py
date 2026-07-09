@@ -7,10 +7,10 @@ import humanize
 import pandas as pd
 
 from data_processor.util import FrameIO
+from data_processor.constants import GROUP_COLS
 
 
 class Statistics:
-    GROUP_COLS = ["host", "tool", "dataset", "mode", "strength", "threading"]
     VALUE_COLS = ["energy", "real", "size"]
 
     def __init__(self, resources: Path):
@@ -31,7 +31,7 @@ class Statistics:
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(
             [
-                df.groupby(self.GROUP_COLS, as_index=False)
+                df.groupby(GROUP_COLS, as_index=False)
                 .agg(
                     num_runs=("run", "size"),
                     energy=("energy", stat),
@@ -50,7 +50,7 @@ class Statistics:
         )
 
         stats_df = stats_df[
-            ["stat"] + self.GROUP_COLS + ["num_runs"] + self.VALUE_COLS
+            ["stat"] + GROUP_COLS + ["num_runs"] + self.VALUE_COLS
         ]
 
         stats_df["stat"] = pd.Categorical(
@@ -59,7 +59,7 @@ class Statistics:
             ordered=True,
         )
         stats_df = stats_df.sort_values(
-            self.GROUP_COLS + ["stat"],
+            GROUP_COLS + ["stat"],
             ignore_index=True,
         )
 
@@ -83,10 +83,10 @@ class Statistics:
         for col in self.VALUE_COLS:
             table_df[col] = table_df[col].astype(float)
         table_entries = []
-        groups = list(table_df.groupby(self.GROUP_COLS, sort=False))
+        groups = list(table_df.groupby(GROUP_COLS, sort=False))
         for i, (_, block) in enumerate(groups):
             for _, row in block.iterrows():
-                entry = list(row.values[:1 + len(self.GROUP_COLS) + 1 + len(self.VALUE_COLS) - 1])
+                entry = list(row.values[:1 + len(GROUP_COLS) + 1 + len(self.VALUE_COLS) - 1])
                 if pd.isna(row["size"]):
                     entry.append(None)
                 else:

@@ -6,12 +6,10 @@ import pandas as pd
 
 from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str
+from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
 
 
 class Throughput:
-    ORDER_TOOL = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli"]
-    ORDER_STRENGTH = ["min", "default", "max"]
-
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
@@ -24,8 +22,8 @@ class Throughput:
         df = df[~df["dataset"].isin(no_dataset)]
 
         result_df = self._calculate_throughput(df)
-        result_df["_tool_key"] = result_df["tool"].apply(self.ORDER_TOOL.index)
-        result_df["_strength_key"] = result_df["strength"].apply(self.ORDER_STRENGTH.index)
+        result_df["_tool_key"] = result_df["tool"].apply(ORDER_TOOL.index)
+        result_df["_strength_key"] = result_df["strength"].apply(ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
             by=["host", "_tool_key", "dataset", "mode", "_strength_key"],
             #ascending=[True]
@@ -63,15 +61,13 @@ class Throughput:
         self._frameio.persist(df, tp_file)
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
-        group_cols = ["host", "tool", "dataset", "mode", "strength", "threading"]
-
         def dataset_map(str_ds):
             return dataset_from_str(str_ds).value
 
         df["throughput"] = df["dataset"].map(dataset_map) / df["real"]
 
         result_df = (
-            df.groupby(group_cols, as_index=False)
+            df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "count"),
                 average_real=("real", "mean"),
