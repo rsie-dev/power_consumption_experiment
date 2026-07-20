@@ -9,6 +9,7 @@ class FrameIO:
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def load(self, in_file: Path) -> pd.DataFrame:
+        self._logger.debug("loading %s", in_file)
         df = pd.read_csv(in_file, header=[0, 1])
 
         names = df.columns.get_level_values(0)

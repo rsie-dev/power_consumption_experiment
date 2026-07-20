@@ -19,7 +19,6 @@ class Statistics:
 
     def process(self, used_power_file: Path):
         frameio = FrameIO()
-        self._logger.debug("loading %s", used_power_file)
         df = frameio.load(used_power_file)
         stats_df = self._calculate_statistics(df)
 

@@ -17,7 +17,6 @@ class CompressionRatio:
 
     def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list):
         frameio = FrameIO()
-        self._logger.debug("loading %s", used_energy_file)
         df = frameio.load(used_energy_file)
         first_host = df.loc[0, "host"]
         df = df[df["mode"] == "compress"]
