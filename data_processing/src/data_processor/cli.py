@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
-from .calc import CompressionRatio, Throughput, Power
+from .calc import CompressionRatio, Throughput, Power, EnergyConsumption
 
 
 class Processor:
@@ -82,6 +82,19 @@ class Processor:
         parser_calc_power.add_argument('--no-data-set', nargs="*", help="data sets to skip")
         parser_calc_power.set_defaults(func=self._calc_power)
 
+        parser_energy = subparsers_calc.add_parser('energy', help="energy subcommands")
+        subparsers_energy = parser_energy.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                                         description='valid subcommands', help='sub-command help')
+
+        parser_energy_consumption = subparsers_energy.add_parser('consumption', help="calculate energy consumption")
+        parser_energy_consumption.add_argument('used_energy_file', type=Path)
+        parser_energy_consumption.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                                               help="resource output folder")
+        parser_energy_consumption.add_argument('--tex', action='store_true', help="create latex table")
+        parser_energy_consumption.add_argument('--no-tool', nargs="*", help="tools to skip")
+        parser_energy_consumption.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        parser_energy_consumption.set_defaults(func=self._calc_energy_consumption)
+
         parser_multimeter = subparsers.add_parser('multimeter')
         subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
                                                                 title='multimeter subcommands',
@@ -141,6 +154,14 @@ class Processor:
                    args.no_data_set if args.no_data_set else []
                    )
 
+    def _calc_energy_consumption(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        ec = EnergyConsumption(resources_folder)
+        ec.process(args.used_energy_file, args.tex,
+                   args.no_tool if args.no_tool else [],
+                   args.no_data_set if args.no_data_set else []
+                   )
 
 def app():
     processor = Processor()
