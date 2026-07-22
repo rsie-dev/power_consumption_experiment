@@ -80,6 +80,7 @@ class Processor:
 
         parser_energy_consumption = subparsers_energy.add_parser('consumption', help="calculate energy consumption",
                                                                  parents=[common_calc_parser])
+        parser_energy_consumption.add_argument('--idle-power', type=Path, required=True, help="idle power CSV file")
         parser_energy_consumption.set_defaults(func=self._calc_energy_consumption)
 
         parser_multimeter = subparsers.add_parser('multimeter')
@@ -147,7 +148,8 @@ class Processor:
         ec = EnergyConsumption(resources_folder)
         ec.process(args.used_energy_file, args.tex,
                    args.no_tool if args.no_tool else [],
-                   args.no_data_set if args.no_data_set else []
+                   args.no_data_set if args.no_data_set else [],
+                   args.idle_power,
                    )
 
 def app():
