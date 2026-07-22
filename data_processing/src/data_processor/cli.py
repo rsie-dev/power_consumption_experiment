@@ -45,54 +45,41 @@ class Processor:
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
 
-        parser_stats = subparsers.add_parser('stats', help="basic statistics")
-        parser_stats.add_argument('used_energy_file', type=Path)
-        parser_stats.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                                  help="resource output folder")
+        common_parser = argparse.ArgumentParser(add_help=False)
+        common_parser.add_argument('used_energy_file', type=Path)
+        common_parser.add_argument('-r', '--resources', type=Path, default=Path("resources"),
+                                   help="resource output folder")
+
+        parser_stats = subparsers.add_parser('stats', help="basic statistics", parents=[common_parser])
         parser_stats.set_defaults(func=self._stats)
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
         subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                      description='valid subcommands', help='sub-command help')
 
-        parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio")
-        parser_calc_cr.add_argument('used_energy_file', type=Path)
-        parser_calc_cr.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                                    help="resource output folder")
-        parser_calc_cr.add_argument('--tex', action='store_true', help="create latex table")
-        parser_calc_cr.add_argument('--no-tool', nargs="*", help="tools to skip")
-        parser_calc_cr.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        common_calc_parser = argparse.ArgumentParser(add_help=False, parents=[common_parser])
+        common_calc_parser.add_argument('--tex', action='store_true', help="create latex table")
+        common_calc_parser.add_argument('--no-tool', nargs="*", help="tools to skip")
+        common_calc_parser.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+
+        parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio",
+                                                    parents=[common_calc_parser])
         parser_calc_cr.set_defaults(func=self._calc_cr)
 
-        parser_calc_trough = subparsers_calc.add_parser('tp', help="calculate throughput")
-        parser_calc_trough.add_argument('used_energy_file', type=Path)
-        parser_calc_trough.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                                        help="resource output folder")
-        parser_calc_trough.add_argument('--tex', action='store_true', help="create latex table")
-        parser_calc_trough.add_argument('--no-tool', nargs="*", help="tools to skip")
-        parser_calc_trough.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        parser_calc_trough = subparsers_calc.add_parser('tp', help="calculate throughput",
+                                                        parents=[common_calc_parser])
         parser_calc_trough.set_defaults(func=self._calc_through)
 
-        parser_calc_power = subparsers_calc.add_parser('power', help="calculate power")
-        parser_calc_power.add_argument('used_energy_file', type=Path)
-        parser_calc_power.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                                        help="resource output folder")
-        parser_calc_power.add_argument('--tex', action='store_true', help="create latex table")
-        parser_calc_power.add_argument('--no-tool', nargs="*", help="tools to skip")
-        parser_calc_power.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        parser_calc_power = subparsers_calc.add_parser('power', help="calculate power",
+                                                       parents=[common_calc_parser])
         parser_calc_power.set_defaults(func=self._calc_power)
 
         parser_energy = subparsers_calc.add_parser('energy', help="energy subcommands")
         subparsers_energy = parser_energy.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                          description='valid subcommands', help='sub-command help')
 
-        parser_energy_consumption = subparsers_energy.add_parser('consumption', help="calculate energy consumption")
-        parser_energy_consumption.add_argument('used_energy_file', type=Path)
-        parser_energy_consumption.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                                               help="resource output folder")
-        parser_energy_consumption.add_argument('--tex', action='store_true', help="create latex table")
-        parser_energy_consumption.add_argument('--no-tool', nargs="*", help="tools to skip")
-        parser_energy_consumption.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        parser_energy_consumption = subparsers_energy.add_parser('consumption', help="calculate energy consumption",
+                                                                 parents=[common_calc_parser])
         parser_energy_consumption.set_defaults(func=self._calc_energy_consumption)
 
         parser_multimeter = subparsers.add_parser('multimeter')
