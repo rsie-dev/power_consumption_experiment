@@ -36,14 +36,16 @@ class EnergyConsumption:
         unit_energy = str(table_df["average_energy_total"].dtype.units)
 
         table_entries = []
-        for col in ["average_energy_total"]:
+        energy_cols = ["average_energy_total", "average_energy_net"]
+        for col in energy_cols:
             table_df[col] = table_df[col].astype(float)
         for _, row in table_df.iterrows():
             table_entries.append(row.values[:])
 
         cols = table_df.columns.tolist()
-        headers = cols[:-1]
+        headers = cols[:-len(energy_cols)]
         headers.append("average energy total (%s)" % unit_energy)
+        headers.append("average energy net (%s)" % unit_energy)
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
@@ -55,11 +57,20 @@ class EnergyConsumption:
         self._frameio.persist(df, tp_file)
 
     def _calculate_energy_consumption(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
+        def get_idle(host: str):
+            result = idle_power_df.loc[df["host"] == host, "average_power"]
+            average_power = result.iloc[0]
+            return average_power
+
+        df = df.copy()
+        df["_energy_net"] = df["energy"] - get_idle(df["host"]) * df["real"]
+
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "size"),
                 average_energy_total=("energy", "mean"),
+                average_energy_net=("_energy_net", "mean"),
             )
             .reset_index(drop=True)
         )
