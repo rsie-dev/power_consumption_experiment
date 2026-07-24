@@ -88,5 +88,4 @@ class EnergyConsumption:
             )
             .reset_index(drop=True)
         )
-        print(result_df)
         return result_df
