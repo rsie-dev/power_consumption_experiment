@@ -61,3 +61,12 @@ def test_energy_net(energy_consumption, sample_energy_df, sample_idle_power_df):
     radxax4_row = result[result["host"] == "radxax4"].iloc[0]
     assert radxax4_row["num_runs"] == 2
     assert radxax4_row["average_energy_net"] == 60.0 * ureg.joule
+
+
+def test_energy_norm(energy_consumption, sample_energy_df, sample_idle_power_df):
+    result = energy_consumption._calculate_energy_consumption(sample_energy_df, sample_idle_power_df)
+
+    radxax4_row = result[result["host"] == "radxax4"].iloc[0]
+    assert radxax4_row["num_runs"] == 2
+    assert radxax4_row["average_energy_norm_0"] == 60.0 * ureg.joule
+    assert radxax4_row["average_energy_norm_1"] == 60.0 * ureg.joule + 10 * ureg.second * 1 * ureg.watt

@@ -4,6 +4,7 @@ from pathlib import Path
 import tabulate
 import pandas as pd
 
+from data_processor import ureg
 from data_processor.util import FrameIO
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
 
@@ -36,16 +37,17 @@ class EnergyConsumption:
         unit_energy = str(table_df["average_energy_total"].dtype.units)
 
         table_entries = []
-        energy_cols = ["average_energy_total", "average_energy_net"]
+        cols = table_df.columns.tolist()
+        energy_cols = cols[len(GROUP_COLS) + 1:]
         for col in energy_cols:
             table_df[col] = table_df[col].astype(float)
         for _, row in table_df.iterrows():
             table_entries.append(row.values[:])
 
-        cols = table_df.columns.tolist()
-        headers = cols[:-len(energy_cols)]
-        headers.append("average energy total (%s)" % unit_energy)
-        headers.append("average energy net (%s)" % unit_energy)
+        headers = cols[:len(GROUP_COLS) + 1]
+        for column in energy_cols:
+            headers.append("%s (%s)" % (column.replace("_", " "), unit_energy))
+
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
@@ -63,15 +65,21 @@ class EnergyConsumption:
             return average_power
 
         df = df.copy()
-        df["_energy_net"] = df["energy"] - get_idle(df["host"]) * df["real"]
+        df["energy_net"] = df["energy"] - get_idle(df["host"]) * df["real"]
+        for virtual_value in [0, 1]:
+            p_virtual = virtual_value * ureg.watt
+            df["energy_norm_%s" % virtual_value] = df["energy_net"] + p_virtual * df["real"]
 
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "size"),
                 average_energy_total=("energy", "mean"),
-                average_energy_net=("_energy_net", "mean"),
+                average_energy_net=("energy_net", "mean"),
+                average_energy_norm_0=("energy_norm_0", "mean"),
+                average_energy_norm_1=("energy_norm_1", "mean"),
             )
             .reset_index(drop=True)
         )
+        print(result_df)
         return result_df
