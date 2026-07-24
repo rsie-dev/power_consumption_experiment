@@ -14,6 +14,11 @@ class EnergyConsumption:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
         self._resources = resources
+        self._virtual_powers = [0, 1]
+
+    @property
+    def virtual_powers(self) -> list:
+        return self._virtual_powers
 
     def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list, idle_power: Path):
         idle_power_df = self._frameio.load(idle_power)
@@ -66,9 +71,9 @@ class EnergyConsumption:
 
         df = df.copy()
         df["energy_net"] = df["energy"] - get_idle(df["host"]) * df["real"]
-        for virtual_value in [0, 1]:
-            p_virtual = virtual_value * ureg.watt
-            df["energy_norm_%s" % virtual_value] = df["energy_net"] + p_virtual * df["real"]
+        virtual_powers = [p * ureg.watt for p in self._virtual_powers]
+        for p_virtual  in virtual_powers:
+            df["energy_norm_%s" % p_virtual.magnitude] = df["energy_net"] + p_virtual * df["real"]
 
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
@@ -76,8 +81,10 @@ class EnergyConsumption:
                 num_runs=("run", "size"),
                 average_energy_total=("energy", "mean"),
                 average_energy_net=("energy_net", "mean"),
-                average_energy_norm_0=("energy_norm_0", "mean"),
-                average_energy_norm_1=("energy_norm_1", "mean"),
+                **{
+                    "average_energy_norm_%s" % v.magnitude: ("energy_norm_%s" % v.magnitude, "mean")
+                    for v in virtual_powers
+                },
             )
             .reset_index(drop=True)
         )
