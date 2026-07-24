@@ -61,5 +61,6 @@ class EnergyConsumption:
                 num_runs=("run", "size"),
                 average_energy_total=("energy", "mean"),
             )
+            .reset_index(drop=True)
         )
         return result_df
