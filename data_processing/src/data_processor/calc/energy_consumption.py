@@ -6,20 +6,19 @@ import tabulate
 import pandas as pd
 
 from data_processor import ureg
-from data_processor.util import FrameIO
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
 from .calc_params import CalcParams
+from .calculator import Calculator
 
 
-class EnergyConsumption:
+class EnergyConsumption(Calculator):
     @dataclass(frozen=True)
     class Params(CalcParams):
         idle_power: Path
 
     def __init__(self, resources: Path):
+        super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._frameio = FrameIO()
-        self._resources = resources
         self._virtual_powers = [0, 1]
 
     @property

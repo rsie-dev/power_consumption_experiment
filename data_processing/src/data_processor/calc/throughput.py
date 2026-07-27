@@ -5,22 +5,21 @@ from dataclasses import dataclass
 import tabulate
 import pandas as pd
 
-from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
 from .calc_params import CalcParams
+from .calculator import Calculator
 
 
-class Throughput:
+class Throughput(Calculator):
     @dataclass(frozen=True)
     class Params(CalcParams):
         pass
 
 
     def __init__(self, resources: Path):
+        super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._frameio = FrameIO()
-        self._resources = resources
 
     def process(self, params: Params):
         df = self._frameio.load(params.used_energy_file)

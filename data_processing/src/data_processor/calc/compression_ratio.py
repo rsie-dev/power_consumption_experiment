@@ -6,24 +6,23 @@ import tabulate
 from tabulate import SEPARATING_LINE
 import pandas as pd
 
-from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str, get_data_file
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
 from .calc_params import CalcParams
+from .calculator import Calculator
 
 
-class CompressionRatio:
+class CompressionRatio(Calculator):
     @dataclass(frozen=True)
     class Params(CalcParams):
         create_tex: bool
 
     def __init__(self, resources: Path):
+        super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._resources = resources
 
     def process(self, params: Params):
-        frameio = FrameIO()
-        df = frameio.load(params.used_energy_file)
+        df = self._frameio.load(params.used_energy_file)
         first_host = df.loc[0, "host"]
         df = df[df["mode"] == "compress"]
         df = df[df["host"] == first_host]
@@ -45,7 +44,6 @@ class CompressionRatio:
     def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
         result_df, _, _ = self._restructure_data(df)
         cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        frameio = FrameIO()
         # Reshape to long format
         csv_df = (
             result_df.melt(
@@ -56,7 +54,7 @@ class CompressionRatio:
             .reset_index(drop=True)
         )
         csv_df = csv_df[csv_df["cr"].notna()]
-        frameio.persist(csv_df, cr_file)
+        self._frameio.persist(csv_df, cr_file)
 
     def _show_tables(self, df: pd.DataFrame):
         result_df, fixed_columns, tool_names = self._restructure_data(df)
