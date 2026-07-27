@@ -38,8 +38,8 @@ class EnergyConsumption(Calculator):
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(energy_df)
-        #energy_file = "energy_consumption_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv"
-        #self._create_csv(energy_file, energy_df)
+        energy_file = "energy_consumption_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        self._create_csv(energy_file, energy_df)
 
     def _print_table(self, df: pd.DataFrame) -> None:
         table_df = df.copy()
