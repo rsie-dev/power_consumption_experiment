@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from dataclasses import dataclass
 
 import tabulate
 import pandas as pd
@@ -7,9 +8,14 @@ import pandas as pd
 from data_processor import ureg
 from data_processor.util import FrameIO
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from .calc_params import CalcParams
 
 
 class EnergyConsumption:
+    @dataclass(frozen=True)
+    class Params(CalcParams):
+        idle_power: Path
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
@@ -20,11 +26,11 @@ class EnergyConsumption:
     def virtual_powers(self) -> list:
         return self._virtual_powers
 
-    def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list, idle_power: Path):
-        idle_power_df = self._frameio.load(idle_power)
-        df = self._frameio.load(used_energy_file)
-        df = df[~df["tool"].isin(no_tool)]
-        df = df[~df["dataset"].isin(no_dataset)]
+    def process(self, params: Params):
+        idle_power_df = self._frameio.load(params.idle_power)
+        df = self._frameio.load(params.used_energy_file)
+        df = df[~df["tool"].isin(params.no_tool)]
+        df = df[~df["dataset"].isin(params.no_dataset)]
 
         energy_df = self._calculate_energy_consumption(df, idle_power_df)
 

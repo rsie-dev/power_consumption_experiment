@@ -146,11 +146,13 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         ec = EnergyConsumption(resources_folder)
-        ec.process(args.used_energy_file, args.tex,
-                   args.no_tool if args.no_tool else [],
-                   args.no_data_set if args.no_data_set else [],
-                   args.idle_power,
-                   )
+        params = EnergyConsumption.Params(
+            used_energy_file=args.used_energy_file,
+            no_tool=args.no_tool if args.no_tool else [],
+            no_dataset=args.no_data_set if args.no_data_set else [],
+            idle_power=args.idle_power,
+        )
+        ec.process(params)
 
 def app():
     processor = Processor()
