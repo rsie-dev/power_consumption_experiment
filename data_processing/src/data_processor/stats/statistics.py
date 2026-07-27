@@ -23,8 +23,8 @@ class Statistics(Processor):
 
         self._print_table(stats_df)
 
-        stat_file = self._resources / ("stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv")
-        self._frameio.persist(stats_df, stat_file)
+        stat_file = "stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv"
+        self._create_csv(stat_file, stats_df)
 
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(

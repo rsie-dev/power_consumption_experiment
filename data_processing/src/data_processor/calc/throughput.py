@@ -35,7 +35,8 @@ class Throughput(Calculator):
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(result_df)
-        self._create_csv(params.used_energy_file, result_df)
+        tp_file = "tp_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        self._create_csv(tp_file, result_df)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.drop(columns=[])
@@ -60,10 +61,6 @@ class Throughput(Calculator):
                                       tablefmt="simple"
                                       )
         print(table_str)
-
-    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
-        tp_file = self._resources / ("tp_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        self._frameio.persist(df, tp_file)
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
         def dataset_map(str_ds):

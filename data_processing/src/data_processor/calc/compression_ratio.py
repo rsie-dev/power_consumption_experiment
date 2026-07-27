@@ -37,13 +37,12 @@ class CompressionRatio(Calculator):
         df["compression_ratio"] = df["compression_ratio"].astype(float)
 
         self._show_tables(df)
-        self._create_csv(params.used_energy_file, df)
+        self._write_csv(params.used_energy_file, df)
         if params.create_tex:
             self._process_tex(params.used_energy_file, df)
 
-    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
+    def _write_csv(self, used_energy_file: Path, df: pd.DataFrame):
         result_df, _, _ = self._restructure_data(df)
-        cr_file = self._resources / ("cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
         # Reshape to long format
         csv_df = (
             result_df.melt(
@@ -54,7 +53,8 @@ class CompressionRatio(Calculator):
             .reset_index(drop=True)
         )
         csv_df = csv_df[csv_df["cr"].notna()]
-        self._frameio.persist(csv_df, cr_file)
+        cr_file = "cr_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        self._create_csv(cr_file, csv_df)
 
     def _show_tables(self, df: pd.DataFrame):
         result_df, fixed_columns, tool_names = self._restructure_data(df)

@@ -35,7 +35,8 @@ class Power(Calculator):
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(power_df)
-        self._create_csv(params.used_energy_file, power_df)
+        power_file = "power_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        self._create_csv(power_file, power_df)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.copy()
@@ -59,10 +60,6 @@ class Power(Calculator):
                                       tablefmt="simple"
                                       )
         print(table_str)
-
-    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
-        tp_file = self._resources / ("power_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        self._frameio.persist(df, tp_file)
 
     def _calculate_power(self, df: pd.DataFrame) -> pd.DataFrame:
         result_df = (
