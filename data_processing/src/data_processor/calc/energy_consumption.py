@@ -38,7 +38,7 @@ class EnergyConsumption(Calculator):
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(energy_df)
-        #energy_file = "energy_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        #energy_file = "energy_consumption_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv"
         #self._create_csv(energy_file, energy_df)
 
     def _print_table(self, df: pd.DataFrame) -> None:
@@ -62,10 +62,6 @@ class EnergyConsumption(Calculator):
                                       tablefmt="simple"
                                       )
         print(table_str)
-
-    def _create_csv(self, used_energy_file: Path, df: pd.DataFrame) -> None:
-        tp_file = self._resources / ("energy_consumption_%s" % used_energy_file.stem.removeprefix("used_energy_") + ".csv")
-        self._frameio.persist(df, tp_file)
 
     def _calculate_energy_consumption(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
         def get_idle(host: str):
