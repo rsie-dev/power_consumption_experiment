@@ -82,7 +82,7 @@ class EnergyConsumption(Calculator):
                 average_energy_consumption_total=("energy", "mean"),
                 average_energy_consumption_net=("energy_net", "mean"),
                 **{
-                    "average_energy_consumption_norm_%s" % v.magnitude: ("energy_norm_%s" % v.magnitude, "mean")
+                    "average_energy_consumption_norm_%s_watt" % v.magnitude: ("energy_norm_%s" % v.magnitude, "mean")
                     for v in virtual_powers
                 },
             )
