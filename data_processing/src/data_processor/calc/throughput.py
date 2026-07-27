@@ -22,9 +22,7 @@ class Throughput(Calculator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def process(self, params: Params):
-        df = self._frameio.load(params.used_energy_file)
-        df = df[~df["tool"].isin(params.no_tool)]
-        df = df[~df["dataset"].isin(params.no_dataset)]
+        df = self._load(params)
 
         result_df = self._calculate_throughput(df)
         result_df["_tool_key"] = result_df["tool"].apply(ORDER_TOOL.index)

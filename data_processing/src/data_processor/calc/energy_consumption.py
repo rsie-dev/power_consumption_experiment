@@ -26,10 +26,8 @@ class EnergyConsumption(Calculator):
         return self._virtual_powers
 
     def process(self, params: Params):
+        df = self._load(params)
         idle_power_df = self._frameio.load(params.idle_power)
-        df = self._frameio.load(params.used_energy_file)
-        df = df[~df["tool"].isin(params.no_tool)]
-        df = df[~df["dataset"].isin(params.no_dataset)]
 
         energy_df = self._calculate_energy_consumption(df, idle_power_df)
 

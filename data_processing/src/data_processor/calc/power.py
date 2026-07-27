@@ -21,9 +21,7 @@ class Power(Calculator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def process(self, params: Params):
-        df = self._frameio.load(params.used_energy_file)
-        df = df[~df["tool"].isin(params.no_tool)]
-        df = df[~df["dataset"].isin(params.no_dataset)]
+        df = self._load(params)
 
         power_df = self._calculate_power(df)
         power_df["average_power"] = power_df["average_power"].pint.to("watt")

@@ -22,14 +22,12 @@ class CompressionRatio(Calculator):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def process(self, params: Params):
-        df = self._frameio.load(params.used_energy_file)
+        df = self._load(params)
         first_host = df.loc[0, "host"]
         df = df[df["mode"] == "compress"]
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
-        df = df[~df["tool"].isin(params.no_tool)]
-        df = df[~df["dataset"].isin(params.no_dataset)]
-        self._validate_multi(df)
+        #self._validate_multi(df)
         df["compression_ratio"] = df.apply(
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
             axis=1,
