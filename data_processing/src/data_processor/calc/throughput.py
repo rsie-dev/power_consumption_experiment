@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from dataclasses import dataclass
 
 import tabulate
 import pandas as pd
@@ -7,18 +8,24 @@ import pandas as pd
 from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from .calc_params import CalcParams
 
 
 class Throughput:
+    @dataclass(frozen=True)
+    class Params(CalcParams):
+        pass
+
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
         self._resources = resources
 
-    def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list):
-        df = self._frameio.load(used_energy_file)
-        df = df[~df["tool"].isin(no_tool)]
-        df = df[~df["dataset"].isin(no_dataset)]
+    def process(self, params: Params):
+        df = self._frameio.load(params.used_energy_file)
+        df = df[~df["tool"].isin(params.no_tool)]
+        df = df[~df["dataset"].isin(params.no_dataset)]
 
         result_df = self._calculate_throughput(df)
         result_df["_tool_key"] = result_df["tool"].apply(ORDER_TOOL.index)
@@ -29,7 +36,7 @@ class Throughput:
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(result_df)
-        self._create_csv(used_energy_file, result_df)
+        self._create_csv(params.used_energy_file, result_df)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.drop(columns=[])

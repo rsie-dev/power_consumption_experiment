@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from dataclasses import dataclass
 
 import tabulate
 from tabulate import SEPARATING_LINE
@@ -8,22 +9,27 @@ import pandas as pd
 from data_processor.util import FrameIO
 from data_processor.data_set import dataset_from_str, get_data_file
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
+from .calc_params import CalcParams
 
 
 class CompressionRatio:
+    @dataclass(frozen=True)
+    class Params(CalcParams):
+        create_tex: bool
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources = resources
 
-    def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list):
+    def process(self, params: Params):
         frameio = FrameIO()
-        df = frameio.load(used_energy_file)
+        df = frameio.load(params.used_energy_file)
         first_host = df.loc[0, "host"]
         df = df[df["mode"] == "compress"]
         df = df[df["host"] == first_host]
         df = df[df["run"] == 1]
-        df = df[~df["tool"].isin(no_tool)]
-        df = df[~df["dataset"].isin(no_dataset)]
+        df = df[~df["tool"].isin(params.no_tool)]
+        df = df[~df["dataset"].isin(params.no_dataset)]
         self._validate_multi(df)
         df["compression_ratio"] = df.apply(
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
@@ -32,9 +38,9 @@ class CompressionRatio:
         df["compression_ratio"] = df["compression_ratio"].astype(float)
 
         self._show_tables(df)
-        self._create_csv(used_energy_file, df)
-        if create_tex:
-            self._process_tex(used_energy_file, df)
+        self._create_csv(params.used_energy_file, df)
+        if params.create_tex:
+            self._process_tex(params.used_energy_file, df)
 
     def _create_csv(self, used_energy_file: Path, df: pd.DataFrame):
         result_df, _, _ = self._restructure_data(df)

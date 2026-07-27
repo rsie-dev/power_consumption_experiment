@@ -1,23 +1,30 @@
 import logging
 from pathlib import Path
+from dataclasses import dataclass
 
 import tabulate
 import pandas as pd
 
 from data_processor.util import FrameIO
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from .calc_params import CalcParams
 
 
 class Power:
+    @dataclass(frozen=True)
+    class Params(CalcParams):
+        pass
+
+
     def __init__(self, resources: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._frameio = FrameIO()
         self._resources = resources
 
-    def process(self, used_energy_file: Path, create_tex: bool, no_tool: list, no_dataset: list):
-        df = self._frameio.load(used_energy_file)
-        df = df[~df["tool"].isin(no_tool)]
-        df = df[~df["dataset"].isin(no_dataset)]
+    def process(self, params: Params):
+        df = self._frameio.load(params.used_energy_file)
+        df = df[~df["tool"].isin(params.no_tool)]
+        df = df[~df["dataset"].isin(params.no_dataset)]
 
         power_df = self._calculate_power(df)
         power_df["average_power"] = power_df["average_power"].pint.to("watt")
@@ -29,7 +36,7 @@ class Power:
         ).drop(columns=["_tool_key", "_strength_key"])
 
         self._print_table(power_df)
-        self._create_csv(used_energy_file, power_df)
+        self._create_csv(params.used_energy_file, power_df)
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.copy()
