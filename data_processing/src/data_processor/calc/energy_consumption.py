@@ -43,7 +43,7 @@ class EnergyConsumption(Calculator):
 
     def _print_table(self, df: pd.DataFrame) -> None:
         table_df = df.copy()
-        unit_energy = str(table_df["average_energy_total"].dtype.units)
+        unit_energy = str(table_df["average_energy_consumption_total"].dtype.units)
 
         table_entries = []
         cols = table_df.columns.tolist()
@@ -79,10 +79,10 @@ class EnergyConsumption(Calculator):
             df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "size"),
-                average_energy_total=("energy", "mean"),
-                average_energy_net=("energy_net", "mean"),
+                average_energy_consumption_total=("energy", "mean"),
+                average_energy_consumption_net=("energy_net", "mean"),
                 **{
-                    "average_energy_norm_%s" % v.magnitude: ("energy_norm_%s" % v.magnitude, "mean")
+                    "average_energy_consumption_norm_%s" % v.magnitude: ("energy_norm_%s" % v.magnitude, "mean")
                     for v in virtual_powers
                 },
             )
