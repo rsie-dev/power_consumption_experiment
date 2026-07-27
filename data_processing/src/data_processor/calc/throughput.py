@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from dataclasses import dataclass
 
 import tabulate
 import pandas as pd
@@ -12,16 +11,11 @@ from .calculator import Calculator
 
 
 class Throughput(Calculator):
-    @dataclass(frozen=True)
-    class Params(CalcParams):
-        pass
-
-
     def __init__(self, resources: Path):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def process(self, params: Params):
+    def process(self, params: CalcParams):
         df = self._load(params)
 
         result_df = self._calculate_throughput(df)

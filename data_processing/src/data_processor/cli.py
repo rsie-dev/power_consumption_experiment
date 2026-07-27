@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
+from .calc import CalcParams
 from .calc import CompressionRatio, Throughput, Power, EnergyConsumption
 
 
@@ -131,7 +132,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         tp = Throughput(resources_folder)
-        params = Throughput.Params(
+        params = CalcParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
@@ -142,7 +143,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         tp = Power(resources_folder)
-        params = Power.Params(
+        params = CalcParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
