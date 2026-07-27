@@ -6,26 +6,25 @@ from tabulate import SEPARATING_LINE
 import humanize
 import pandas as pd
 
-from data_processor.util import FrameIO
 from data_processor.constants import GROUP_COLS
+from data_processor.processor import Processor
 
 
-class Statistics:
+class Statistics(Processor):
     VALUE_COLS = ["energy", "real", "size"]
 
     def __init__(self, resources: Path):
+        super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._resources = resources
 
     def process(self, used_power_file: Path):
-        frameio = FrameIO()
-        df = frameio.load(used_power_file)
+        df = self._frameio.load(used_power_file)
         stats_df = self._calculate_statistics(df)
 
         self._print_table(stats_df)
 
         stat_file = self._resources / ("stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv")
-        frameio.persist(stats_df, stat_file)
+        self._frameio.persist(stats_df, stat_file)
 
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(
