@@ -24,7 +24,7 @@ def sample_df():
         "dataset": ["image"] * 6,
         "mode": ["compress"] * 6,
         "strength": ["default"] * 6,
-        "threading": ["single", "single", "single", "single", "multi", "multi"],
+        "threading": ["single"] * 6,
         "run": [1] * 6,
         "size": [100, 50, 80, 40, 90, 45],
     })

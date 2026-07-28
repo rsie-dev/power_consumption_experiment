@@ -20,7 +20,7 @@ def calculator():
 @pytest.fixture
 def sample_df():
     df = pd.DataFrame({
-        "host": ["host1"] * 6,
+        "host": ["host"] * 6,
         "tool": ["tool1", "tool1", "tool2", "tool2", "tool3", "tool3"],
         "dataset": ["image"] * 6,
         "mode": ["compress"] * 6,
