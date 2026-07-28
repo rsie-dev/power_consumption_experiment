@@ -23,21 +23,26 @@ class CompressionRatio(Calculator):
 
     def process(self, params: Params):
         df = self._load(params)
-        first_host = df.loc[0, "host"]
-        df = df[df["mode"] == "compress"]
-        df = df[df["host"] == first_host]
-        df = df[df["run"] == 1]
         #self._validate_multi(df)
-        df["compression_ratio"] = df.apply(
-            lambda row: dataset_from_str(row["dataset"]).value / row["size"],
-            axis=1,
-        )
-        df["compression_ratio"] = df["compression_ratio"].astype(float)
+        df = self._calculate_compression_ratio(df)
 
         self._show_tables(df)
         self._write_csv(params.used_energy_file, df)
         if params.create_tex:
             self._process_tex(params.used_energy_file, df)
+
+    def _calculate_compression_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
+        first_host = df.loc[0, "host"]
+        df = df[df["mode"] == "compress"]
+        df = df[df["host"] == first_host]
+        df = df[df["run"] == 1]
+
+        df["compression_ratio"] = df.apply(
+            lambda row: dataset_from_str(row["dataset"]).value / row["size"],
+            axis=1,
+        )
+        df["compression_ratio"] = df["compression_ratio"].astype(float)
+        return df
 
     def _write_csv(self, used_energy_file: Path, df: pd.DataFrame):
         result_df, _, _ = self._restructure_data(df)
@@ -72,7 +77,7 @@ class CompressionRatio(Calculator):
 
         print("entries:")
         print(table_str)
-        self._show_mode_deviations(result_df)
+        #self._show_mode_deviations(result_df)
 
     def _show_mode_deviations(self, df: pd.DataFrame):
         multi = df["threading"] == "multi"
