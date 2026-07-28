@@ -41,7 +41,6 @@ class CompressionRatio(Calculator):
             lambda row: dataset_from_str(row["dataset"]).value / row["size"],
             axis=1,
         )
-        df["compression_ratio"] = df["compression_ratio"].astype(float)
         return df
 
     def _write_csv(self, used_energy_file: Path, df: pd.DataFrame):
@@ -60,6 +59,8 @@ class CompressionRatio(Calculator):
         self._create_csv(cr_file, csv_df)
 
     def _show_tables(self, df: pd.DataFrame):
+        df = df.copy()
+        df["compression_ratio"] = df["compression_ratio"].astype(float)
         result_df, fixed_columns, tool_names = self._restructure_data(df)
         table_entries = []
         for _, row in result_df.iterrows():
