@@ -18,7 +18,6 @@ class Power(Calculator):
         df = self._load(params)
 
         power_df = self._calculate_power(df)
-        power_df["average_power"] = power_df["average_power"].pint.to("watt")
 
         power_df["_tool_key"] = power_df["tool"].apply(ORDER_TOOL.index)
         power_df["_strength_key"] = power_df["strength"].apply(ORDER_STRENGTH.index)
@@ -63,5 +62,6 @@ class Power(Calculator):
             )
         )
         result_df["average_power"] = result_df["sum_energy"] / result_df["sum_duration"]
+        result_df["average_power"] = result_df["average_power"].pint.to("watt")
 
         return result_df
