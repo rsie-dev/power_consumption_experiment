@@ -1,7 +1,8 @@
-import pytest
-import pandas as pd
 from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
+import pandas as pd
 
 from data_processor import ureg
 from data_processor.calc.compression_ratio import CompressionRatio

@@ -1,7 +1,7 @@
-import pytest
 from pathlib import Path
 from unittest.mock import Mock
 
+import pytest
 import pandas as pd
 
 from data_processor import ureg
