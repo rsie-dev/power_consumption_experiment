@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from data_processor.processor import Processor
-from .calc_params import CalcParams
+from .calc_params import EnergyParams
 
 
 class Calculator(Processor):
@@ -12,7 +12,7 @@ class Calculator(Processor):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def _load(self, params: CalcParams) -> pd.DataFrame:
+    def _load(self, params: EnergyParams) -> pd.DataFrame:
         df = self._frameio.load(params.used_energy_file)
         df = df[~df["tool"].isin(params.no_tool)]
         df = df[~df["dataset"].isin(params.no_dataset)]

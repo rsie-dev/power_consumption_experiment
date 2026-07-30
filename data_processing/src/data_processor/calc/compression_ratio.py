@@ -8,13 +8,13 @@ import pandas as pd
 
 from data_processor.data_set import dataset_from_str, get_data_file
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
-from .calc_params import CalcParams
+from .calc_params import EnergyParams
 from .calculator import Calculator
 
 
 class CompressionRatio(Calculator):
     @dataclass(frozen=True)
-    class Params(CalcParams):
+    class Params(EnergyParams):
         create_tex: bool
 
     def __init__(self, resources: Path):

@@ -7,13 +7,13 @@ import pandas as pd
 
 from data_processor import ureg
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
-from .calc_params import CalcParams
+from .calc_params import EnergyParams
 from .calculator import Calculator
 
 
 class EnergyConsumption(Calculator):
     @dataclass(frozen=True)
-    class Params(CalcParams):
+    class Params(EnergyParams):
         idle_power: Path
 
     def __init__(self, resources: Path):

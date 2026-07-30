@@ -5,7 +5,7 @@ import tabulate
 import pandas as pd
 
 from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
-from .calc_params import CalcParams
+from .calc_params import EnergyParams
 from .calculator import Calculator
 
 
@@ -14,7 +14,7 @@ class Power(Calculator):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def process(self, params: CalcParams):
+    def process(self, params: EnergyParams):
         df = self._load(params)
 
         power_df = self._calculate_power(df)

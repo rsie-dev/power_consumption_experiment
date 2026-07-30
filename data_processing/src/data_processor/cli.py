@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
-from .calc import CalcParams
+from .calc import CalcParams, EnergyParams
 from .calc import CompressionRatio, Throughput, Power, EnergyConsumption
 
 
@@ -47,32 +47,36 @@ class Processor:
                                            description='valid subcommands', help='sub-command help')
 
         common_parser = argparse.ArgumentParser(add_help=False)
-        common_parser.add_argument('used_energy_file', type=Path)
         common_parser.add_argument('-r', '--resources', type=Path, default=Path("resources"),
                                    help="resource output folder")
 
-        parser_stats = subparsers.add_parser('stats', help="basic statistics", parents=[common_parser])
+        energy_parser = argparse.ArgumentParser(add_help=False)
+        energy_parser.add_argument('used_energy_file', type=Path)
+
+        parser_stats = subparsers.add_parser('stats', help="basic statistics", parents=[common_parser, energy_parser])
         parser_stats.set_defaults(func=self._stats)
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
         subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                      description='valid subcommands', help='sub-command help')
 
-        common_calc_parser = argparse.ArgumentParser(add_help=False, parents=[common_parser])
-        common_calc_parser.add_argument('--tex', action='store_true', help="create latex table")
-        common_calc_parser.add_argument('--no-tool', nargs="*", help="tools to skip")
-        common_calc_parser.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+        filter_parser = argparse.ArgumentParser(add_help=False)
+        filter_parser.add_argument('--no-tool', nargs="*", help="tools to skip")
+        filter_parser.add_argument('--no-data-set', nargs="*", help="data sets to skip")
+
+        calc_parser = argparse.ArgumentParser(add_help=False, parents=[common_parser, filter_parser])
+        calc_parser.add_argument('--tex', action='store_true', help="create latex table")
 
         parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio",
-                                                    parents=[common_calc_parser])
+                                                    parents=[calc_parser, energy_parser])
         parser_calc_cr.set_defaults(func=self._calc_cr)
 
         parser_calc_trough = subparsers_calc.add_parser('tp', help="calculate throughput",
-                                                        parents=[common_calc_parser])
+                                                        parents=[calc_parser, energy_parser])
         parser_calc_trough.set_defaults(func=self._calc_through)
 
         parser_calc_power = subparsers_calc.add_parser('power', help="calculate power",
-                                                       parents=[common_calc_parser])
+                                                       parents=[calc_parser, energy_parser])
         parser_calc_power.set_defaults(func=self._calc_power)
 
         parser_energy = subparsers_calc.add_parser('energy', help="energy subcommands")
@@ -80,7 +84,7 @@ class Processor:
                                                          description='valid subcommands', help='sub-command help')
 
         parser_energy_consumption = subparsers_energy.add_parser('consumption', help="calculate energy consumption",
-                                                                 parents=[common_calc_parser])
+                                                                 parents=[calc_parser, energy_parser])
         parser_energy_consumption.add_argument('--idle-power', type=Path, required=True, help="idle power CSV file")
         parser_energy_consumption.set_defaults(func=self._calc_energy_consumption)
 
@@ -132,7 +136,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         tp = Throughput(resources_folder)
-        params = CalcParams(
+        params = EnergyParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
@@ -143,7 +147,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         tp = Power(resources_folder)
-        params = CalcParams(
+        params = EnergyParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
@@ -161,6 +165,7 @@ class Processor:
             idle_power=args.idle_power,
         )
         ec.process(params)
+
 
 def app():
     processor = Processor()
