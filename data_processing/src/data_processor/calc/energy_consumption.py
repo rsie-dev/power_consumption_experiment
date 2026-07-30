@@ -65,12 +65,12 @@ class EnergyConsumption(Calculator):
 
     def _calculate_energy_consumption(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
         def get_idle(host: str):
-            result = idle_power_df.loc[df["host"] == host, "average_power"]
+            result = idle_power_df.loc[idle_power_df["host"] == host, "average_power"]
             average_power = result.iloc[0]
             return average_power
 
         df = df.copy()
-        df["energy_net"] = df["energy"] - get_idle(df["host"]) * df["real"]
+        df["energy_net"] = df["energy"] - df["host"].map(get_idle) * df["real"]
         virtual_powers = [p * ureg.watt for p in self._virtual_powers]
         for p_virtual  in virtual_powers:
             df["energy_norm_%s" % p_virtual.magnitude] = df["energy_net"] + p_virtual * df["real"]
