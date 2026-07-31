@@ -52,20 +52,26 @@ def test_energy_total(energy_consumption, sample_energy_df, sample_idle_power_df
 
     radxax4_row = result[result["host"] == "radxax4"].iloc[0]
     assert radxax4_row["num_runs"] == 2
-    assert radxax4_row["average_energy_consumption_total"] == 110.0 * ureg.joule
+    expected = (100.0 * ureg.joule + 120.0 * ureg.joule) / 2
+    assert radxax4_row["average_energy_consumption_total"] == expected
     raspi5_row = result[result["host"] == "raspi5"].iloc[0]
     assert raspi5_row ["num_runs"] == 2
-    assert raspi5_row ["average_energy_consumption_total"] == 60.0 * ureg.joule
+    expected = (50.0 * ureg.joule + 70.0 * ureg.joule) / 2
+    assert raspi5_row ["average_energy_consumption_total"] == expected
 
 def test_energy_net(energy_consumption, sample_energy_df, sample_idle_power_df):
     result = energy_consumption._calculate_energy_consumption(sample_energy_df, sample_idle_power_df)
 
     radxax4_row = result[result["host"] == "radxax4"].iloc[0]
     assert radxax4_row["num_runs"] == 2
-    assert radxax4_row["average_energy_consumption_net"] == 60.0 * ureg.joule
+    expected = ((100.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt) +
+                (120.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt)) / 2
+    assert radxax4_row["average_energy_consumption_net"] == expected
     raspi5_row = result[result["host"] == "raspi5"].iloc[0]
     assert raspi5_row ["num_runs"] == 2
-    assert raspi5_row ["average_energy_consumption_net"] == 44.0 * ureg.joule
+    expected = ((50.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt) +
+                (70.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt)) / 2
+    assert raspi5_row ["average_energy_consumption_net"] == expected
 
 
 def test_energy_norm(energy_consumption, sample_energy_df, sample_idle_power_df):
