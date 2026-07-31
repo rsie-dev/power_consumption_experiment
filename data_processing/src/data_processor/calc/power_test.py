@@ -45,7 +45,6 @@ def test_calculate_power_basic(power_calculator, sample_df):
 
 def test_calculate_power_grouping(power_calculator, sample_df):
     result = power_calculator._calculate_power(sample_df)
-    print(result)
 
     assert len(result) == 2
     host1_row = result.iloc[0]
