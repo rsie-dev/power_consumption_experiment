@@ -35,13 +35,17 @@ def sample_df():
 
 
 def test_calculate_power_basic(power_calculator, sample_df):
-    sample_df = sample_df[sample_df["host"] == "host1"]
+    #sample_df = sample_df[sample_df["host"] == "host1"]
     result = power_calculator._calculate_power(sample_df)
 
-    host1_row = result[result["host"] == "host1"].iloc[0]
-    assert host1_row["num_runs"] == 2
-    assert host1_row["average_power"] == 10.0 * ureg.watt
-
+    row = result[result["host"] == "host1"].iloc[0]
+    assert row["num_runs"] == 2
+    expected = (100 * ureg.joule + 150 * ureg.joule) / (10 * ureg.second + 15 * ureg.second)
+    assert row["average_power"] == expected
+    row = result[result["host"] == "host2"].iloc[0]
+    assert row["num_runs"] == 2
+    expected = (200 * ureg.joule + 250 * ureg.joule) / (15 * ureg.second + 21 * ureg.second)
+    assert row["average_power"] == expected
 
 def test_calculate_power_grouping(power_calculator, sample_df):
     result = power_calculator._calculate_power(sample_df)
