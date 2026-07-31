@@ -31,7 +31,7 @@ class Throughput(Calculator):
         self._create_csv(tp_file, result_df)
 
     def _print_table(self, df: pd.DataFrame):
-        table_df = df.drop(columns=[])
+        table_df = df.copy()
         table_df["average_real"] = table_df["average_real"].astype(float)
         table_df["average_throughput"] = table_df["average_throughput"].pint.to("MiB/s")
         table_df["average_throughput"] = table_df["average_throughput"].astype(float)

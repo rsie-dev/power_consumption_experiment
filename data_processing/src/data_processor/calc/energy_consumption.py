@@ -69,7 +69,6 @@ class EnergyConsumption(Calculator):
             average_power = result.iloc[0]
             return average_power
 
-        df = df.copy()
         df["energy_net"] = df["energy"] - df["host"].map(get_idle) * df["real"]
         virtual_powers = [p * ureg.watt for p in self._virtual_powers]
         for p_virtual  in virtual_powers:
