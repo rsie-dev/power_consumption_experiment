@@ -32,9 +32,12 @@ def sample_df():
     return df
 
 
-def test_calculate_compression_ratio_basic(calculator, sample_df):
+def test_calculate_compression_ratio(calculator, sample_df):
     result = calculator._calculate_compression_ratio(sample_df)
 
-    expected_ratio = DataSet.IMAGE.value / (100 * ureg.byte)
     row = result[result["tool"] == "tool1"].iloc[0]
+    expected_ratio = DataSet.IMAGE.value / (100 * ureg.byte)
+    assert row["compression_ratio"] == expected_ratio
+    row = result[result["tool"] == "tool2"].iloc[0]
+    expected_ratio = DataSet.IMAGE.value / (80 * ureg.byte)
     assert row["compression_ratio"] == expected_ratio
