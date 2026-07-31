@@ -35,7 +35,6 @@ def sample_df():
 
 
 def test_calculate_power_basic(power_calculator, sample_df):
-    #sample_df = sample_df[sample_df["host"] == "host1"]
     result = power_calculator._calculate_power(sample_df)
 
     row = result[result["host"] == "host1"].iloc[0]
