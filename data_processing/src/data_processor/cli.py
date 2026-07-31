@@ -7,7 +7,7 @@ from ruamel.yaml import YAML
 from .multimeter import MultimeterValidate
 from .stats import Statistics
 from .calc import CalcParams, EnergyParams
-from .calc import CompressionRatio, Throughput, Power, EnergyConsumption
+from .calc import CompressionRatio, Throughput, Power, EnergyConsumption, EnergyEfficiency
 
 
 class Processor:
@@ -88,6 +88,12 @@ class Processor:
         parser_energy_consumption.add_argument('--idle-power', type=Path, required=True, help="idle power CSV file")
         parser_energy_consumption.set_defaults(func=self._calc_energy_consumption)
 
+        parser_energy_efficiency = subparsers_energy.add_parser('efficiency', help="calculate energy efficiency",
+                                                                parents=[calc_parser, energy_parser])
+        parser_energy_efficiency.add_argument('--idle-power', type=Path, required=True,
+                                               help="idle power CSV file")
+        parser_energy_efficiency.set_defaults(func=self._calc_energy_efficiency)
+
         parser_multimeter = subparsers.add_parser('multimeter')
         subparsers_multimeter = parser_multimeter.add_subparsers(required=True, dest="subcommand",
                                                                 title='multimeter subcommands',
@@ -159,6 +165,18 @@ class Processor:
         resources_folder.mkdir(parents=True, exist_ok=True)
         ec = EnergyConsumption(resources_folder)
         params = EnergyConsumption.Params(
+            used_energy_file=args.used_energy_file,
+            no_tool=args.no_tool if args.no_tool else [],
+            no_dataset=args.no_data_set if args.no_data_set else [],
+            idle_power=args.idle_power,
+        )
+        ec.process(params)
+
+    def _calc_energy_efficiency(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        ec = EnergyEfficiency(resources_folder)
+        params = EnergyEfficiency.Params(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
