@@ -52,7 +52,9 @@ class Generator:
             warmup = args.warmup,
             mon_temp = args.mon_temp,
             head_delay=args.head_delay,
+            max_head_delay=args.head_delay_max,
             tail_delay=args.tail_delay,
+            max_tail_delay=args.tail_delay_max,
         )
         sg = generator_type.create(script_folder, args.prefix if args.prefix else "", template_args)
         tools = self._get_tools(args)
@@ -103,7 +105,9 @@ class Generator:
         parser.add_argument('--prefix', type=str, help="script name prefix")
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
+        parser.add_argument('--head-delay-max', type=int, help="us a stable temp max head delay")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
+        parser.add_argument('--tail-delay-max', type=int, help="us a stable temp max tail delay")
         parser.add_argument('--warmup', type=int, default=120, help="warmup task time in S, 0 to disable" + default)
         parser.add_argument('--mon-temp', type=float, help="activate temperature monitoring with max MON_TEMP delta")
         parser.add_argument('--with-timers', action="store_true",

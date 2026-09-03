@@ -14,4 +14,6 @@ class TemplateArgs:  # pylint: disable=too-many-instance-attributes
     warmup: int | None
     mon_temp: float | None
     head_delay: int | None
+    max_head_delay: int | None
     tail_delay: int | None
+    max_tail_delay: int | None

@@ -1,14 +1,22 @@
 {% macro measurement(template_args, tool, measurement_tags, tool_args, data_set_name) %}
 .measure_runs(run_count, "{{ measurement_tags | join("_") }}")
 {% if template_args.head_delay %}
+{% if template_args.max_head_delay %}
+                .with_stable_temp_head_delay(min_head_delay, max_head_delay, head_threshold)
+{% else %}
                 .with_head_delay(head_delay)
+{% endif %}
 {% endif %}
                 .execute_with("{{tool.value.binary}} {{tool_args}} %s" % remote_{{data_set_name}})
                   .with_timings()
                   .count_stdout()
                 .done()
 {% if template_args.tail_delay %}
+{% if template_args.max_tail_delay %}
+                .with_stable_temp_tail_delay(min_tail_delay, max_tail_delay, tail_threshold)
+{% else %}
                 .with_tail_delay(tail_delay)
+{% endif %}
 {% endif %}
               .done()
 {% endmacro %}

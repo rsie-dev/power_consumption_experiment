@@ -12,10 +12,22 @@ from experiment.api import get_experiment_builder
 
 run_count = {{template_args.runs}}
 {% if template_args.head_delay %}
+{% if template_args.max_head_delay %}
+min_head_delay = {{template_args.head_delay}}
+max_head_delay = {{template_args.max_head_delay}}
+head_threshold = 0.1
+{% else %}
 head_delay = {{template_args.head_delay}}
 {% endif %}
+{% endif %}
 {% if template_args.tail_delay %}
+{% if template_args.max_tail_delay %}
+min_tail_delay = {{template_args.tail_delay}}
+max_tail_delay = {{template_args.max_tail_delay}}
+tail_threshold = 0.1
+{% else %}
 tail_delay = {{template_args.tail_delay}}
+{% endif %}
 {% endif %}
 
 local_path = Path("{{template_args.data_folder}}")
@@ -36,6 +48,10 @@ experiment = (get_experiment_builder()
                 .upload(local_{{data_set.data_set_name}}, remote_path)
 {% endfor %}
               .done()
+
+{% if template_args.max_head_delay or template_args.max_tail_delay %}
+              .with_sbc_monitoring()
+{% endif %}
 
 {% if template_args.warmup %}
               .with_warmup()
