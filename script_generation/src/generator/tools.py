@@ -37,7 +37,7 @@ class Tool(Enum):
                            max="-b 128",  # limit for 4GB although 511 is the max
                            keep="-k", to_stdout="-c",
                            threading=Threading.MULTI, single_thread="-j 1", multi_thread="-j 4")
-    XZ = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="-d", min="-0", max="-9",
+    XZ = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="-d", min="--fast", max="--best",
                         keep="-k", to_stdout="-c",
                         threading=Threading.MULTI, single_thread="-T 1", multi_thread="-T 0")
     LZ4 = ToolDefinition(binary="lz4", extension=".lz4", compress="-z", decompress="-d", min="--fast", max="--best",
