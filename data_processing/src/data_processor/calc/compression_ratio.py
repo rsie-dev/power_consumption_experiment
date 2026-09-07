@@ -231,7 +231,11 @@ class CompressionRatio(Calculator):
                 {column: magnitude_only for column in df.columns.drop(fixed_columns)},
                 na_rep="",
             )
-            #.highlight_max(subset=["Accuracy"], props="textbf:--rwrap;")
+            .highlight_max(
+                axis="columns",
+                subset=list(df.columns.drop(fixed_columns)),
+                props="bfseries:;",
+            )
             .to_latex(
                 hrules=True,
                 column_format="lc" + data_format  * len(tool_names),
