@@ -201,12 +201,11 @@ class CompressionRatio(Calculator):
         tex_file = self._resources / filename
         self._logger.info("Generate: %s", tex_file)
 
-        lines = self._build_lines(result_df, fixed_columns)
+        latex = self._build_tex_lines(result_df, fixed_columns)
         with tex_file.open(mode="w", encoding="UTF_8") as f:
-            for line in lines:
-                f.write(line + "\n")
+            f.write(latex)
 
-    def _build_lines(self, df: pd.DataFrame, fixed_columns: list) -> list[str]:
+    def _build_tex_lines(self, df: pd.DataFrame, fixed_columns: list) -> str:
         lines = []
         lines.append("\\begin{tabular}")
         lines.append("{")
@@ -236,4 +235,6 @@ class CompressionRatio(Calculator):
             lines.append(" & ".join(entries) + "\\\\")
         lines.append("\\bottomrule")
         lines.append("\\end{tabular}")
-        return lines
+        lines.append("")
+        latex = "\n".join(lines)
+        return latex
