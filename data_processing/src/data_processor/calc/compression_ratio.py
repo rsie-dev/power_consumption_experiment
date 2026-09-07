@@ -196,45 +196,53 @@ class CompressionRatio(Calculator):
         result_df = result_df[cols[:len(fixed_columns)] + tool_names]
         return result_df, fixed_columns, tool_names
 
-    def _create_tex(self, used_energy_file: Path, result_df, threading, fixed_columns):
+    def _create_tex(self, used_energy_file: Path, df: pd.DataFrame, threading, fixed_columns):
         filename = "cr_%s_%s" % (threading, used_energy_file.stem.removeprefix("used_energy_")) + ".tex"
         tex_file = self._resources / filename
         self._logger.info("Generate: %s", tex_file)
 
-        latex = self._build_tex_lines(result_df, fixed_columns)
+        latex = self._build_tex_lines(df, fixed_columns)
         with tex_file.open(mode="w", encoding="UTF_8") as f:
             f.write(latex)
 
     def _build_tex_lines(self, df: pd.DataFrame, fixed_columns: list) -> str:
-        lines = []
-        lines.append("\\begin{tabular}")
-        lines.append("{")
-        lines.append("l")
-        lines.append("c")
         tool_names = df.columns.drop(fixed_columns).tolist()
-        for _ in tool_names:
-            lines.append("S[round-mode=places, round-precision=2, table-format=1.2]")
-        lines.append("}")
-        lines.append("\\toprule")
-        header_entries = ["Dataset", "Strength"] + ["{%s}" % tool for tool in tool_names]
-        lines.append(" & ".join(header_entries) + "\\\\")
-        lines.append("\\midrule")
-        used_datasets = set()
-        for _, row in df.iterrows():
-            dataset = get_data_file(dataset_from_str(row["dataset"]))
-            strength = row["strength"]
-            values = ["%f" % row[tool] for tool in tool_names]
-            entries = []
-            if dataset in used_datasets:
-                entries.append("")
-            else:
-                entries.append(dataset)
-                used_datasets.add(dataset)
-            entries.append(strength)
-            entries.extend(values)
-            lines.append(" & ".join(entries) + "\\\\")
-        lines.append("\\bottomrule")
-        lines.append("\\end{tabular}")
-        lines.append("")
-        latex = "\n".join(lines)
+        header_entries = ["Dataset", "Strength"] + ["{{%s}}" % tool for tool in tool_names]
+        if df.index.name == "Dataset":
+            df = df.reset_index()
+
+        def dataset_map(str_ds):
+            return get_data_file(dataset_from_str(str_ds))
+
+        df["dataset"] = df["dataset"].map(dataset_map)
+
+        # Blank consecutive repeated dataset names
+        df["dataset"] = df["dataset"].mask(
+            df["dataset"].eq(df["dataset"].shift()),
+            "",
+        )
+        data_format = "S[round-mode=places, round-precision=2, table-format=1.2]"
+
+        def magnitude_only(value):
+            if hasattr(value, "magnitude"):
+                #return f"{value.magnitude:g}"
+                return value.magnitude
+            return value
+
+        latex = (
+            df.style
+            .hide(subset=["threading"], axis="columns")
+            .hide(axis="index")
+            .relabel_index(header_entries, axis="columns")
+            .format(
+                {column: magnitude_only for column in df.columns.drop(fixed_columns)},
+                na_rep="",
+            )
+            #.format({"Accuracy": "{:.6%}"})
+            #.highlight_max(subset=["Accuracy"], props="textbf:--rwrap;")
+            .to_latex(
+                hrules=True,
+                column_format="lc" + data_format  * len(tool_names),
+            )
+        )
         return latex
