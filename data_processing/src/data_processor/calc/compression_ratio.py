@@ -6,7 +6,7 @@ import tabulate
 from tabulate import SEPARATING_LINE
 import pandas as pd
 
-from data_processor.data_set import dataset_from_str, get_data_file
+from data_processor.data_set import dataset_from_str, dataset_map
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
 from .calc_params import EnergyParams
 from .calculator import Calculator
@@ -180,9 +180,6 @@ class CompressionRatio(Calculator):
         )
         result_df.columns.name = None
 
-        def dataset_map(str_ds):
-            return get_data_file(dataset_from_str(str_ds))
-
         result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
         result_df["_strength_key"] = result_df["strength"].apply(ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
@@ -211,9 +208,6 @@ class CompressionRatio(Calculator):
         if df.index.name == "Dataset":
             df = df.reset_index()
 
-        def dataset_map(str_ds):
-            return get_data_file(dataset_from_str(str_ds))
-
         df["dataset"] = df["dataset"].map(dataset_map)
 
         # Blank consecutive repeated dataset names
@@ -225,7 +219,6 @@ class CompressionRatio(Calculator):
 
         def magnitude_only(value):
             if hasattr(value, "magnitude"):
-                #return f"{value.magnitude:g}"
                 return value.magnitude
             return value
 
@@ -238,7 +231,6 @@ class CompressionRatio(Calculator):
                 {column: magnitude_only for column in df.columns.drop(fixed_columns)},
                 na_rep="",
             )
-            #.format({"Accuracy": "{:.6%}"})
             #.highlight_max(subset=["Accuracy"], props="textbf:--rwrap;")
             .to_latex(
                 hrules=True,

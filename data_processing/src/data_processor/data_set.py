@@ -29,3 +29,6 @@ def get_data_file(dataset: DataSet) -> str:
         DataSet.SENSOR: "data.txt",
     }
     return files[dataset]
+
+def dataset_map(str_ds):
+    return get_data_file(dataset_from_str(str_ds))
