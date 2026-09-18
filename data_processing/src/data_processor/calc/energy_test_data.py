@@ -12,8 +12,7 @@ def sample_energy_df() -> pd.DataFrame:
         "strength": ["default"] * 4,
         "threading": ["single"] * 4,
         "run": [1, 2, 1, 2],
-        "energy": [100.0, 120.0, 50.0, 70.0], # energy
-        #"energy": [100.0, 150.0, 200.0, 250.0], # power
+        "energy": [100.0, 150.0, 200.0, 250.0], # power
         "real": [10.0, 10.0, 8.0, 8.0],
         "power": [10.0, 12.0, 6.0, 8.0],
         "duration": [10.0, 15.0, 15.0, 21.0],

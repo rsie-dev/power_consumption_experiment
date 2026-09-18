@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-import pandas as pd
 
 from data_processor import ureg
 from data_processor.calc.average_power import AveragePower
@@ -16,26 +15,8 @@ def power_calculator():
     return AveragePower(Mock(spec=Path))
 
 
-@pytest.fixture
-def sample_df():
-    df = pd.DataFrame({
-        "host": ["host1", "host1", "host2", "host2"],
-        "tool": ["gzip"] * 4,
-        "dataset": ["image"] * 4,
-        "mode": ["compress"] * 4,
-        "strength": ["default"] * 4,
-        "threading": ["single"] * 4,
-        "run": [1, 2, 1, 2],
-        "energy": [100.0, 150.0, 200.0, 250.0],
-        "duration": [10.0, 15.0, 15.0, 21.0],
-    })
-    df["energy"] = df["energy"].astype("pint[joule]")
-    df["duration"] = df["duration"].astype("pint[second]")
-    return df
-
-
-def test_calculate_power_one(power_calculator, sample_df):
-    result = power_calculator._calculate_power(sample_df)
+def test_calculate_power_one(power_calculator, sample_energy_df):
+    result = power_calculator._calculate_power(sample_energy_df)
 
     row = result[result["host"] == "host1"].iloc[0]
     assert row["num_runs"] == 2
@@ -46,8 +27,8 @@ def test_calculate_power_one(power_calculator, sample_df):
     expected = ((200 + 250) * ureg.joule) / ((15 + 21) * ureg.second)
     assert row["average_power"] == expected
 
-def test_calculate_power_grouping(power_calculator, sample_df):
-    result = power_calculator._calculate_power(sample_df)
+def test_calculate_power_grouping(power_calculator, sample_energy_df):
+    result = power_calculator._calculate_power(sample_energy_df)
 
     assert len(result) == 2
     host1_row = result.iloc[0]
