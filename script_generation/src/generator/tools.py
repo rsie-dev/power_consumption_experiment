@@ -34,7 +34,7 @@ class Tool(Enum):
                             keep="-k", to_stdout="-c",
                             threading=Threading.MULTI, single_thread="-n 1", multi_thread="")
     BZIP3 = ToolDefinition(binary="bzip3", extension=".bz3", compress="-z", decompress="-d", min="-b 1",
-                           max="-b 128",  # limit for 4GB although 511 is the max
+                           max="-b 80",  # limit for 4GB although 511 is the max
                            keep="-k", to_stdout="-c",
                            threading=Threading.MULTI, single_thread="-j 1", multi_thread="-j 4")
     XZ = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="-d", min="--fast", max="--best",
