@@ -4,6 +4,8 @@ import pytest
 import pandas as pd
 from pint.testing import assert_allclose
 
+from data_aggregator.util.frame_io import adjust_pint_columns
+
 from .energy_calculator import EnergyCalculator
 
 # pylint: disable=redefined-outer-name
@@ -42,19 +44,9 @@ def run_data_frame_two(run_data_two):
     return _as_dataframe(run_data_two)
 
 
-def _as_dataframe(data: str, times=True) -> pd.DataFrame:
+def _as_dataframe(data: str) -> pd.DataFrame:
     df = pd.read_csv(StringIO(data), header=[0, 1])
-
-    names = df.columns.get_level_values(0)
-    units = df.columns.get_level_values(1)
-
-    df.columns = names  # flatten
-    if times:
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-    for col, unit in zip(names, units):  # apply units
-        if unit != "No Unit":
-            df[col] = df[col].astype(f"pint[{unit}]")
-    return df
+    return adjust_pint_columns(df)
 
 
 @pytest.fixture
