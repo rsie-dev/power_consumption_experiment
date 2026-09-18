@@ -56,8 +56,11 @@ class Processor:
 
         frame_io = FrameIO()
         df_all = pd.concat(all_df)
-        description = "_".join([str(raw.stem) for raw in args.raw_data])
-        csv_file = resources_folder / f"used_energy_{description}.csv"
+        if args.result:
+            csv_file = resources_folder / args.result
+        else:
+            description = "_".join([str(raw.stem) for raw in args.raw_data])
+            csv_file = resources_folder / f"used_energy_{description}.csv"
         frame_io.persist(df_all, csv_file)
 
     def _aggregate_runs(self, args):
@@ -104,7 +107,7 @@ class Processor:
         parser.add_argument('-v', '--verbose', action='count', default=1, help="set the verbosity level" + default)
         parser.add_argument('-l', '--logFile', help="logfile name")
         parser.add_argument('-r', '--resources', type=Path, default=Path("resources"),
-                            help="resource output folder")
+                            help="resource output folder" + default)
 
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                            description='valid subcommands', help='sub-command help')
@@ -112,6 +115,7 @@ class Processor:
         parser_collect = subparsers.add_parser('collect', help="aggregate runs and power in one step")
         parser_collect.add_argument('-d', '--raw-data', type=Path, nargs='+',
                                     help="raw data measurement folder")
+        parser_collect.add_argument('--result', type=Path, help="Resulting file name")
         parser_collect.set_defaults(func=self._collect)
 
         parser_aggregate = subparsers.add_parser('aggregate')
