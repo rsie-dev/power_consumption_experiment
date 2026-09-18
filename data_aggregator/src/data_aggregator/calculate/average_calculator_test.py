@@ -1,11 +1,10 @@
 from pathlib import Path
-from io import StringIO
 
 import pytest
 import pandas as pd
 from pint.testing import assert_allclose
 
-from data_aggregator.util.frame_io import adjust_pint_columns
+from data_aggregator.util.frame_io import FrameIO
 
 from .average_calculator import AverageCalculator
 
@@ -30,8 +29,8 @@ def run_data_frame(run_data):
 
 
 def _as_dataframe(data: str) -> pd.DataFrame:
-    df = pd.read_csv(StringIO(data), header=[0, 1])
-    return adjust_pint_columns(df)
+    io = FrameIO()
+    return io.load_str(data)
 
 
 @pytest.fixture

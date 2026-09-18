@@ -1,21 +1,9 @@
 import logging
 from pathlib import Path
+from io import StringIO
 
 import pandas as pd
 
-
-def adjust_pint_columns(df: pd.DataFrame) -> pd.DataFrame:
-    names = df.columns.get_level_values(0)
-    units = df.columns.get_level_values(1)
-
-    df.columns = names  # flatten
-    if 'timestamp' in df.columns:
-        df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
-    for col, unit in zip(names, units):  # apply units
-        if unit != "No Unit":
-            df[col] = df[col].astype(f"pint[{unit}]")
-
-    return df
 
 
 class FrameIO:
@@ -24,7 +12,24 @@ class FrameIO:
 
     def load(self, in_file: Path) -> pd.DataFrame:
         df = pd.read_csv(in_file, header=[0, 1])
-        return adjust_pint_columns(df)
+        return self.adjust_pint_columns(df)
+
+    def load_str(self, data: str) -> pd.DataFrame:
+        df = pd.read_csv(StringIO(data), header=[0, 1])
+        return self.adjust_pint_columns(df)
+
+    def adjust_pint_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        names = df.columns.get_level_values(0)
+        units = df.columns.get_level_values(1)
+
+        df.columns = names  # flatten
+        if 'timestamp' in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
+        for col, unit in zip(names, units):  # apply units
+            if unit != "No Unit":
+                df[col] = df[col].astype(f"pint[{unit}]")
+
+        return df
 
     def persist(self, df: pd.DataFrame, target_path: Path) -> None:
         self._logger.info("Generate: %s", target_path)
