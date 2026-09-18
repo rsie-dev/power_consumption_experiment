@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
 from .stats import Statistics
-from .calc import CalcParams, EnergyParams
+from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
 
 
