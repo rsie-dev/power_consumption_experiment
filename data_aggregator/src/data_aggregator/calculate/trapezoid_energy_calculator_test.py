@@ -45,7 +45,7 @@ def calculator():
     return TrapezoidEnergyCalculator()
 
 
-def test_calculate_power_single(calculator, run_data_single):
+def test_calculate_power_single(calculator, power_data_one):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
 No Unit,No Unit,volt,ampere,watt,second,joule
@@ -55,7 +55,7 @@ No Unit,No Unit,volt,ampere,watt,second,joule
 """
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator.calculate_energy(run_data_single)
+    df_actual = calculator.calculate_energy(power_data_one)
 
     for column in ["voltage", "current", "power", "power_duration", "energy_used"]:
         assert_allclose(
@@ -66,7 +66,7 @@ No Unit,No Unit,volt,ampere,watt,second,joule
         )
 
 
-def test_calculate_power_double(calculator, run_data_two):
+def test_calculate_power_double(calculator, power_data_two):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
 No Unit,No Unit,volt,ampere,watt,second,joule
@@ -79,7 +79,7 @@ No Unit,No Unit,volt,ampere,watt,second,joule
 """
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator.calculate_energy(run_data_two)
+    df_actual = calculator.calculate_energy(power_data_two)
 
     for column in ["voltage", "current", "power", "power_duration", "energy_used"]:
         assert_allclose(

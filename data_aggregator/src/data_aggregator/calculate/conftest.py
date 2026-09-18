@@ -8,7 +8,7 @@ from data_aggregator.util.frame_io import FrameIO
 
 
 @pytest.fixture
-def run_data_single() -> pd.DataFrame:
+def power_data_one() -> pd.DataFrame:
     data = """
 run,timestamp,voltage,current,power
 No Unit,No Unit,volt,ampere,watt
@@ -20,7 +20,7 @@ No Unit,No Unit,volt,ampere,watt
 
 
 @pytest.fixture
-def run_data_two(run_data_single) -> pd.DataFrame:
+def power_data_two(power_data_one) -> pd.DataFrame:
     data = """
 run,timestamp,voltage,current,power
 No Unit,No Unit,volt,ampere,watt
@@ -29,7 +29,7 @@ No Unit,No Unit,volt,ampere,watt
 2,2026-04-07 07:41:05.533,5.12585,0.51322,2.630688737
 """
     two = _as_dataframe(data)
-    return pd.concat([run_data_single, two])
+    return pd.concat([power_data_one, two])
 
 
 def _as_dataframe(data: str) -> pd.DataFrame:
