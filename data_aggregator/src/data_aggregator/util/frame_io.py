@@ -10,7 +10,9 @@ class FrameIO:
 
     def load(self, in_file: Path) -> pd.DataFrame:
         df = pd.read_csv(in_file, header=[0, 1])
+        return self.adjust_pint_columns(df)
 
+    def adjust_pint_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         names = df.columns.get_level_values(0)
         units = df.columns.get_level_values(1)
 
