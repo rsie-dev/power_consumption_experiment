@@ -20,11 +20,11 @@ def power_calculator():
 def sample_df():
     df = pd.DataFrame({
         "host": ["host1", "host1", "host2", "host2"],
-        "tool": ["gzip", "gzip", "gzip", "gzip"],
-        "dataset": ["image", "image", "image", "image"],
-        "mode": ["compress", "compress", "compress", "compress"],
-        "strength": ["default", "default", "default", "default"],
-        "threading": ["single", "single", "single", "single"],
+        "tool": ["gzip"] * 4,
+        "dataset": ["image"] * 4,
+        "mode": ["compress"] * 4,
+        "strength": ["default"] * 4,
+        "threading": ["single"] * 4,
         "run": [1, 2, 1, 2],
         "energy": [100.0, 150.0, 200.0, 250.0],
         "duration": [10.0, 15.0, 15.0, 21.0],
@@ -34,16 +34,16 @@ def sample_df():
     return df
 
 
-def test_calculate_power_basic(power_calculator, sample_df):
+def test_calculate_power_one(power_calculator, sample_df):
     result = power_calculator._calculate_power(sample_df)
 
     row = result[result["host"] == "host1"].iloc[0]
     assert row["num_runs"] == 2
-    expected = (100 * ureg.joule + 150 * ureg.joule) / (10 * ureg.second + 15 * ureg.second)
+    expected = ((100 + 150) * ureg.joule) / ((10 + 15) * ureg.second)
     assert row["average_power"] == expected
     row = result[result["host"] == "host2"].iloc[0]
     assert row["num_runs"] == 2
-    expected = (200 * ureg.joule + 250 * ureg.joule) / (15 * ureg.second + 21 * ureg.second)
+    expected = ((200 + 250) * ureg.joule) / ((15 + 21) * ureg.second)
     assert row["average_power"] == expected
 
 def test_calculate_power_grouping(power_calculator, sample_df):
