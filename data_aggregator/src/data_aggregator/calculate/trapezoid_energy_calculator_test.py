@@ -20,7 +20,7 @@ def calculator():
     return TrapezoidEnergyCalculator()
 
 
-def test_calculate_power_single(calculator, power_data_one):
+def test_calculate_energy_single(calculator, power_data_one):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
 No Unit,No Unit,volt,ampere,watt,second,joule
@@ -41,7 +41,7 @@ No Unit,No Unit,volt,ampere,watt,second,joule
         )
 
 
-def test_calculate_power_double(calculator, power_data_two):
+def test_calculate_energy_double(calculator, power_data_two):
     data = """
 run,timestamp,voltage,current,power,power_duration,energy_used
 No Unit,No Unit,volt,ampere,watt,second,joule
