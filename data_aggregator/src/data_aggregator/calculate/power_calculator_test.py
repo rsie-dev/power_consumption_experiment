@@ -11,7 +11,7 @@ from .power_calculator import PowerCalculator
 
 
 @pytest.fixture
-def run_data_single():
+def raw_data_one() -> pd.DataFrame:
     data = """
 run,timestamp,voltage,current
 No Unit,No Unit,volt,ampere
@@ -19,12 +19,7 @@ No Unit,No Unit,volt,ampere
 1,2026-05-07 07:40:28.281,5.12401,0.48916
 1,2026-05-07 07:40:28.291,5.12401,0.4775
 """
-    return data
-
-
-@pytest.fixture
-def single_run_data_frame(run_data_single):
-    return _as_dataframe(run_data_single)
+    return _as_dataframe(data)
 
 
 def _as_dataframe(data: str) -> pd.DataFrame:
@@ -37,7 +32,7 @@ def calculator():
     return PowerCalculator()
 
 
-def test_calculate_power_single(calculator, single_run_data_frame):
+def test_calculate_power_single(calculator, raw_data_one):
     data = """
 run,timestamp,voltage,current,power
 No Unit,No Unit,volt,ampere,watt
@@ -47,7 +42,7 @@ No Unit,No Unit,volt,ampere,watt
 """
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator.calculate_power(single_run_data_frame)
+    df_actual = calculator.calculate_power(raw_data_one)
 
     for column in ["voltage", "current", "power"]:
         assert_allclose(
