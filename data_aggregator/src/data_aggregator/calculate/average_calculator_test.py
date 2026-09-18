@@ -13,19 +13,14 @@ from .average_calculator import AverageCalculator
 
 
 @pytest.fixture
-def run_data():
+def run_data() -> pd.DataFrame:
     data = """
 run,power
 No Unit,ampere·second·volt
 1,4.428333128232399
 2,4.506464898589998
 3,4.5322596144951985"""
-    return data
-
-
-@pytest.fixture
-def run_data_frame(run_data):
-    return _as_dataframe(run_data)
+    return _as_dataframe(data)
 
 
 def _as_dataframe(data: str) -> pd.DataFrame:
@@ -38,7 +33,7 @@ def calculator():
     return AverageCalculator(Path())
 
 
-def test_calculate_average(calculator, run_data_frame):
+def test_calculate_average(calculator, run_data):
     data = """
 runs,power_average,power_std,power_var
 No Unit,joule,joule,joule^2
@@ -46,7 +41,7 @@ No Unit,joule,joule,joule^2
     """
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator._calculate_averages(run_data_frame)
+    df_actual = calculator._calculate_averages(run_data)
 
     for column in ["power_average", "power_std", "power_var"]:
         assert_allclose(
