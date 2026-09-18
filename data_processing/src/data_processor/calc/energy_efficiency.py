@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import tabulate
 import pandas as pd
 
-from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from data_processor.constants import GROUP_COLS
 from data_processor.data_set import dataset_from_str
 from .calc_params import EnergyParams
 from .calculator import Calculator
@@ -25,12 +25,7 @@ class EnergyEfficiency(Calculator):
         idle_power_df = self._frameio.load(params.idle_power)
 
         energy_df = self._calculate_energy_efficiency(df, idle_power_df)
-
-        energy_df["_tool_key"] = energy_df["tool"].apply(ORDER_TOOL.index)
-        energy_df["_strength_key"] = energy_df["strength"].apply(ORDER_STRENGTH.index)
-        energy_df = energy_df.sort_values(
-            by=["host", "_tool_key", "dataset", "mode", "_strength_key"],
-        ).drop(columns=["_tool_key", "_strength_key"])
+        energy_df = self._order_data(energy_df)
 
         self._print_table(energy_df)
         energy_file = "energy_efficiency_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"

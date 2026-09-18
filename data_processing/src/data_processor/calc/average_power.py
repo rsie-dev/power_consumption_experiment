@@ -4,7 +4,7 @@ from pathlib import Path
 import tabulate
 import pandas as pd
 
-from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from data_processor.constants import GROUP_COLS
 from .calc_params import EnergyParams
 from .calculator import Calculator
 
@@ -18,12 +18,7 @@ class AveragePower(Calculator):
         df = self._load(params)
 
         power_df = self._calculate_power(df)
-
-        power_df["_tool_key"] = power_df["tool"].apply(ORDER_TOOL.index)
-        power_df["_strength_key"] = power_df["strength"].apply(ORDER_STRENGTH.index)
-        power_df = power_df.sort_values(
-            by=["host", "_tool_key", "dataset", "mode", "_strength_key"],
-        ).drop(columns=["_tool_key", "_strength_key"])
+        power_df = self._order_data(power_df)
 
         self._print_table(power_df)
         power_file = "power_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"

@@ -5,7 +5,7 @@ import tabulate
 import pandas as pd
 
 from data_processor.data_set import dataset_from_str
-from data_processor.constants import GROUP_COLS, ORDER_TOOL, ORDER_STRENGTH
+from data_processor.constants import GROUP_COLS
 from .calc_params import EnergyParams
 from .calculator import Calculator
 
@@ -19,12 +19,7 @@ class Throughput(Calculator):
         df = self._load(params)
 
         result_df = self._calculate_throughput(df)
-        result_df["_tool_key"] = result_df["tool"].apply(ORDER_TOOL.index)
-        result_df["_strength_key"] = result_df["strength"].apply(ORDER_STRENGTH.index)
-        result_df = result_df.sort_values(
-            by=["host", "_tool_key", "dataset", "mode", "_strength_key"],
-            #ascending=[True]
-        ).drop(columns=["_tool_key", "_strength_key"])
+        result_df = self._order_data(result_df)
 
         self._print_table(result_df)
         tp_file = "tp_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
