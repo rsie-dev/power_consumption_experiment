@@ -6,7 +6,7 @@ from pint.testing import assert_allclose
 
 from data_aggregator.util.frame_io import FrameIO
 
-from .average_calculator import AverageCalculator
+from .average_power_calculator import AveragePowerCalculator
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -30,10 +30,10 @@ def _as_dataframe(data: str) -> pd.DataFrame:
 
 @pytest.fixture
 def calculator():
-    return AverageCalculator(Path())
+    return AveragePowerCalculator(Path())
 
 
-def test_calculate_average(calculator, energy_data):
+def test_calculate_power_averages(calculator, energy_data):
     data = """
 runs,power_average,power_std,power_var
 No Unit,joule,joule,joule^2
@@ -41,7 +41,7 @@ No Unit,joule,joule,joule^2
     """
     df_expected = _as_dataframe(data)
 
-    df_actual = calculator._calculate_averages(energy_data)
+    df_actual = calculator._calculate_power_averages(energy_data)
 
     for column in ["power_average", "power_std", "power_var"]:
         assert_allclose(

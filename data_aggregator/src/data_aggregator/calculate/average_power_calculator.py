@@ -6,23 +6,23 @@ import pandas as pd
 from data_aggregator.util import FrameIO
 
 
-class AverageCalculator:
+class AveragePowerCalculator:
     def __init__(self, resources_folder: Path):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources_folder = resources_folder
 
     def calculate(self, power_file: Path):
-        self._logger.info("Calculate averages for: %s", power_file)
+        self._logger.info("Calculate power averages for: %s", power_file)
 
         frame_io = FrameIO()
         df = frame_io.load(power_file)
-        df = self._calculate_averages(df)
+        df = self._calculate_power_averages(df)
 
         calculated_name = f"average_power_{power_file.stem[13:]}.csv"
         csv_file = self._resources_folder / calculated_name
         frame_io.persist(df, csv_file)
 
-    def _calculate_averages(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _calculate_power_averages(self, df: pd.DataFrame) -> pd.DataFrame:
         power_mean = df['power'].mean()
         power_std = df['power'].std()
         power_var = df['power'].var()

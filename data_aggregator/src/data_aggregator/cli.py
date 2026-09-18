@@ -6,7 +6,7 @@ from ruamel.yaml import YAML
 import pandas as pd
 
 from .aggregator import RunAggregator, EnergyAggregator
-from .calculate import AverageCalculator
+from .calculate import AveragePowerCalculator
 from .util import FrameIO
 
 
@@ -95,10 +95,10 @@ class Processor:
         aggregator = EnergyAggregator(resources_folder)
         aggregator.aggregate(args.power_data)
 
-    def _calculate_average(self, args):
+    def _calculate_power_average(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        calculator = AverageCalculator(resources_folder)
+        calculator = AveragePowerCalculator(resources_folder)
         calculator.calculate(args.power_data)
 
     def main(self):
@@ -141,7 +141,7 @@ class Processor:
                                                                     help="calculate average power usage")
         parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
                                                help="power usage file")
-        parser_calculate_averages.set_defaults(func=self._calculate_average)
+        parser_calculate_averages.set_defaults(func=self._calculate_power_average)
 
         args = parser.parse_args()
 
