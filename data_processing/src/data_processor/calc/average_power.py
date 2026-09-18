@@ -9,7 +9,7 @@ from .calc_params import EnergyParams
 from .calculator import Calculator
 
 
-class Power(Calculator):
+class AveragePower(Calculator):
     def __init__(self, resources: Path):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)

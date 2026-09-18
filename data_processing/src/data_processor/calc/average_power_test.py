@@ -5,7 +5,7 @@ import pytest
 import pandas as pd
 
 from data_processor import ureg
-from data_processor.calc.power import Power
+from data_processor.calc.average_power import AveragePower
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
@@ -13,7 +13,7 @@ from data_processor.calc.power import Power
 
 @pytest.fixture
 def power_calculator():
-    return Power(Mock(spec=Path))
+    return AveragePower(Mock(spec=Path))
 
 
 @pytest.fixture

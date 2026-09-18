@@ -7,7 +7,7 @@ from ruamel.yaml import YAML
 from .multimeter import MultimeterValidate
 from .stats import Statistics
 from .calc import CalcParams, EnergyParams
-from .calc import CompressionRatio, Throughput, Power, EnergyConsumption, EnergyEfficiency
+from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
 
 
 class Processor:
@@ -152,7 +152,7 @@ class Processor:
     def _calc_power(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        tp = Power(resources_folder)
+        tp = AveragePower(resources_folder)
         params = EnergyParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
