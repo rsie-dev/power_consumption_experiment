@@ -5,8 +5,7 @@ import pandas as pd
 @pytest.fixture
 def sample_energy_df() -> pd.DataFrame:
     df = pd.DataFrame({
-        "host": ["radxax4", "radxax4", "raspi5", "raspi5"],
-        #"host": ["host1", "host1", "host2", "host2"],
+        "host": ["host1", "host1", "host2", "host2"],
         "tool": ["gzip"] * 4,
         "dataset": ["image"] * 4,
         "mode": ["compress"] * 4,
