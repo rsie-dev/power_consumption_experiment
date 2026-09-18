@@ -2,7 +2,6 @@ from unittest.mock import Mock
 from pathlib import Path
 
 import pytest
-import pandas as pd
 
 
 from data_processor import ureg
@@ -10,36 +9,6 @@ from .energy_consumption import EnergyConsumption
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=protected-access
-
-
-@pytest.fixture
-def sample_energy_df():
-    df = pd.DataFrame({
-        "host": ["radxax4", "radxax4", "raspi5", "raspi5"],
-        "tool": ["gzip"] * 4,
-        "dataset": ["image"] * 4,
-        "mode": ["compress"] * 4,
-        "strength": ["default"] * 4,
-        "threading": ["single"] * 4,
-        "run": [1, 2, 1, 2],
-        "energy": [100.0, 120.0, 50.0, 70.0],
-        "real": [10.0, 10.0, 8.0, 8.0],
-        "power": [10.0, 12.0, 6.0, 8.0],
-    })
-    df["energy"] = df["energy"].astype("pint[joule]")
-    df["real"] = df["real"].astype("pint[second]")
-    df["power"] = df["power"].astype("pint[watt]")
-    return df
-
-
-@pytest.fixture
-def sample_idle_power_df():
-    df = pd.DataFrame({
-        "host": ["radxax4", "raspi5"],
-        "average_power": [5.0, 2.0],
-    })
-    df["average_power"] = df["average_power"].astype("pint[watt]")
-    return df
 
 
 @pytest.fixture
