@@ -13,14 +13,14 @@ from .calculator import Calculator
 
 class EnergyEfficiency(Calculator):
     @dataclass(frozen=True)
-    class Params(EnergyParams):
+    class EfficiencyParams(EnergyParams):
         idle_power: Path
 
     def __init__(self, resources: Path):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def process(self, params: Params):
+    def process(self, params: EfficiencyParams):
         df = self._load(params)
         idle_power_df = self._frameio.load(params.idle_power)
 

@@ -165,7 +165,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         ec = EnergyConsumption(resources_folder)
-        params = EnergyConsumption.Params(
+        params = EnergyConsumption.ConsumptionParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],
@@ -177,7 +177,7 @@ class Processor:
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         ec = EnergyEfficiency(resources_folder)
-        params = EnergyEfficiency.Params(
+        params = EnergyEfficiency.EfficiencyParams(
             used_energy_file=args.used_energy_file,
             no_tool=args.no_tool if args.no_tool else [],
             no_dataset=args.no_data_set if args.no_data_set else [],

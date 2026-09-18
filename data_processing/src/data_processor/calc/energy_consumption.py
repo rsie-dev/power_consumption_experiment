@@ -13,7 +13,7 @@ from .calculator import Calculator
 
 class EnergyConsumption(Calculator):
     @dataclass(frozen=True)
-    class Params(EnergyParams):
+    class ConsumptionParams(EnergyParams):
         idle_power: Path
 
     def __init__(self, resources: Path):
@@ -25,7 +25,7 @@ class EnergyConsumption(Calculator):
     def virtual_powers(self) -> list:
         return self._virtual_powers
 
-    def process(self, params: Params):
+    def process(self, params: ConsumptionParams):
         df = self._load(params)
         idle_power_df = self._frameio.load(params.idle_power)
 
