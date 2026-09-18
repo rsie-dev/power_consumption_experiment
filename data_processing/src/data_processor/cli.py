@@ -116,7 +116,7 @@ class Processor:
             self._logger.exception("Error: %s", e)
         return 1
 
-    def _multimeter_validate(self, args):
+    def _multimeter_validate(self, _):
         validate = MultimeterValidate()
         validate.validate()
 
