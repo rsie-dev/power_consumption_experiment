@@ -25,10 +25,10 @@ class RunAggregator:
 
     def collect_runs(self, host: str, host_folder: Path):
         self._logger.info("Aggregate measurements of: %s", host)
-        measurement_folders = [f for f in list(host_folder.iterdir()) if f.is_dir()]
-        self._logger.info("Found %d measurements", len(measurement_folders))
         calculator = TrapezoidEnergyCalculator()
-        for measurement_folder in measurement_folders:
+        for measurement_folder in host_folder.iterdir():
+            if not measurement_folder.is_dir():
+                continue
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
