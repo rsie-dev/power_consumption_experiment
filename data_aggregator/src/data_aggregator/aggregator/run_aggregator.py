@@ -24,16 +24,11 @@ class RunAggregator:
             frame_io.persist(df, csv_file)
 
     def collect_runs(self, host: str, host_folder: Path):
-        # ToDo:
-        #log run duration, real time, measurement count per run and after clean
-
         self._logger.info("Aggregate measurements of: %s", host)
-        measurement_folders = list(host_folder.iterdir())
+        measurement_folders = [f for f in list(host_folder.iterdir()) if f.is_dir()]
         self._logger.info("Found %d measurements", len(measurement_folders))
         calculator = TrapezoidEnergyCalculator()
         for measurement_folder in measurement_folders:
-            if not measurement_folder.is_dir():
-                continue
             measurement_info = self._get_measurement_info(host, measurement_folder.stem)
             run_collector = RunCollector()
             runs = run_collector.collect_runs(measurement_info, measurement_folder)
