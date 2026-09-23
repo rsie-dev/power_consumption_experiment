@@ -15,6 +15,6 @@ class Timings:
 class Measurement:
     start: datetime.datetime
     end: datetime.datetime
-    timings: Timings
-    count: int | None
     readings: pd.DataFrame
+    timings: Timings | None
+    count: int | None

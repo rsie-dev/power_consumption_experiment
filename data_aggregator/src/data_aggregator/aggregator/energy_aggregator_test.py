@@ -53,11 +53,11 @@ def aggregator():
     return EnergyAggregator(Path())
 
 
-def test_aggregate_power_single(aggregator, single_run_data_frame):
+def test_aggregate_energy_single(aggregator, single_run_data_frame):
     data = """
-host,tool,dataset,mode,strength,threading,run,duration,energy,real,size,average_run_power
-No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,second,joules,second,byte,watt
-raspi5,bzip2,sensor,compress,default,single,1,0.07,0.21341973333599978,13.96,1.0,3.0488533333714254"""
+host,tool,dataset,mode,strength,threading,run,duration,energy,size,average_run_power
+No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,second,joules,byte,watt
+raspi5,bzip2,sensor,compress,default,single,1,0.07,0.21341973333599978,1.0,3.0488533333714254"""
     df_expected = _as_dataframe(data, times=False)
 
     df_actual = aggregator.aggregate_energy(single_run_data_frame)

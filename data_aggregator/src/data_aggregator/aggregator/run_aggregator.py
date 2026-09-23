@@ -8,7 +8,6 @@ from data_aggregator.common import MeasurementInfo
 from data_aggregator.ingest import RunCollector
 from data_aggregator.calculate import TrapezoidEnergyCalculator, PowerCalculator
 from data_aggregator.util import FrameIO
-from data_aggregator import ureg
 
 
 class RunAggregator:
@@ -77,8 +76,6 @@ class RunAggregator:
             if len(cut_run.index) < 3:
                 raise ValueError("no or too few samples after cutting: %s" % len(cut_run.index))
             power_df = power_calculator.calculate_power(cut_run)
-            power_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
-            power_df["real"] = power_df["real"].astype("pint[second]")
             power_df["size"] = run.measurement.count
             power_df["size"] = power_df["size"].astype("pint[byte]")
             all_runs.append(power_df)

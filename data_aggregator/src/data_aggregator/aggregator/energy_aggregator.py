@@ -32,7 +32,6 @@ class EnergyAggregator:
             .agg(
                 duration=("power_duration", "sum"),
                 energy=("energy_used", "sum"),
-                real=("real", "first"),
                 size=("size", "first"),
             )
             .reset_index()

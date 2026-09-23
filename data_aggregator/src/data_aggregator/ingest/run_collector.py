@@ -47,8 +47,11 @@ class RunCollector:
         return RunInfo(run=run, measurement=measurement)
 
     def _read_timings(self, run_folder):
+        timings_file = run_folder / 'timings.csv'
+        if not timings_file.exists():
+            return None
         frame_io = FrameIO()
-        df = frame_io.load(run_folder / 'timings.csv')
+        df = frame_io.load(timings_file)
         real = datetime.timedelta(seconds=df["real"].iloc[0].to(ureg.second).magnitude)
         user = datetime.timedelta(seconds=df["user"].iloc[0].to(ureg.second).magnitude)
         sys = datetime.timedelta(seconds=df["sys"].iloc[0].to(ureg.second).magnitude)
