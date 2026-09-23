@@ -89,7 +89,7 @@ class RunAggregator:
     def _cut_lead_tail(self, run: RunInfo) -> pd.DataFrame:
         measurement = run.measurement
         df = measurement.readings
-        filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
+        filtered_df = df[(df['timestamp'] > measurement.start) & (df['timestamp'] < measurement.end)]
         return filtered_df
 
     def _build_name(self, measurement_info: MeasurementInfo) -> str:

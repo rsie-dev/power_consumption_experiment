@@ -55,7 +55,5 @@ def test_cut_lead_tail(aggregator, readings_df):
 
     df_actual = aggregator._cut_lead_tail(run_info)
 
-    #df_expected = readings_df.iloc[1:-1].copy()
-    df_expected = readings_df.copy()
-    df_expected = df_expected.reset_index(drop=True)
+    df_expected = readings_df.iloc[1:-1].copy()
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
