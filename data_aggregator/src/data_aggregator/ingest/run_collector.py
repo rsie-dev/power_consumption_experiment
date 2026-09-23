@@ -20,7 +20,7 @@ class RunCollector:
         self._logger.debug("Collecting runs of: %s", measurement_info)
 
         run_folders = list(measurement_folder.iterdir())
-        self._logger.info("Found %d runs", len(run_folders))
+        self._logger.debug("Found %d runs", len(run_folders))
         for run_folder in run_folders:
             run_info = self.collect_run(measurement_info.tool_config.mode, run_folder)
             yield run_info
