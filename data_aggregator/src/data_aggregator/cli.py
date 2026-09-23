@@ -6,7 +6,6 @@ from ruamel.yaml import YAML
 import pandas as pd
 
 from .aggregator import RunAggregator, EnergyAggregator
-from .calculate import AveragePowerCalculator
 from .util import FrameIO
 
 
@@ -95,12 +94,6 @@ class Processor:
         aggregator = EnergyAggregator(resources_folder)
         aggregator.aggregate(args.power_data)
 
-    def _calculate_power_average(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
-        calculator = AveragePowerCalculator(resources_folder)
-        calculator.calculate(args.power_data)
-
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
@@ -118,7 +111,7 @@ class Processor:
         parser_collect.add_argument('--result', type=Path, help="Resulting file name")
         parser_collect.set_defaults(func=self._collect)
 
-        parser_aggregate = subparsers.add_parser('aggregate')
+        parser_aggregate = subparsers.add_parser('aggregate', help="single aggregations")
         subparsers_aggregate = parser_aggregate.add_subparsers(required=True, dest="subcommand",
                                                                title='aggregate subcommands',
                                                                description='valid subcommands', help='sub-command help')
@@ -129,19 +122,8 @@ class Processor:
         parser_aggregate_runs.set_defaults(func=self._aggregate_runs)
 
         parser_aggregate_power = subparsers_aggregate.add_parser('power', help="aggregate power of runs")
-        parser_aggregate_power.add_argument('power_data', type=Path, nargs="+", help="preprocessed files")
+        parser_aggregate_power.add_argument('power_data', type=Path, nargs="+", help="runs aggregation file")
         parser_aggregate_power.set_defaults(func=self._aggregate_power)
-
-        parser_calculate = subparsers.add_parser('calculate')
-        subparsers_calculate = parser_calculate.add_subparsers(required=True, dest="subcommand",
-                                                               title='calculate subcommands',
-                                                               description='valid subcommands', help='sub-command help')
-
-        parser_calculate_averages = subparsers_calculate.add_parser('average',
-                                                                    help="calculate average power usage")
-        parser_calculate_averages.add_argument('-d', '--power-data', type=Path, required=True,
-                                               help="power usage file")
-        parser_calculate_averages.set_defaults(func=self._calculate_power_average)
 
         args = parser.parse_args()
 
