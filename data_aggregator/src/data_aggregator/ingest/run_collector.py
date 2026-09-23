@@ -14,6 +14,7 @@ from data_aggregator import ureg
 class RunCollector:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._frame_io = FrameIO()
 
     def collect_runs(self, measurement_info: MeasurementInfo,
                      measurement_folder: Path) -> Generator[RunInfo, None, None]:
@@ -27,19 +28,18 @@ class RunCollector:
 
     def collect_run(self, mode: OperationMode, run_folder: Path) -> RunInfo:
         self._logger.debug("processing run folder: %s", run_folder)
-        frame_io = FrameIO()
         run = int(run_folder.stem[4:])
         count = None
         count_file = run_folder / 'count_stdout.csv'
         if mode == OperationMode.COMPRESS:
-            df = frame_io.load(count_file)
+            df = self._frame_io.load(count_file)
             count_quantity = df["count"].iloc[0]
             count = int(count_quantity.to(ureg.byte).magnitude)
 
         end, start = self._read_markers(run_folder)
         timings = self._read_timings(run_folder)
 
-        readings = frame_io.load(run_folder / 'multimeter.csv')
+        readings = self._frame_io.load(run_folder / 'multimeter.csv')
         if readings.empty:
             raise ValueError("no samples in: %s" % (run_folder / 'multimeter.csv'))
         readings['run'] = run
@@ -50,8 +50,7 @@ class RunCollector:
         timings_file = run_folder / 'timings.csv'
         if not timings_file.exists():
             return None
-        frame_io = FrameIO()
-        df = frame_io.load(timings_file)
+        df = self._frame_io.load(timings_file)
         real = datetime.timedelta(seconds=df["real"].iloc[0].to(ureg.second).magnitude)
         user = datetime.timedelta(seconds=df["user"].iloc[0].to(ureg.second).magnitude)
         sys = datetime.timedelta(seconds=df["sys"].iloc[0].to(ureg.second).magnitude)
@@ -59,8 +58,7 @@ class RunCollector:
         return timings
 
     def _read_markers(self, run_folder):
-        frame_io = FrameIO()
-        df = frame_io.load(run_folder / 'markers.csv')
+        df = self._frame_io.load(run_folder / 'markers.csv')
         start = df.loc[df["kind"] == "START", "timestamp"].iloc[0]
         end = df.loc[df["kind"] == "END", "timestamp"].iloc[0]
         return end, start
