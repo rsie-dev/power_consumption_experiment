@@ -36,6 +36,14 @@ class EnergyAggregator:
             )
             .reset_index()
         )
+
+        duration = result["duration"]
+        magnitudes = duration.pint.magnitude.round(3)
+        result["duration"] = pd.array(
+            magnitudes,
+            dtype=duration.dtype,
+        )
+
         for i, column in enumerate(["host", "tool", "dataset", "mode", "strength", "threading"]):
             result.insert(loc=i, column=column, value=df.iloc[0][column])
         return result
