@@ -5,6 +5,7 @@ import pandas as pd
 
 from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo
+from data_aggregator.common import RunInfo
 from data_aggregator.ingest import RunCollector
 from data_aggregator.calculate import TrapezoidEnergyCalculator, PowerCalculator
 from data_aggregator.util import FrameIO
@@ -85,7 +86,7 @@ class RunAggregator:
         self._logger.debug("Raw entries: %d, after cut: %d", entries_count, len(df_all))
         return df_all
 
-    def _cut_lead_tail(self, run) -> pd.DataFrame:
+    def _cut_lead_tail(self, run: RunInfo) -> pd.DataFrame:
         measurement = run.measurement
         df = measurement.readings
         filtered_df = df[(df['timestamp'] >= measurement.start) & (df['timestamp'] <= measurement.end)]
