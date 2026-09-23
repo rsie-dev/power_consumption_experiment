@@ -30,13 +30,13 @@ class EnergyAggregator:
         result = (
             df.groupby("run")
             .agg(
-                sample_duration=("power_duration", "sum"),
+                duration=("power_duration", "sum"),
                 energy=("energy_used", "sum"),
                 size=("size", "first"),
             )
             .reset_index()
         )
-        result["average_run_power"] = result["energy"] / result["sample_duration"]
+        result["average_run_power"] = result["energy"] / result["duration"]
         result["average_run_power"] = result["average_run_power"].pint.to("watt")
         for i, column in enumerate(["host", "tool", "dataset", "mode", "strength", "threading"]):
             result.insert(loc=i, column=column, value=df.iloc[0][column])

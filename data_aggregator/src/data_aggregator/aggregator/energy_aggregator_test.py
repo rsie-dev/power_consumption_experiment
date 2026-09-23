@@ -45,14 +45,14 @@ def aggregator():
 
 def test_aggregate_energy_single(aggregator, single_run_data_frame):
     data = """
-host,tool,dataset,mode,strength,threading,run,sample_duration,energy,size,average_run_power
+host,tool,dataset,mode,strength,threading,run,duration,energy,size,average_run_power
 No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,No Unit,second,joules,byte,watt
 raspi5,bzip2,sensor,compress,default,single,1,0.07,0.21341973333599978,1.0,3.0488533333714254"""
     df_expected = _as_dataframe(data)
 
     df_actual = aggregator.aggregate_energy(single_run_data_frame)
 
-    for key in ["sample_duration", "energy", "average_run_power"]:
+    for key in ["duration", "energy", "average_run_power"]:
         df_expected[key] = df_expected[key].astype("float")
         df_actual[key] = df_actual[key].astype("float")
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
