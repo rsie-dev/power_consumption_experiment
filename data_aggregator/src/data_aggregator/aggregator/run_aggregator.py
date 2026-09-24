@@ -9,12 +9,14 @@ from data_aggregator.common import RunInfo
 from data_aggregator.ingest import RunCollector
 from data_aggregator.calculate import TrapezoidEnergyCalculator, PowerCalculator
 from data_aggregator.util import FrameIO
+from data_aggregator import ureg
 
 
 class RunAggregator:
-    def __init__(self, resources_folder: Path):
+    def __init__(self, resources_folder: Path, add_timings: bool = False):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources_folder = resources_folder
+        self._add_timings = add_timings
 
     def aggregate(self, host: str, host_folder: Path):
         frame_io = FrameIO()
@@ -79,6 +81,9 @@ class RunAggregator:
             power_df = power_calculator.calculate_power(cut_run)
             power_df["size"] = run.measurement.count
             power_df["size"] = power_df["size"].astype("pint[byte]")
+            if self._add_timings:
+                power_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
+                power_df["real"] = power_df["real"].astype("pint[second]")
             all_runs.append(power_df)
 
         df_all = pd.concat(all_runs)

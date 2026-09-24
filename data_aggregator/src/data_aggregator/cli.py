@@ -45,8 +45,8 @@ class Processor:
             host_folders.extend(folders)
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        run_aggregator = RunAggregator(resources_folder)
-        energy_aggregator = EnergyAggregator(resources_folder)
+        run_aggregator = RunAggregator(resources_folder, args.add_timings)
+        energy_aggregator = EnergyAggregator(resources_folder, args.add_timings)
         all_df = []
         for host_folder in host_folders:
             for _, df in run_aggregator.collect_runs(host_folder.stem, host_folder):
@@ -109,6 +109,7 @@ class Processor:
         parser_collect.add_argument('-d', '--raw-data', type=Path, nargs='+',
                                     help="raw data measurement folder")
         parser_collect.add_argument('--result', type=Path, help="Resulting file name")
+        parser_collect.add_argument("--add-timings", action="store_true", help="Store timings, too")
         parser_collect.set_defaults(func=self._collect)
 
         parser_aggregate = subparsers.add_parser('aggregate', help="single aggregations")

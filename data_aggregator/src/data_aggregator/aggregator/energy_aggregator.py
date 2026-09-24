@@ -7,9 +7,10 @@ from data_aggregator.util import FrameIO
 
 
 class EnergyAggregator:
-    def __init__(self, resources_folder: Path):
+    def __init__(self, resources_folder: Path, add_timings: bool = False):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._resources_folder = resources_folder
+        self._add_timings = add_timings
 
     def aggregate(self, power_datas: list[Path]):
         frame_io = FrameIO()
@@ -27,13 +28,19 @@ class EnergyAggregator:
         frame_io.persist(df_all, csv_file)
 
     def aggregate_energy(self, df: pd.DataFrame) -> pd.DataFrame:
+        aggregations = {
+            "duration": ("power_duration", "sum"),
+            "energy": ("energy_used", "sum"),
+            "size": ("size", "first"),
+        }
+        if self._add_timings:
+            aggregations.update({
+                "real": ("real", "first"),
+            })
+
         result = (
             df.groupby("run")
-            .agg(
-                duration=("power_duration", "sum"),
-                energy=("energy_used", "sum"),
-                size=("size", "first"),
-            )
+            .agg(**aggregations)
             .reset_index()
         )
 
