@@ -110,7 +110,7 @@ class Generator:
         parser.add_argument('--head-delay-max', type=int, help="us a stable temp max head delay")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
         parser.add_argument('--tail-delay-max', type=int, help="us a stable temp max tail delay")
-        parser.add_argument('--warmup', type=int, default=120, help="warmup task time in S, 0 to disable" + default)
+        parser.add_argument('--warmup', type=int, help="warmup task time in S, 0 to disable" + default)
         parser.add_argument('--with-sensor', type=str, help="Use an sensor to measure the ambient temperature")
         parser.add_argument('--mon-temp', type=float, help="activate temperature monitoring with max MON_TEMP delta")
 
