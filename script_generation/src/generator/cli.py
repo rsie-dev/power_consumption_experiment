@@ -50,6 +50,7 @@ class Generator:
             with_timers=args.with_timers,
             with_caches=args.with_caches,
             warmup = args.warmup,
+            with_sensor = args.with_sensor,
             mon_temp = args.mon_temp,
             head_delay=args.head_delay,
             max_head_delay=args.head_delay_max,
@@ -110,7 +111,9 @@ class Generator:
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
         parser.add_argument('--tail-delay-max', type=int, help="us a stable temp max tail delay")
         parser.add_argument('--warmup', type=int, default=120, help="warmup task time in S, 0 to disable" + default)
+        parser.add_argument('--with-sensor', type=str, help="Use an sensor to measure the ambient temperature")
         parser.add_argument('--mon-temp', type=float, help="activate temperature monitoring with max MON_TEMP delta")
+
         parser.add_argument('--with-timers', action="store_true",
                             help="Do not disable systemd timers during measurement")
         parser.add_argument('--with-caches', action="store_true", help="Do not clear caches prior to measurement")

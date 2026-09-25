@@ -12,6 +12,7 @@ class TemplateArgs:  # pylint: disable=too-many-instance-attributes
     with_timers: bool
     with_caches: bool
     warmup: int | None
+    with_sensor: str | None
     mon_temp: float | None
     head_delay: int | None
     max_head_delay: int | None
