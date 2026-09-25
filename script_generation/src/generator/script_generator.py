@@ -33,7 +33,7 @@ class ScriptGenerator(ABC):
         self._logger.info("Using operation modes: %s", ", ".join([mode.name for mode in modes]))
         template_name = self._get_template_name()
         template = env.get_template(template_name)
-        data = self._build_data(tools, data_sets, compression_strengths, modes, template)
+        data = self._build_data(tools, data_sets, compression_strengths, modes)
         script_name = self._build_script_name(tools, data_sets, compression_strengths, modes)
         self._generate_script(script_name, template, data)
 
@@ -48,8 +48,7 @@ class ScriptGenerator(ABC):
 
     @abstractmethod
     def _build_data(self, tools: list[Tool], data_sets: list[DataSet],
-                    compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                    template) -> dict:
+                    compression_strengths: list[CompressionStrength], modes: list[OperationMode]) -> dict:
         pass
 
     def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):

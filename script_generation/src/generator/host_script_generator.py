@@ -17,8 +17,7 @@ class HostScriptGenerator(ScriptGenerator):
         return "experiment.jinja"
 
     def _build_data(self, tools: list[Tool], data_sets: list[DataSet],
-                    compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                    template) -> dict:
+                    compression_strengths: list[CompressionStrength], modes: list[OperationMode]) -> dict:
         all_data_sets = []
         measurement_sets = 0
         if OperationMode.COMPRESS in modes:
