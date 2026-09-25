@@ -16,9 +16,9 @@ class HostScriptGenerator(ScriptGenerator):
     def _get_template_name(self) -> str:
         return "experiment.jinja"
 
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template) -> None:
+    def _build_data(self, tools: list[Tool], data_sets: list[DataSet],
+                    compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                    template) -> dict:
         all_data_sets = []
         measurement_sets = 0
         if OperationMode.COMPRESS in modes:
@@ -41,13 +41,16 @@ class HostScriptGenerator(ScriptGenerator):
             "modes": [mode.name for mode in modes],
             "data_sets": all_data_sets,
         }
+        return data
 
+    def _build_script_name(self, tools: list[Tool], data_sets: list[DataSet],
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode]) -> Path:
         if tools == Tool:
             post_info = "all"
         else:
             post_info = "_".join([tool.name.lower() for tool in tools])
         host_script = self._script_folder / f"{self._prefix}{self._template_args.host}_{post_info}.py"
-        self._generate_script(host_script, template, data)
+        return host_script
 
     def _get_measurement_sets_compress(self, tools: list[Tool], data_sets: list[DataSet],
                                        compression_strengths: list[CompressionStrength]):

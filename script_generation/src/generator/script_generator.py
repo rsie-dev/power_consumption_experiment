@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
@@ -10,7 +10,7 @@ from generator.data_set import DataSet
 from generator.template_args import TemplateArgs
 
 
-class ScriptGenerator:
+class ScriptGenerator(ABC):
     def __init__(self, script_folder: Path, prefix: str, template_args: TemplateArgs):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._script_folder = script_folder
@@ -33,16 +33,23 @@ class ScriptGenerator:
         self._logger.info("Using operation modes: %s", ", ".join([mode.name for mode in modes]))
         template_name = self._get_template_name()
         template = env.get_template(template_name)
-        self._write_scripts(tools, data_sets, compression_strengths, modes, template)
+        data = self._build_data(tools, data_sets, compression_strengths, modes, template)
+        script_name = self._build_script_name(tools, data_sets, compression_strengths, modes)
+        self._generate_script(script_name, template, data)
+
+    @abstractmethod
+    def _build_script_name(self, tools: list[Tool], data_sets: list[DataSet],
+                       compression_strengths: list[CompressionStrength], modes: list[OperationMode]) -> Path:
+        pass
 
     @abstractmethod
     def _get_template_name(self) -> str:
         pass
 
     @abstractmethod
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template) -> None:
+    def _build_data(self, tools: list[Tool], data_sets: list[DataSet],
+                    compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                    template) -> dict:
         pass
 
     def _build_tool_entry(self, tool: Tool, tool_config: ToolConfig, data_set: DataSet):

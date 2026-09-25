@@ -16,9 +16,9 @@ class DataGenScriptGenerator(ScriptGenerator):
     def _get_template_name(self) -> str:
         return "data_gen.jinja"
 
-    def _write_scripts(self, tools: list[Tool], data_sets: list[DataSet],
-                       compression_strengths: list[CompressionStrength], modes: list[OperationMode],
-                       template) -> None:
+    def _build_data(self, tools: list[Tool], data_sets: list[DataSet],
+                    compression_strengths: list[CompressionStrength], modes: list[OperationMode],
+                    template) -> dict:
         data_sets_in, data_sets_out, measurement_sets_decompress = self._get_data_sets(tools, data_sets,
                                                                                        compression_strengths)
 
@@ -30,9 +30,12 @@ class DataGenScriptGenerator(ScriptGenerator):
             "data_sets_in": data_sets_in,
             "data_sets": data_sets_out,
         }
+        return data
 
+    def _build_script_name(self, tools: list[Tool], data_sets: list[DataSet],
+                               compression_strengths: list[CompressionStrength], modes: list[OperationMode]) -> Path:
         host_script = self._script_folder / f"{self._prefix}{self._template_args.host}_data_gen.py"
-        self._generate_script(host_script, template, data)
+        return host_script
 
     def _get_data_sets(self, tools: list[Tool], data_sets: list[DataSet],
                        compression_strengths: list[CompressionStrength]):
