@@ -39,16 +39,16 @@ class Tool(Enum):
                            threading=Threading.MULTI, single_thread="-j 1", multi_thread="-j 4")
     XZ = ToolDefinition(binary="xz", extension=".xz", compress="-z", decompress="-d", min="--fast", max="--best",
                         keep="-k", to_stdout="-c",
-                        threading=Threading.MULTI, single_thread="-T 1", multi_thread="-T 0")
+                        threading=Threading.MULTI, single_thread="-T 1", multi_thread="-T 4")
     LZ4 = ToolDefinition(binary="lz4", extension=".lz4", compress="-z", decompress="-d", min="--fast", max="--best",
                          keep="-k", to_stdout="-c",
-                         threading=Threading.MULTI, single_thread="-T1", multi_thread="")
+                         threading=Threading.MULTI, single_thread="-T1", multi_thread="-T4")
     LZOP = ToolDefinition(binary="lzop", extension=".lzo", compress="", decompress="-d", min="--fast", max="--best",
                           keep="-k", to_stdout="-c",
                           threading=Threading.SINGLE, single_thread="", multi_thread="")
     ZSTD = ToolDefinition(binary="zstd", extension=".zst", compress="-z", decompress="-d", min="--fast", max="--ultra",
                           keep="-k", to_stdout="-c",
-                          threading=Threading.MULTI, single_thread="--single-thread", multi_thread="-T0")
+                          threading=Threading.MULTI, single_thread="--single-thread", multi_thread="-T4")
     BROTLI = ToolDefinition(binary="brotli", extension=".br", compress="", decompress="-d", min="-q 0", max="-q 11",
                             keep="-k", to_stdout="-c",
                             threading=Threading.SINGLE, single_thread="", multi_thread="")
