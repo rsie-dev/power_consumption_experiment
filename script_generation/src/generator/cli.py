@@ -65,7 +65,7 @@ class Generator:
         compression_strengths = self._get_compression_strength(args)
         modes = [OperationMode[mode.upper()] for mode in args.modes]
         script_folder.mkdir(parents=True, exist_ok=True)
-        sg.generate(tools, data_sets, compression_strengths, modes, args.host)
+        sg.generate(tools, data_sets, compression_strengths, modes, args.host, args.script)
 
     def _get_tools(self, args) -> list[Tool]:
         if args.no_tool:
@@ -155,6 +155,7 @@ class Generator:
                             choices=default_modes,
                             default=default_modes,
                             help="operation modes to use" + default)
+        parser.add_argument('--script', type=Path, help="Optional script name")
 
         args = parser.parse_args()
 

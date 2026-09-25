@@ -18,7 +18,8 @@ class ScriptGenerator(ABC):
         self._template_args = template_args
 
     def generate(self, tools: list[Tool], data_sets: list[DataSet],
-                 compression_strengths: list[CompressionStrength], modes: list[OperationMode], host: str):
+                 compression_strengths: list[CompressionStrength], modes: list[OperationMode], host: str,
+                 script: Path):
         env = Environment(
             loader=PackageLoader("generator"),
             trim_blocks=True,
@@ -34,7 +35,10 @@ class ScriptGenerator(ABC):
         template_name = self._get_template_name()
         template = env.get_template(template_name)
         data = self._build_data(tools, data_sets, compression_strengths, modes)
-        script_name = self._build_script_name(tools, data_sets, compression_strengths, modes)
+        if script:
+            script_name = self._script_folder / script
+        else:
+            script_name = self._build_script_name(tools, data_sets, compression_strengths, modes)
         self._generate_script(script_name, template, data)
 
     @abstractmethod
