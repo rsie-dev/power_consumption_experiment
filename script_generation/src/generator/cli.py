@@ -45,6 +45,7 @@ class Generator:
             host=args.host,
             ip=args.ip,
             runs=args.runs,
+            use_dut_timings=args.use_dut_timings,
             data_folder=args.data_folder,
             multimeter=args.multimeter,
             with_timers=args.with_timers,
@@ -106,6 +107,7 @@ class Generator:
         parser.add_argument('-l', '--logFile', help="logfile name")
         parser.add_argument('--prefix', type=str, help="script name prefix")
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
+        parser.add_argument('--use-dut-timings', action="store_true", help="Use timings on the device itself")
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
         parser.add_argument('--head-delay-max', type=int, help="us a stable temp max head delay")
         parser.add_argument('--tail-delay', type=int, help="tail delay per measurement")
@@ -113,7 +115,6 @@ class Generator:
         parser.add_argument('--warmup', type=int, help="warmup task time in S, 0 to disable" + default)
         parser.add_argument('--with-sensor', type=str, help="Use an sensor to measure the ambient temperature")
         parser.add_argument('--mon-temp', type=float, help="activate temperature monitoring with max MON_TEMP delta")
-
         parser.add_argument('--with-timers', action="store_true",
                             help="Do not disable systemd timers during measurement")
         parser.add_argument('--with-caches', action="store_true", help="Do not clear caches prior to measurement")

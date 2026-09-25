@@ -8,7 +8,11 @@
 {% endif %}
 {% endif %}
                 .execute_with("{{tool.value.binary}} {{tool_args}} %s" % remote_{{data_set_name}})
+{% if template_args.use_dut_timings %}
+                  .with_dut_timings()
+{% else %}
                   .with_timings()
+{% endif %}
                   .count_stdout()
                 .done()
 {% if template_args.tail_delay %}

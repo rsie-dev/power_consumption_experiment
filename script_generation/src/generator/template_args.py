@@ -7,6 +7,7 @@ class TemplateArgs:  # pylint: disable=too-many-instance-attributes
     host: str
     ip: str
     runs: int
+    use_dut_timings: bool
     data_folder: Path
     multimeter: str
     with_timers: bool
