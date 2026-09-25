@@ -11,7 +11,7 @@
 {% if template_args.use_dut_timings %}
                   .with_dut_timings()
 {% endif %}
-{% if template_args.use_local_timings %}
+{% if template_args.use_time_timings %}
                   .with_timings()
 {% endif %}
                   .count_stdout()

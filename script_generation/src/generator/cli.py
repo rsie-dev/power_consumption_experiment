@@ -45,7 +45,7 @@ class Generator:
             host=args.host,
             ip=args.ip,
             runs=args.runs,
-            use_local_timings=args.use_local_timings,
+            use_time_timings=args.use_time_timings,
             use_dut_timings=args.use_dut_timings,
             data_folder=args.data_folder,
             multimeter=args.multimeter,
@@ -108,7 +108,7 @@ class Generator:
         parser.add_argument('-l', '--logFile', help="logfile name")
         parser.add_argument('--prefix', type=str, help="script name prefix")
         parser.add_argument('--runs', default=30, help="amount of runs" + default)
-        parser.add_argument('--use-local-timings', action="store_true", help="Use local timings")
+        parser.add_argument('--use-time-timings', action="store_true", help="Use time tool timings")
         parser.add_argument('--use-dut-timings', action="store_true", help="Use timings on the device itself")
         parser.add_argument('--head-delay', type=int, help="head delay per measurement")
         parser.add_argument('--head-delay-max', type=int, help="us a stable temp max head delay")
