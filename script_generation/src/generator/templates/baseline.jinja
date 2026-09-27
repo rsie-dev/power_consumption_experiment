@@ -8,9 +8,14 @@ experiment = (get_experiment_builder()
             .on_host("{{template_args.host}}", "{{template_args.ip}}")
 
               .measure_with_multimeter("{{template_args.multimeter}}")
+
+{% if template_args.with_sensor %}
+              .with_ambient_temperature_sensor("{{template_args.with_sensor}}")
+{% endif %}
 {% if template_args.mon_temp %}
               .control_temperature({{template_args.mon_temp}})
 {% endif %}
+
 {% if not template_args.with_timers %}
               .disable_timers()
 {% endif %}
@@ -21,6 +26,7 @@ experiment = (get_experiment_builder()
               .measure_runs(run_count, "baseline")
                 .execute_with("/usr/bin/sleep {{sleep_time}}s")
                   .with_timings()
+                  .with_dut_timings()
                 .done()
               .done()
             .done()
