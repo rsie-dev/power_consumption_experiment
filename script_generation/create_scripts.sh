@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
-MULTIMETER="377D11895400"
+#MULTIMETER="377D11895400"
+MULTIMETER="07D1A5642160"
 SENSOR="/dev/ttyUSB0"
+
+DELAY=3
+DATA_FOLDER="/data"
 
 
 OPTIONS="--multimeter $MULTIMETER"
@@ -10,14 +14,13 @@ OPTIONS+=" --runs 30"
 OPTIONS+=" --use-time-timings"
 OPTIONS+=" --use-dut-timings"
 
-DELAY=3
 RUN_OPTIONS=$OPTIONS
 RUN_OPTIONS+=" -t host"
 RUN_OPTIONS+=" --head-delay $DELAY --head-delay-max 60 --tail-delay $DELAY"
 RUN_OPTIONS+=" --warmup 30"
-RUN_OPTIONS+=" --data-folder /data"
+RUN_OPTIONS+=" --data-folder $DATA_FOLDER"
 
-venv/bin/generator --script data_gen.py --host visionfive2 --ip 192.168.5.104 --multimeter $MULTIMETER --use-time-timings -t datagen --data-folder data
+venv/bin/generator --script data_gen.py --host visionfive2 --ip 192.168.5.104 --multimeter $MULTIMETER --use-time-timings -t datagen --data-folder $DATA_FOLDER
 
 
 venv/bin/generator --script raspi5_baseline.py --host raspi5 --ip 192.168.5.102 $OPTIONS -t baseline
