@@ -91,10 +91,14 @@ class RunAggregator:
         self._logger.debug("Raw entries: %d, after cut: %d", entries_count, len(df_all))
         return df_all
 
-    def _cut_lead_tail(self, run: RunInfo, marker: Marker) -> pd.DataFrame:
+    def _cut_lead_tail(self, run: RunInfo, marker: Marker, inclusive: bool = False) -> pd.DataFrame:
         measurement = run.measurement
         df = measurement.readings
-        filtered_df = df[(df['timestamp'] > marker.start) & (df['timestamp'] < marker.end)]
+        if inclusive:
+            inclusive_lit = "both"
+        else:
+            inclusive_lit = "neither"
+        filtered_df = df[df["timestamp"].between(marker.start, marker.end, inclusive=inclusive_lit)]
         return filtered_df
 
     def _build_name(self, measurement_info: MeasurementInfo) -> str:
