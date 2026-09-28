@@ -125,8 +125,6 @@ class RunAggregator:
         tokens.append(measurement_info.tool)
         tokens.append(measurement_info.tool_config.mode.name.lower())
         tokens.append(measurement_info.dataset)
-        if measurement_info.tool_config.mode == OperationMode.COMPRESS:
-            tokens.append(measurement_info.tool_config.strength.name.lower())
-        if measurement_info.tool_config.threading != Threading.NONE:
-            tokens.append(measurement_info.tool_config.threading.name.lower())
+        tokens.append(measurement_info.tool_config.strength.name.lower())
+        tokens.append(measurement_info.tool_config.threading.name.lower())
         return tokens
