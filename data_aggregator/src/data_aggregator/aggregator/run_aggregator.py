@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
+from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig, Measurement
 from data_aggregator.common import MeasurementInfo, Marker
 from data_aggregator.common import RunInfo
 from data_aggregator.ingest import RunCollector
@@ -81,9 +81,18 @@ class RunAggregator:
             power_df = power_calculator.calculate_power(cut_run)
             power_df["size"] = run.measurement.count
             power_df["size"] = power_df["size"].astype("pint[byte]")
+
+            duration_host = run.measurement.marker_host.end - run.measurement.marker_host.start
+            power_df["duration_host"] = duration_host.total_seconds() * ureg.second
+            power_df["duration_host"] = power_df["duration_host"].astype("pint[second]")
+            duration_dut = run.measurement.marker_device.end - run.measurement.marker_device.start
+            power_df["duration_dut"] = duration_dut.total_seconds() * ureg.second
+            power_df["duration_dut"] = power_df["duration_dut"].astype("pint[second]")
+
             if self._add_timings:
                 power_df["real"] = run.measurement.timings.real.total_seconds() * ureg.second
                 power_df["real"] = power_df["real"].astype("pint[second]")
+
             all_runs.append(power_df)
 
         df_all = pd.concat(all_runs)

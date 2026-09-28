@@ -3,6 +3,8 @@ from pathlib import Path
 import datetime
 from typing import Generator
 
+import pandas as pd
+
 from data_aggregator.common import OperationMode
 from data_aggregator.common import RunInfo
 from data_aggregator.common import Timings, Marker, Measurement
@@ -71,7 +73,7 @@ class RunCollector:
         return Marker(start=start, end=end)
 
     def _read_device_markers(self, run_folder) -> Marker:
-        df = self._frame_io.load(run_folder / 'timings_dut.csv')
+        df = self._frame_io.load(run_folder / 'timings_dut.csv', time_columns=["start", "end"])
         start = df["start"].iloc[0]
         end = df["end"].iloc[0]
         return Marker(start=start, end=end)
