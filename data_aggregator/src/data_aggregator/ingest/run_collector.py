@@ -5,7 +5,7 @@ from typing import Generator
 
 from data_aggregator.common import OperationMode
 from data_aggregator.common import RunInfo
-from data_aggregator.common import Timings, Measurement
+from data_aggregator.common import Timings, Marker, Measurement
 from data_aggregator.common import MeasurementInfo
 from data_aggregator.util import FrameIO
 from data_aggregator import ureg
@@ -36,14 +36,21 @@ class RunCollector:
             count_quantity = df["count"].iloc[0]
             count = int(count_quantity.to(ureg.byte).magnitude)
 
-        end, start = self._read_markers(run_folder)
+        host_marker = self._read_host_markers(run_folder)
+        device_marker = self._read_device_markers(run_folder)
         timings = self._read_timings(run_folder)
 
         readings = self._frame_io.load(run_folder / 'multimeter.csv')
         if readings.empty:
             raise ValueError("no samples in: %s" % (run_folder / 'multimeter.csv'))
         readings['run'] = run
-        measurement = Measurement(start=start, end=end, count=count, timings=timings, readings=readings)
+        measurement = Measurement(
+            marker_host=host_marker,
+            marker_device=device_marker,
+            readings=readings,
+            timings=timings,
+            count=count,
+        )
         return RunInfo(run=run, measurement=measurement)
 
     def _read_timings(self, run_folder):
@@ -57,8 +64,14 @@ class RunCollector:
         timings = Timings(real=real, user=user, sys=sys)
         return timings
 
-    def _read_markers(self, run_folder):
+    def _read_host_markers(self, run_folder) -> Marker:
         df = self._frame_io.load(run_folder / 'markers.csv')
         start = df.loc[df["kind"] == "START", "timestamp"].iloc[0]
         end = df.loc[df["kind"] == "END", "timestamp"].iloc[0]
-        return end, start
+        return Marker(start=start, end=end)
+
+    def _read_device_markers(self, run_folder) -> Marker:
+        df = self._frame_io.load(run_folder / 'timings_dut.csv')
+        start = df["start"].iloc[0]
+        end = df["end"].iloc[0]
+        return Marker(start=start, end=end)

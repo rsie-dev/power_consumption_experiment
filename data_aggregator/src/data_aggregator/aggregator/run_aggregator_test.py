@@ -6,7 +6,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 
 from data_aggregator.util.frame_io import FrameIO
-from data_aggregator.common import Measurement
+from data_aggregator.common import Measurement, Marker
 from data_aggregator.common import RunInfo
 from .run_aggregator import RunAggregator
 
@@ -44,16 +44,24 @@ def aggregator():
 
 
 def test_cut_lead_tail(aggregator, readings_df):
-    measurement = Measurement(
+    marker_host = Marker(
         start=dt.datetime.fromisoformat("2026-09-04T09:29:01.000+02:00"),
-        end = dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
+        end=dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
+    )
+    marker_device = Marker(
+        start=dt.datetime.fromisoformat("2026-09-04T09:29:01.000+02:00"),
+        end=dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
+    )
+    measurement = Measurement(
+        marker_host=marker_host,
+        marker_device=marker_device,
         readings=readings_df,
         timings=None,
         count=None,
     )
     run_info = RunInfo(run=0, measurement=measurement)
 
-    df_actual = aggregator._cut_lead_tail(run_info)
+    df_actual = aggregator._cut_lead_tail(run_info, marker_host)
 
     df_expected = readings_df.iloc[1:-1].copy()
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)

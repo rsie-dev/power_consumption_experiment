@@ -12,9 +12,15 @@ class Timings:
 
 
 @dataclass(frozen=True)
-class Measurement:
+class Marker:
     start: datetime.datetime
     end: datetime.datetime
+
+
+@dataclass(frozen=True)
+class Measurement:
+    marker_host: Marker
+    marker_device: Marker
     readings: pd.DataFrame
     timings: Timings | None
     count: int | None
