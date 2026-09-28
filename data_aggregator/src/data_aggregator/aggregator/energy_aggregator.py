@@ -29,14 +29,14 @@ class EnergyAggregator:
 
     def aggregate_energy(self, df: pd.DataFrame) -> pd.DataFrame:
         aggregations = {
-            "duration_power": ("power_duration", "sum"),
-            "duration_host": ("duration_host", "first"),
-            "duration_dut": ("duration_dut", "first"),
+            "duration": ("power_duration", "sum"),
             "energy": ("energy_used", "sum"),
             "size": ("size", "first"),
         }
         if self._add_timings:
             aggregations.update({
+                "duration_host": ("duration_host", "first"),
+                "duration_dut": ("duration_dut", "first"),
                 "real": ("real", "first"),
             })
 
@@ -46,10 +46,11 @@ class EnergyAggregator:
             .reset_index()
         )
 
-        for column in ["duration_power", "duration_host", "duration_dut"]:
-            duration = result[column]
-            magnitudes = duration.pint.magnitude.round(3)
-            result[column] = pd.array(magnitudes, dtype=duration.dtype)
+        for column in ["duration", "duration_host", "duration_dut"]:
+            if column in result.columns:
+                duration = result[column]
+                magnitudes = duration.pint.magnitude.round(3)
+                result[column] = pd.array(magnitudes, dtype=duration.dtype)
 
         for i, column in enumerate(["host", "tool", "dataset", "mode", "strength", "threading"]):
             result.insert(loc=i, column=column, value=df.iloc[0][column])

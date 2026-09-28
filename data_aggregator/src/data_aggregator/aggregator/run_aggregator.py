@@ -75,7 +75,7 @@ class RunAggregator:
         power_calculator = PowerCalculator()
         for run in runs:
             entries_count += len(run.measurement.readings)
-            cut_run = self._cut_lead_tail(run, run.measurement.marker_host)
+            cut_run = self._cut_lead_tail(run, run.measurement.marker_device)
             if len(cut_run.index) < 3:
                 raise ValueError("no or too few samples after cutting: %s" % len(cut_run.index))
             power_df = power_calculator.calculate_power(cut_run)
