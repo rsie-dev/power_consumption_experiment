@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from dataclasses import dataclass
 
-import tabulate
 import pandas as pd
 
 from data_processor.constants import GROUP_COLS
@@ -36,32 +35,14 @@ class EnergyEfficiency(BaseEnergyCalculator):
         for c in ["average_energy_efficiency_total", "average_energy_efficiency_net"]:
             table_df[c] = table_df[c].pint.to("MiB/joule")
         unit_energy = str(table_df["average_energy_efficiency_total"].dtype.units)
-
-        table_entries = []
-        cols = table_df.columns.tolist()
-        energy_cols = cols[len(GROUP_COLS) + 1:]
-        for col in energy_cols:
-            table_df[col] = table_df[col].astype(float)
-        for _, row in table_df.iterrows():
-            table_entries.append(row.values[:])
-
-        headers = cols[:len(GROUP_COLS) + 1]
-        for column in energy_cols:
-            headers.append("%s (%s)" % (column.replace("_", " "), unit_energy))
-
-        table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
-                                      tablefmt="simple"
-                                      )
+        table_str = self._pre_print_table(table_df, unit_energy)
         print(table_str)
 
     def _calculate_energy_efficiency(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
         idle_power_df = self._calculate_average_power(idle_power_df)
 
         def get_idle(host: str):
-            result = idle_power_df.loc[idle_power_df["host"] == host, "average_power"]
-            average_power = result.iloc[0]
-            return average_power
+            return self._lookup_idle_power(host, idle_power_df)
 
         def get_data_size(dataset: str):
             return dataset_from_str(dataset).value
