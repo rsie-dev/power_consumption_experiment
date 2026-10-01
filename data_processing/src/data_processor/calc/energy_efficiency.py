@@ -56,6 +56,8 @@ class EnergyEfficiency(Calculator):
         print(table_str)
 
     def _calculate_energy_efficiency(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
+        idle_power_df = self._calculate_average_power(idle_power_df)
+
         def get_idle(host: str):
             result = idle_power_df.loc[idle_power_df["host"] == host, "average_power"]
             average_power = result.iloc[0]
@@ -65,7 +67,7 @@ class EnergyEfficiency(Calculator):
             return dataset_from_str(dataset).value
 
         df["energy_efficiency_total"] = df["dataset"].map(get_data_size) / df["energy"]
-        df["energy_consumption_net"] = df["energy"] - df["host"].map(get_idle) * df["real"]
+        df["energy_consumption_net"] = df["energy"] - df["host"].map(get_idle) * df["duration"]
         df["energy_efficiency_net"] = df["dataset"].map(get_data_size) / df["energy_consumption_net"]
 
         result_df = (
@@ -78,3 +80,8 @@ class EnergyEfficiency(Calculator):
             .reset_index(drop=True)
         )
         return result_df
+
+    def _calculate_average_power(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["average_power"] = df["energy"] / df["duration"]
+        df["average_power"] = df["average_power"].pint.to("watt")
+        return df

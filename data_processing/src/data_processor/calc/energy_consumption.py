@@ -42,14 +42,14 @@ class EnergyConsumption(Calculator):
 
         table_entries = []
         cols = table_df.columns.tolist()
-        energy_cols = cols[len(GROUP_COLS) + 1:]
-        for col in energy_cols:
+        consumption_cols = cols[len(GROUP_COLS) + 1:]
+        for col in consumption_cols:
             table_df[col] = table_df[col].astype(float)
         for _, row in table_df.iterrows():
             table_entries.append(row.values[:])
 
         headers = cols[:len(GROUP_COLS) + 1]
-        for column in energy_cols:
+        for column in consumption_cols:
             headers.append("%s (%s)" % (column.replace("_", " "), unit_energy))
 
         table_str = tabulate.tabulate(table_entries,
@@ -59,15 +59,17 @@ class EnergyConsumption(Calculator):
         print(table_str)
 
     def _calculate_energy_consumption(self, df: pd.DataFrame, idle_power_df: pd.DataFrame) -> pd.DataFrame:
+        idle_power_df = self._calculate_average_power(idle_power_df)
+
         def get_idle(host: str):
             result = idle_power_df.loc[idle_power_df["host"] == host, "average_power"]
             average_power = result.iloc[0]
             return average_power
 
-        df["energy_net"] = df["energy"] - df["host"].map(get_idle) * df["real"]
+        df["energy_net"] = df["energy"] - df["host"].map(get_idle) * df["duration"]
         virtual_powers = [p * ureg.watt for p in self._virtual_powers]
         for p_virtual  in virtual_powers:
-            df["energy_norm_%s" % p_virtual.magnitude] = df["energy_net"] + p_virtual * df["real"]
+            df["energy_norm_%s" % p_virtual.magnitude] = df["energy_net"] + p_virtual * df["duration"]
 
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
@@ -83,3 +85,8 @@ class EnergyConsumption(Calculator):
             .reset_index(drop=True)
         )
         return result_df
+
+    def _calculate_average_power(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["average_power"] = df["energy"] / df["duration"]
+        df["average_power"] = df["average_power"].pint.to("watt")
+        return df
