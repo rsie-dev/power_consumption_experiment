@@ -8,10 +8,10 @@ import pandas as pd
 from data_processor.constants import GROUP_COLS
 from data_processor.data_set import dataset_from_str
 from .calc_params import EnergyParams
-from .calculator import Calculator
+from .base_energy_calculator import BaseEnergyCalculator
 
 
-class EnergyEfficiency(Calculator):
+class EnergyEfficiency(BaseEnergyCalculator):
     @dataclass(frozen=True)
     class EfficiencyParams(EnergyParams):
         idle_power: Path
@@ -80,8 +80,3 @@ class EnergyEfficiency(Calculator):
             .reset_index(drop=True)
         )
         return result_df
-
-    def _calculate_average_power(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["average_power"] = df["energy"] / df["duration"]
-        df["average_power"] = df["average_power"].pint.to("watt")
-        return df
