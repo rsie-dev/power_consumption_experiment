@@ -43,7 +43,7 @@ def aggregator():
     return RunAggregator(Path())
 
 
-def test_cut_lead_tail(aggregator, readings_df):
+def test_cut_lead_tail_exclusive(aggregator, readings_df):
     marker_host = Marker(
         start=dt.datetime.fromisoformat("2026-09-04T09:29:01.000+02:00"),
         end=dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
@@ -61,7 +61,33 @@ def test_cut_lead_tail(aggregator, readings_df):
     )
     run_info = RunInfo(run=0, measurement=measurement)
 
-    df_actual = aggregator._cut_lead_tail(run_info, marker_host)
+    df_actual = aggregator._cut_lead_tail(run_info, marker_device)
 
     df_expected = readings_df.iloc[1:-1].copy()
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
+
+
+def test_cut_lead_tail_inclusive(aggregator, readings_df):
+    marker_host = Marker(
+        start=dt.datetime.fromisoformat("2026-09-04T09:29:01.000+02:00"),
+        end=dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
+    )
+    marker_device = Marker(
+        start=dt.datetime.fromisoformat("2026-09-04T09:29:01.000+02:00"),
+        end=dt.datetime.fromisoformat("2026-09-04T09:29:05.000+02:00"),
+    )
+    measurement = Measurement(
+        marker_host=marker_host,
+        marker_device=marker_device,
+        readings=readings_df,
+        timings=None,
+        count=None,
+    )
+    run_info = RunInfo(run=0, measurement=measurement)
+
+    df_actual = aggregator._cut_lead_tail(run_info, marker_device, True)
+
+    df_expected = readings_df.iloc[:].copy()
+    assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
+
+
