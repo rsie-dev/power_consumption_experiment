@@ -19,14 +19,17 @@ class Throughput(Calculator):
         df = self._load(params)
 
         result_df = self._calculate_throughput(df)
-        result_df = self._order_data(result_df)
 
         self._print_table(result_df)
         tp_file = "tp_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
-        self._create_csv(tp_file, result_df)
+        csv_df = result_df.drop(columns=['energy', 'size'])
+        csv_df = self._order_data(csv_df)
+        self._create_csv(tp_file, csv_df)
 
     def _print_table(self, df: pd.DataFrame):
-        table_df = df.copy()
+        table_df = self._aggregate_throughput(df)
+        table_df= self._order_data(table_df)
+
         table_df["average_duration"] = table_df["average_duration"].astype(float)
         table_df["average_throughput"] = table_df["average_throughput"].pint.to("MiB/s")
         table_df["average_throughput"] = table_df["average_throughput"].astype(float)
@@ -52,6 +55,9 @@ class Throughput(Calculator):
 
         df["throughput"] = df["dataset"].map(dataset_map) / df["duration"]
 
+        return df
+
+    def _aggregate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
             .agg(
