@@ -89,5 +89,3 @@ def test_cut_lead_tail_inclusive(aggregator, readings_df):
 
     df_expected = readings_df.iloc[:].copy()
     assert_frame_equal(df_actual, df_expected, rtol=1e-7, atol=1e-9)
-
-
