@@ -17,19 +17,25 @@ class CompressionRatio(Calculator):
     class Params(EnergyParams):
         create_tex: bool
 
-    def __init__(self, resources: Path):
+    def __init__(self, resources: Path, multi: bool = False):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._multi = multi
 
     def process(self, params: Params):
         df = self._load(params)
-        #self._validate_multi(df)
+        if self._multi:
+            self._validate_multi(df)
+        else:
+            df = df[df["threading"] == "single"].reset_index(drop=True)
         df = self._calculate_compression_ratio(df)
-
         self._show_tables(df)
         self._write_csv(params.used_energy_file, df)
         if params.create_tex:
-            self._process_tex(params.used_energy_file, df)
+            if self._multi:
+                self._process_tex(params.used_energy_file, df)
+            else:
+                self._process_tex_threading(params.used_energy_file, df, "single")
 
     def _calculate_compression_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
         first_host = df.loc[0, "host"]
