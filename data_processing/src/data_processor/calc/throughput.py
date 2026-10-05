@@ -27,7 +27,7 @@ class Throughput(Calculator):
 
     def _print_table(self, df: pd.DataFrame):
         table_df = df.copy()
-        table_df["average_real"] = table_df["average_real"].astype(float)
+        table_df["average_duration"] = table_df["average_duration"].astype(float)
         table_df["average_throughput"] = table_df["average_throughput"].pint.to("MiB/s")
         table_df["average_throughput"] = table_df["average_throughput"].astype(float)
 
@@ -41,7 +41,7 @@ class Throughput(Calculator):
             table_entries.append(row.values[:])
 
         headers = cols[:-2]
-        headers.append("average real (s)")
+        headers.append("average duration (s)")
         headers.append("average throughput (MiB/s)")
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
@@ -53,13 +53,13 @@ class Throughput(Calculator):
         def dataset_map(str_ds):
             return dataset_from_str(str_ds).value
 
-        df["throughput"] = df["dataset"].map(dataset_map) / df["real"]
+        df["throughput"] = df["dataset"].map(dataset_map) / df["duration"]
 
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)
             .agg(
                 num_runs=("run", "count"),
-                average_real=("real", "mean"),
+                average_duration=("duration", "mean"),
                 average_throughput=("throughput", "mean"),
             )
         )

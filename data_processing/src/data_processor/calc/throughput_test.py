@@ -27,9 +27,9 @@ def sample_df():
         "strength": ["default"] * 6,
         "threading": ["single", "single", "single", "single", "multi", "multi"],
         "run": [1, 2, 1, 2, 1, 2],
-        "real": [1.0, 1.1, 0.9, 1.0, 1.2, 1.3],
+        "duration": [1.0, 1.1, 0.9, 1.0, 1.2, 1.3],
     })
-    df["real"] = df["real"].astype("pint[second]")
+    df["duration"] = df["duration"].astype("pint[second]")
     return df
 
 
