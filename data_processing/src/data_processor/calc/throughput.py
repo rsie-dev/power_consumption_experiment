@@ -32,9 +32,6 @@ class Throughput(Calculator):
         table_df["average_throughput"] = table_df["average_throughput"].astype(float)
 
         cols = table_df.columns.tolist()
-        i = cols.index("num_runs")
-        cols.insert(i - 1, cols.pop(i))
-        table_df = table_df[cols]
 
         table_entries = []
         for _, row in table_df.iterrows():
