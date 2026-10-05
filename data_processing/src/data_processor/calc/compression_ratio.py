@@ -79,7 +79,8 @@ class CompressionRatio(Calculator):
         headers = fixed_columns + tool_names
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
-                                      tablefmt="simple"
+                                      tablefmt="simple",
+                                      floatfmt = ".2f",
                                       )
 
         print("entries:")
@@ -242,9 +243,14 @@ class CompressionRatio(Calculator):
                 subset=list(df.columns.drop(fixed_columns)),
                 props="bfseries:;",
             )
+            .highlight_min(
+                axis="columns",
+                subset=list(df.columns.drop(fixed_columns)),
+                props="underline:--rwrap;num:--rwrap;",
+            )
             .to_latex(
                 hrules=True,
-                column_format="lc" + data_format  * len(tool_names),
+                column_format=r"l@{\hspace{0.05cm}}c@{\hspace{0.05cm}}" + data_format  * len(tool_names),
             )
         )
         return latex
