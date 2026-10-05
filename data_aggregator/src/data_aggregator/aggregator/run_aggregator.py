@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig, Measurement
+from data_aggregator.common import OperationMode, CompressionStrength, Threading, ToolConfig
 from data_aggregator.common import MeasurementInfo, Marker
 from data_aggregator.common import RunInfo
 from data_aggregator.ingest import RunCollector
@@ -75,7 +75,10 @@ class RunAggregator:
         power_calculator = PowerCalculator()
         for run in runs:
             entries_count += len(run.measurement.readings)
-            cut_run = self._cut_lead_tail(run, run.measurement.marker_device, True)
+            if run.measurement.marker_device:
+                cut_run = self._cut_lead_tail(run, run.measurement.marker_device, True)
+            else:
+                cut_run = self._cut_lead_tail(run, run.measurement.marker_host, False)
             if len(cut_run.index) < 3:
                 raise ValueError("no or too few samples after cutting: %s" % len(cut_run.index))
             power_df = power_calculator.calculate_power(cut_run)
@@ -85,7 +88,10 @@ class RunAggregator:
             duration_host = run.measurement.marker_host.end - run.measurement.marker_host.start
             power_df["duration_host"] = duration_host.total_seconds() * ureg.second
             power_df["duration_host"] = power_df["duration_host"].astype("pint[second]")
-            duration_dut = run.measurement.marker_device.end - run.measurement.marker_device.start
+            if run.measurement.marker_device:
+                duration_dut = run.measurement.marker_device.end - run.measurement.marker_device.start
+            else:
+                duration_dut = run.measurement.timings.real
             power_df["duration_dut"] = duration_dut.total_seconds() * ureg.second
             power_df["duration_dut"] = power_df["duration_dut"].astype("pint[second]")
 

@@ -20,7 +20,7 @@ class Marker:
 @dataclass(frozen=True)
 class Measurement:
     marker_host: Marker
-    marker_device: Marker
+    marker_device: Marker | None
     readings: pd.DataFrame
     timings: Timings | None
     count: int | None
