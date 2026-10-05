@@ -132,7 +132,7 @@ class CompressionRatio(Calculator):
             .index
         )
         df = df.set_index(group_cols).loc[valid_groups].reset_index()
-        df = df.drop(columns=["run", "real", "duration", "average_power", "energy"])
+        df = df.drop(columns=["run", "duration", "energy"])
         print(df)
 
         size_mismatch = (
