@@ -6,8 +6,8 @@ import tabulate
 from tabulate import SEPARATING_LINE
 import pandas as pd
 
-from data_processor.data_set import dataset_from_str, dataset_map
-from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
+from data_processor.data_set import DataSet, dataset_from_str, dataset_map
+from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH, ORDER_THREADING
 from .calc_params import EnergyParams
 from .calculator import Calculator
 
@@ -29,6 +29,7 @@ class CompressionRatio(Calculator):
         else:
             df = df[df["threading"] == "single"].reset_index(drop=True)
         df = self._calculate_compression_ratio(df)
+
         self._show_tables(df)
         self._write_csv(params.used_energy_file, df)
         if params.create_tex:
@@ -36,6 +37,16 @@ class CompressionRatio(Calculator):
                 self._process_tex(params.used_energy_file, df)
             else:
                 self._process_tex_threading(params.used_energy_file, df, "single")
+
+    def _order_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        order_dataset = [dataset.name.lower() for dataset in DataSet]
+        df["_dataset_key"] = df["dataset"].apply(order_dataset .index)
+        df["_strength_key"] = df["strength"].apply(ORDER_STRENGTH.index)
+        df["_threading_key"] = df["threading"].apply(ORDER_THREADING.index)
+        df = df.sort_values(
+            by=["_dataset_key", "_strength_key", "_threading_key"],
+        ).drop(columns=["_dataset_key", "_strength_key", "_threading_key"])
+        return df
 
     def _calculate_compression_ratio(self, df: pd.DataFrame) -> pd.DataFrame:
         first_host = df.loc[0, "host"]
@@ -68,6 +79,7 @@ class CompressionRatio(Calculator):
         df = df.copy()
         df["compression_ratio"] = df["compression_ratio"].astype(float)
         result_df, fixed_columns, tool_names = self._restructure_data(df)
+        result_df = self._order_data(result_df)
         table_entries = []
         for _, row in result_df.iterrows():
             dataset = row["dataset"]
@@ -173,6 +185,7 @@ class CompressionRatio(Calculator):
     def _process_tex_threading(self, used_energy_file: Path, df: pd.DataFrame, threading: str):
         df = df[df["threading"] == threading]
         result_df, fixed_columns, _ = self._restructure_data(df)
+        result_df = self._order_data(result_df)
         self._create_tex(used_energy_file, result_df, threading, fixed_columns)
 
     def _restructure_data(self, df: pd.DataFrame) -> tuple[pd.DataFrame, list, list]:
