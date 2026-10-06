@@ -5,12 +5,12 @@ from data_processor import ureg
 
 class DataSet(Enum):
     TEXT = 10192446 * ureg.byte
-    TEXTLARGE = 20715520 * ureg.byte
+    TEXTLARGE = 100000000 * ureg.byte
     XML = 5345280 * ureg.byte
     XML2 = 10690560 * ureg.byte
     WEBSTER = 41458703 * ureg.byte
     IMAGE = 8474240 * ureg.byte
-    IMAGELARGE = 100000000 * ureg.byte
+    IMAGELARGE = 20715520 * ureg.byte
     SENSOR = 150910946 * ureg.byte
 
 
