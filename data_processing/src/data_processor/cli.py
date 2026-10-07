@@ -45,7 +45,7 @@ class Processor:
         parser.add_argument('-l', '--logFile', help="logfile name")
 
         subparsers = parser.add_subparsers(required=True, dest="subcommand", title='subcommands',
-                                           description='valid subcommands', help='sub-command help')
+                                           description='valid subcommands')
 
         common_parser = argparse.ArgumentParser(add_help=False)
         common_parser.add_argument('-r', '--resources', type=Path, default=Path("resources"),
@@ -54,12 +54,18 @@ class Processor:
         energy_parser = argparse.ArgumentParser(add_help=False)
         energy_parser.add_argument('used_energy_file', type=Path)
 
-        parser_stats = subparsers.add_parser('stats', help="basic statistics", parents=[common_parser, energy_parser])
-        parser_stats.set_defaults(func=self._stats)
+        parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
+        subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                                       description='valid subcommands')
+
+        parser_stats_raw = subparsers_stats.add_parser('raw', help="calculate raw statistics",
+                                                       parents=[common_parser, energy_parser])
+        parser_stats_raw.set_defaults(func=self._stats)
+
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
         subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
-                                                     description='valid subcommands', help='sub-command help')
+                                                     description='valid subcommands')
 
         filter_parser = argparse.ArgumentParser(add_help=False)
         filter_parser.add_argument('--no-tool', nargs="*", help="tools to skip")
