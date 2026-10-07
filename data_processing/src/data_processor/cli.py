@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .stats import Statistics
+from .stats import Statistics, ThroughputStatistics
 from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
 
@@ -60,7 +60,12 @@ class Processor:
 
         parser_stats_raw = subparsers_stats.add_parser('raw', help="calculate raw statistics",
                                                        parents=[common_parser, energy_parser])
-        parser_stats_raw.set_defaults(func=self._stats)
+        parser_stats_raw.set_defaults(func=self._stats_raw)
+
+        parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
+                                                       parents=[common_parser])
+        parser_stats_tp .add_argument('tp_file', type=Path, help="calculated throughput file")
+        parser_stats_tp.set_defaults(func=self._stats_tp)
 
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
@@ -127,11 +132,17 @@ class Processor:
         validate = MultimeterValidate()
         validate.validate()
 
-    def _stats(self, args):
+    def _stats_raw(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
         statistics = Statistics(resources_folder)
         statistics.process(args.used_energy_file)
+
+    def _stats_tp(self, args):
+        resources_folder = args.resources
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        statistics = ThroughputStatistics(resources_folder)
+        statistics.process(args.tp_file)
 
     def _calc_cr(self, args):
         resources_folder = args.resources
