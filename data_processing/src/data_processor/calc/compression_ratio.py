@@ -6,7 +6,7 @@ import tabulate
 from tabulate import SEPARATING_LINE
 import pandas as pd
 
-from data_processor.data_set import DataSet, dataset_from_str, dataset_map
+from data_processor.data_set import DataSet, get_data_size, dataset_map
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH, ORDER_THREADING
 from .calc_params import EnergyParams
 from .calculator import Calculator
@@ -55,7 +55,7 @@ class CompressionRatio(Calculator):
         df = df[df["run"] == 1]
 
         df["compression_ratio"] = df.apply(
-            lambda row: dataset_from_str(row["dataset"]).size / row["size"],
+            lambda row: get_data_size(row["dataset"]) / row["size"],
             axis=1,
         )
         return df
