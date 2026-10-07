@@ -6,7 +6,7 @@ import tabulate
 from tabulate import SEPARATING_LINE
 import pandas as pd
 
-from data_processor.data_set import DataSet, get_data_size, dataset_map
+from data_processor.data_set import DataSet, get_dataset_size, get_dataset_file
 from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH, ORDER_THREADING
 from .calc_params import EnergyParams
 from .calculator import Calculator
@@ -55,7 +55,7 @@ class CompressionRatio(Calculator):
         df = df[df["run"] == 1]
 
         df["compression_ratio"] = df.apply(
-            lambda row: get_data_size(row["dataset"]) / row["size"],
+            lambda row: get_dataset_size(row["dataset"]) / row["size"],
             axis=1,
         )
         return df
@@ -200,7 +200,7 @@ class CompressionRatio(Calculator):
         )
         result_df.columns.name = None
 
-        result_df["_dataset_key"] = result_df["dataset"].apply(dataset_map)
+        result_df["_dataset_key"] = result_df["dataset"].apply(get_dataset_file)
         result_df["_strength_key"] = result_df["strength"].apply(ORDER_STRENGTH.index)
         result_df = result_df.sort_values(
             by=["_dataset_key", "_strength_key", "threading"],
@@ -228,7 +228,7 @@ class CompressionRatio(Calculator):
         if df.index.name == "Dataset":
             df = df.reset_index()
 
-        df["dataset"] = df["dataset"].map(dataset_map)
+        df["dataset"] = df["dataset"].map(get_dataset_file)
 
         # Blank consecutive repeated dataset names
         df["dataset"] = df["dataset"].mask(

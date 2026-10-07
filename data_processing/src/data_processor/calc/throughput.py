@@ -4,7 +4,7 @@ from pathlib import Path
 import tabulate
 import pandas as pd
 
-from data_processor.data_set import get_data_size
+from data_processor.data_set import get_dataset_size
 from data_processor.constants import GROUP_COLS
 from .calc_params import EnergyParams
 from .calculator import Calculator
@@ -50,7 +50,7 @@ class Throughput(Calculator):
         print(table_str)
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["throughput"] = df["dataset"].map(get_data_size) / df["duration"]
+        df["throughput"] = df["dataset"].map(get_dataset_size) / df["duration"]
 
         return df
 

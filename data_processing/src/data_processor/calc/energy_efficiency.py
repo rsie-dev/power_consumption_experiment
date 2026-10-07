@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from data_processor.constants import GROUP_COLS
-from data_processor.data_set import get_data_size
+from data_processor.data_set import get_dataset_size
 from .calc_params import EnergyParams
 from .base_energy_calculator import BaseEnergyCalculator
 
@@ -44,9 +44,9 @@ class EnergyEfficiency(BaseEnergyCalculator):
         def get_idle(host: str):
             return self._lookup_idle_power(host, idle_power_df)
 
-        df["energy_efficiency_total"] = df["dataset"].map(get_data_size) / df["energy"]
+        df["energy_efficiency_total"] = df["dataset"].map(get_dataset_size) / df["energy"]
         df["energy_consumption_net"] = df["energy"] - df["host"].map(get_idle) * df["duration"]
-        df["energy_efficiency_net"] = df["dataset"].map(get_data_size) / df["energy_consumption_net"]
+        df["energy_efficiency_net"] = df["dataset"].map(get_dataset_size) / df["energy_consumption_net"]
 
         result_df = (
             df.groupby(GROUP_COLS, as_index=False)

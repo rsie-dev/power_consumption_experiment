@@ -23,17 +23,17 @@ class DataSet(Entry, Enum):
     SENSOR = 150910946 * ureg.byte, "data.txt"
 
 
-def dataset_from_str(ds_str: str) -> DataSet:
+def _dataset_from_str(ds_str: str) -> DataSet:
     try:
         return DataSet[ds_str.strip().upper()]
     except KeyError as e:
         raise ValueError(f"Unknown dataset: {ds_str}") from e
 
 
-def dataset_map(ds_str) -> pint.Quantity[int]:
-    ds = dataset_from_str(ds_str)
+def get_dataset_file(ds_str) -> str:
+    ds = _dataset_from_str(ds_str)
     return ds.file
 
 
-def get_data_size(ds_str: str):
-    return dataset_from_str(ds_str).size
+def get_dataset_size(ds_str: str):
+    return _dataset_from_str(ds_str).size
