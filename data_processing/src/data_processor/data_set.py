@@ -1,17 +1,26 @@
 from enum import Enum
+from dataclasses import dataclass
+
+import pint
 
 from data_processor import ureg
 
 
-class DataSet(Enum):
-    TEXT = 10192446 * ureg.byte
-    TEXTLARGE = 100000000 * ureg.byte
-    XML = 5345280 * ureg.byte
-    XML2 = 10690560 * ureg.byte
-    WEBSTER = 41458703 * ureg.byte
-    IMAGE = 8474240 * ureg.byte
-    IMAGELARGE = 20715520 * ureg.byte
-    SENSOR = 150910946 * ureg.byte
+@dataclass(frozen=True)
+class Entry:
+    size: pint.Quantity[int]
+    file: str
+
+
+class DataSet(Entry, Enum):
+    TEXT = 10192446 * ureg.byte, "dickens"
+    TEXTLARGE = 100000000 * ureg.byte, "enwik8"
+    XML = 5345280 * ureg.byte, "xml"
+    XML2 = 10690560 * ureg.byte, "xml2"
+    WEBSTER = 41458703 * ureg.byte, "webster"
+    IMAGE = 8474240 * ureg.byte, "x-ray"
+    IMAGELARGE = 20715520 * ureg.byte, "images.tar"
+    SENSOR = 150910946 * ureg.byte, "data.txt"
 
 
 def dataset_from_str(s: str) -> DataSet:
@@ -21,18 +30,6 @@ def dataset_from_str(s: str) -> DataSet:
         raise ValueError(f"Unknown dataset: {s}") from e
 
 
-def get_data_file(dataset: DataSet) -> str:
-    files = {
-        DataSet.TEXT: "dickens",
-        DataSet.TEXTLARGE: "enwik8",
-        DataSet.XML: "xml",
-        DataSet.XML2: "xml2",
-        DataSet.WEBSTER: "webster",
-        DataSet.IMAGE: "x-ray",
-        DataSet.IMAGELARGE: "images.tar",
-        DataSet.SENSOR: "data.txt",
-    }
-    return files[dataset]
-
-def dataset_map(str_ds):
-    return get_data_file(dataset_from_str(str_ds))
+def dataset_map(str_ds) -> pint.Quantity[int]:
+    ds = dataset_from_str(str_ds)
+    return ds.file

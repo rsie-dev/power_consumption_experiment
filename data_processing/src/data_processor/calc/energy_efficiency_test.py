@@ -22,13 +22,13 @@ def test_energy_total(energy_efficiency, sample_energy_df, sample_idle_power_df)
 
     host1_row = result[result["host"] == "host1"].iloc[0]
     assert host1_row["num_runs"] == 2
-    expected = ((DataSet.IMAGE.value / (100.0 * ureg.joule)) +
-                (DataSet.IMAGE.value / (150.0 * ureg.joule))) / 2
+    expected = ((DataSet.IMAGE.size / (100.0 * ureg.joule)) +
+                (DataSet.IMAGE.size / (150.0 * ureg.joule))) / 2
     assert host1_row["average_energy_efficiency_total"] == expected
     host2_row = result[result["host"] == "host2"].iloc[0]
     assert host2_row ["num_runs"] == 2
-    expected = ((DataSet.IMAGE.value / (200.0 * ureg.joule)) +
-                (DataSet.IMAGE.value / (250.0 * ureg.joule))) / 2
+    expected = ((DataSet.IMAGE.size / (200.0 * ureg.joule)) +
+                (DataSet.IMAGE.size / (250.0 * ureg.joule))) / 2
     assert host2_row ["average_energy_efficiency_total"] == expected
 
 def test_energy_net(energy_efficiency, sample_energy_df, sample_idle_power_df):
@@ -36,11 +36,11 @@ def test_energy_net(energy_efficiency, sample_energy_df, sample_idle_power_df):
 
     host1_row = result[result["host"] == "host1"].iloc[0]
     assert host1_row["num_runs"] == 2
-    expected = ((DataSet.IMAGE.value / (100.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt)) +
-                (DataSet.IMAGE.value / (150.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt))) / 2
+    expected = ((DataSet.IMAGE.size / (100.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt)) +
+                (DataSet.IMAGE.size / (150.0 * ureg.joule - 10 * ureg.second * 5 * ureg.watt))) / 2
     assert host1_row["average_energy_efficiency_net"] == expected
     host2_row = result[result["host"] == "host2"].iloc[0]
     assert host2_row ["num_runs"] == 2
-    expected = ((DataSet.IMAGE.value / (200.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt)) +
-                (DataSet.IMAGE.value / (250.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt))) / 2
+    expected = ((DataSet.IMAGE.size / (200.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt)) +
+                (DataSet.IMAGE.size / (250.0 * ureg.joule - 8 * ureg.second * 2 * ureg.watt))) / 2
     assert host2_row ["average_energy_efficiency_net"] == expected

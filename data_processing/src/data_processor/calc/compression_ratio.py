@@ -55,7 +55,7 @@ class CompressionRatio(Calculator):
         df = df[df["run"] == 1]
 
         df["compression_ratio"] = df.apply(
-            lambda row: dataset_from_str(row["dataset"]).value / row["size"],
+            lambda row: dataset_from_str(row["dataset"]).size / row["size"],
             axis=1,
         )
         return df

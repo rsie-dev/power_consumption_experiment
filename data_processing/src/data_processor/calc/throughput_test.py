@@ -37,7 +37,7 @@ def test_calculate_throughput(calculator, sample_df):
     result = calculator._calculate_throughput(sample_df)
 
     row = result[result["tool"] == "tool1"].iloc[0]
-    expected_tp = DataSet.IMAGE.value / (1 * ureg.second)
+    expected_tp = DataSet.IMAGE.size / (1 * ureg.second)
     assert row["throughput"] == expected_tp
 
 
@@ -46,6 +46,6 @@ def test_aggregate_throughput(calculator, sample_df):
 
     result = calculator._aggregate_throughput(df)
 
-    expected_throughput = (DataSet.IMAGE.value / (1.0 * ureg.second) + DataSet.IMAGE.value / (1.1 * ureg.second)) / 2
+    expected_throughput = (DataSet.IMAGE.size / (1.0 * ureg.second) + DataSet.IMAGE.size / (1.1 * ureg.second)) / 2
     row = result[result["tool"] == "tool1"].iloc[0]
     assert row["average_throughput"] == expected_throughput

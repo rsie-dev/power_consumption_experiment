@@ -51,7 +51,7 @@ class Throughput(Calculator):
 
     def _calculate_throughput(self, df: pd.DataFrame) -> pd.DataFrame:
         def dataset_map(str_ds):
-            return dataset_from_str(str_ds).value
+            return dataset_from_str(str_ds).size
 
         df["throughput"] = df["dataset"].map(dataset_map) / df["duration"]
 
