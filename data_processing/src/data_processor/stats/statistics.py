@@ -11,7 +11,7 @@ from data_processor.processor import Processor
 
 
 class Statistics(Processor):
-    VALUE_COLS = ["energy", "real", "size"]
+    VALUE_COLS = ["energy", "duration", "size"]
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -33,7 +33,7 @@ class Statistics(Processor):
                 .agg(
                     num_runs=("run", "size"),
                     energy=("energy", stat),
-                    real=("real", stat),
+                    duration=("duration", stat),
                     size=("size", stat),
                 )
                 .assign(stat=name)
@@ -66,10 +66,10 @@ class Statistics(Processor):
     def _print_table(self, df):
         table_entries = self._create_table_entries(df)
         unit_energy = str(df["energy"].dtype.units)
-        unit_times = str(df["real"].dtype.units)
+        unit_times = str(df["duration"].dtype.units)
         unit_size = str(df["size"].dtype.units)
         headers = ["stat", "host", "tool", "dataset", "mode", "strength", "threading", "num runs",
-                   "energy (%s)" % unit_energy, "real (%s)" % unit_times, "size (%s)" % unit_size]
+                   "energy (%s)" % unit_energy, "duration (%s)" % unit_times, "size (%s)" % unit_size]
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple"
