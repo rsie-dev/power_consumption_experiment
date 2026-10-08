@@ -284,6 +284,9 @@ class ThroughputStatistics(Processor):
         print("ANOVA rank table:")
         print(table_str)
 
+        #ci_values = self._calculate_ci(comp, full_formula, effects)
+        #self._print_ci(ci_values)
+
         means_dataset = self._calculate_mean(comp, "dataset")
         self._print_means("dataset", means_dataset)
         means_tool = self._calculate_mean(comp, "tool")
@@ -295,7 +298,22 @@ class ThroughputStatistics(Processor):
         means_strength = self._calculate_mean(comp, "strength", ORDER_STRENGTH)
         self._print_means("strength", means_strength)
 
-    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame):
+    def _print_ci(self, sorted_ci_values: pd.DataFrame):
+        headers = ["Factor", "omega squared", "CI low", "CI high"]
+        table_entries = []
+        for idx, row in sorted_ci_values.iterrows():
+            values = list(row.values[:])
+            values.insert(0, str(idx))
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("95% confidence interval table")
+        print(table_str)
+
+    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) -> pd.DataFrame:
         rng = np.random.default_rng(12345)
         n_boot = 1000
 
@@ -350,19 +368,7 @@ class ThroughputStatistics(Processor):
         )
 
         sorted_values = results_with_ci.sort_values("omega_squared", ascending=False)
-        headers = ["Factor", "omega squared", "CI low", "CI high"]
-        table_entries = []
-        for idx, row in sorted_values.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      #floatfmt=".2f",
-                                      )
-        print("95% confidence interval table")
-        print(table_str)
+        return sorted_values
 
     def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
         headers = [factor]
