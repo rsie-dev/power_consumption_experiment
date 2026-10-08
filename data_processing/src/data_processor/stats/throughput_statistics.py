@@ -405,17 +405,15 @@ class ThroughputStatistics(Processor):
     def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list | None = None):
         means = (
             comp.groupby(
-                ["tool", "strength"],
+                factor,
                 observed=True
             )["log_throughput"]
             .mean()
             .pipe(np.exp)
             .div(2 ** 20)
-            .unstack("strength")
         )
+        means = means.unstack(factor[-1])
 
-        #strength_list = ["min", "default", "max"]
-        #means = means[strength_list]
         if order:
             means = means[order]
         return means
