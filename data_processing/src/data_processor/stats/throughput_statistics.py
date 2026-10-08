@@ -290,7 +290,8 @@ class ThroughputStatistics(Processor):
         self._print_means("tool", means_tool)
         means_host = self._calculate_mean(comp, "host")
         self._print_means("host", means_host)
-        self._calculate_mean_combined(comp, ["tool", "strength"])
+        means_tool_strength = self._calculate_mean_combined(comp, ["tool", "strength"], ORDER_STRENGTH)
+        self._print_means("tool * strength", means_tool_strength, ORDER_STRENGTH)
         means_strength = self._calculate_mean(comp, "strength", ORDER_STRENGTH)
         self._print_means("strength", means_strength)
 
@@ -363,13 +364,17 @@ class ThroughputStatistics(Processor):
         print("95% confidence interval table")
         print(table_str)
 
-    def _print_means(self, factor: str, means: pd.DataFrame):
-        headers = [factor, "Mean throughput MiB/s"]
+    def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
+        headers = [factor]
+        if extra_columns:
+            headers += extra_columns
+        else:
+            headers += ["Mean throughput MiB/s"]
         table_entries = []
         for idx, row in means.iterrows():
-                values = list(row.values[:])
-                values.insert(0, str(idx))
-                table_entries.append(values)
+            values = list(row.values[:])
+            values.insert(0, str(idx))
+            table_entries.append(values)
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
@@ -391,7 +396,7 @@ class ThroughputStatistics(Processor):
         means = means.rename("geometric_mean_MiB_s").to_frame()
         return means
 
-    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str]):
+    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list | None = None):
         means = (
             comp.groupby(
                 ["tool", "strength"],
@@ -405,21 +410,9 @@ class ThroughputStatistics(Processor):
 
         #strength_list = ["min", "default", "max"]
         #means = means[strength_list]
-        means = means[ORDER_STRENGTH]
-
-        headers = ["tool"] + ORDER_STRENGTH
-        table_entries = []
-        for idx, row in means.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      floatfmt=".2f",
-                                      )
-        print("Throughput means for: %s" % factor)
-        print(table_str)
+        if order:
+            means = means[order]
+        return means
 
     def _calculate_statistics_(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(
