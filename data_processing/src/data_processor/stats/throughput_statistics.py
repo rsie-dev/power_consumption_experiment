@@ -19,7 +19,7 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-    N_BOOT = 10
+    N_BOOT = 1000
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -234,18 +234,8 @@ class ThroughputStatistics(Processor):
         )
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        diagnostics = full_model.model.data.frame[run_factors].copy()
-        diagnostics["studentized_residual"] = (
-            full_model.get_influence().resid_studentized_internal
-        )
-        extreme = diagnostics[
-            diagnostics["studentized_residual"].abs() > 3
-            ]
-        print("Extreme observations:         %d" % len(extreme))
-        extremes = extreme.groupby(
-            factors
-        ).size().sort_values(ascending=False).head(10)
-        print(extremes.to_string(dtype=False))
+        extremes = self._get_diagnostics(full_model, factors)
+        self._print_diagnostics(extremes, factors)
 
         # Test which factors and interactions affect mean compression throughput
         anova_hc3 = anova_lm(
@@ -484,6 +474,38 @@ class ThroughputStatistics(Processor):
         ]
 
         return throughput_values
+
+    def _print_diagnostics(self, extremes_df: pd.DataFrame, factors: list[str]):
+        total = extremes_df["count"].sum()
+
+        extremes_df = extremes_df.head(10)
+        headers = factors + ["count"]
+        table_entries = []
+        for _, row in extremes_df.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      )
+        print("Extreme observations:         %d" % total)
+        print(table_str)
+
+    def _get_diagnostics(self, full_model: RegressionResultsWrapper, factors: list[str]) -> pd.DataFrame:
+        # Determine whether extreme residuals are isolated or concentrated in particular configurations.
+        run_factors = factors + ["run"]
+        diagnostics = full_model.model.data.frame[run_factors].copy()
+        diagnostics["studentized_residual"] = (
+            full_model.get_influence().resid_studentized_internal
+        )
+        extreme = diagnostics[
+            diagnostics["studentized_residual"].abs() > 3
+            ]
+        extremes = extreme.groupby(
+            factors
+        ).size().sort_values(ascending=False)
+        extremes_df = extremes.reset_index(name="count")
+        return extremes_df
 
     def _show_factor_impacts(self, comp: pd.DataFrame):
         means_dataset = self._calculate_mean(comp, "dataset")
