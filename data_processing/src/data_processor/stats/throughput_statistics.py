@@ -19,6 +19,7 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
+    N_BOOT = 1000
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -290,8 +291,8 @@ class ThroughputStatistics(Processor):
 
 
         # Check that the confidence intervals do not overlap
-        #ci_values = self._calculate_ci(comp, full_formula, effects, factors)
-        #self._print_ci(ci_values)
+        ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
+        self._print_ci(ci_values)
 
         print("")
         print("-" * 20 + " Factor means " + "-" * 20)
@@ -347,6 +348,90 @@ class ThroughputStatistics(Processor):
                                                                                          "strength", factors)
         self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
 
+        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
+        self._print_effect_ranking_table(effect_ranking)
+
+    def _print_effect_ranking_table(self, table_df: pd.DataFrame):
+        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
+        table_entries = []
+        for _, row in table_df.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        coalign = ["global"] * len(headers)
+        coalign[2] = "right"
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      colalign=coalign
+                                      )
+        print("Effect ranking table")
+        print(table_str)
+
+    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.DataFrame, anova_hc3: pd.DataFrame):
+        effect_ranking = (
+            effects[["df", "omega_squared"]]
+            .join(confidence_intervals)
+            .join(anova_hc3[["F", "PR(>F)"]])
+        )
+
+        def clean_effect(term):
+            for factor in ["host", "tool", "dataset", "strength"]:
+                term = term.replace(f"C({factor}, Sum)", factor)
+            return term.replace(":", " × ")
+
+        type_names = {
+            1: "Main effect",
+            2: "Two-way interaction",
+            3: "Three-way interaction",
+            4: "Four-way interaction"
+        }
+
+        effect_ranking["Effect"] = [
+            clean_effect(term) for term in effect_ranking.index
+        ]
+
+        effect_ranking["Effect type"] = [
+            type_names[term.count(":") + 1]
+            for term in effect_ranking.index
+        ]
+
+        effect_ranking["Rank"] = (
+            effect_ranking["omega_squared"]
+            .rank(ascending=False, method="min")
+            .astype(int)
+        )
+
+        effect_ranking["95% bootstrap CI"] = (
+                effect_ranking["ci_low"].map(lambda x: f"{x:.6f}")
+                + "–"
+                + effect_ranking["ci_high"].map(lambda x: f"{x:.6f}")
+        )
+
+        effect_ranking["HC3 p"] = effect_ranking["PR(>F)"].map(
+            lambda p: "<0.001" if p < 0.001 else f"{p:.3f}"
+        )
+
+        effect_ranking = effect_ranking.rename(columns={
+            "omega_squared": "ω²",
+            "F": "HC3 F"
+        })
+
+        effect_ranking = effect_ranking[
+            [
+                "Rank",
+                "Effect",
+                "Effect type",
+                "df",
+                "ω²",
+                "95% bootstrap CI",
+                "HC3 F",
+                "HC3 p"
+            ]
+        ].sort_values("Rank")
+
+        return effect_ranking
+
     def _show_factor_impacts(self, comp: pd.DataFrame):
         means_dataset = self._calculate_mean(comp, "dataset")
         self._print_means("dataset", means_dataset)
@@ -374,9 +459,9 @@ class ThroughputStatistics(Processor):
         print("95%% confidence interval table")
         print(table_str)
 
-    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) -> pd.DataFrame:
+    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) \
+            -> tuple[pd.DataFrame, pd.DataFrame]:
         rng = np.random.default_rng(12345)
-        n_boot = 1000
 
         print("Calculating confidence intervals...")
 
@@ -387,7 +472,7 @@ class ThroughputStatistics(Processor):
         )
 
         boot_results = []
-        for _ in range(n_boot):
+        for _ in range(self.N_BOOT):
             sampled_positions = np.concatenate([
                 rng.choice(group, size=len(group), replace=True)
                 for group in groups
@@ -427,7 +512,7 @@ class ThroughputStatistics(Processor):
         )
 
         sorted_values = results_with_ci.sort_values("omega_squared", ascending=False)
-        return sorted_values
+        return sorted_values, confidence_intervals
 
     def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
         headers = [factor]
