@@ -3,8 +3,6 @@ from pathlib import Path
 from itertools import product, combinations
 
 import tabulate
-from scipy.special import factorial2
-from tabulate import SEPARATING_LINE
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
@@ -13,13 +11,13 @@ from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
 from patsy.build import build_design_matrices
 
-from data_processor.constants import GROUP_COLS
 from data_processor.processor import Processor
 from data_processor.constants import ORDER_STRENGTH
 
 
 class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
+    SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
     def __init__(self, resources: Path):
@@ -28,27 +26,25 @@ class ThroughputStatistics(Processor):
 
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
+        factors_single = ["host", "tool", "dataset", "strength"]
+        self._process_threading(df, "single", [], factors_single)
 
-        #self._validate_temporal_drift(df)
+    def _process_threading(self, df: pd.DataFrame, threading: str, excludes: list[str], factors: list[str]):
+        df = df[~df["tool"].isin(excludes)]
+        self._process_threading_mode(df, threading, "compress", factors)
 
-        stats_df = self._calculate_statistics(df)
-        return
+    def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+        self._validate_temporal_drift(df, threading, mode, factors)
+        self._calculate_statistics(df, threading, mode, factors)
 
-        self._print_table(stats_df)
+    def _validate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+        print("")
+        print("-" * 20 + " Validate temporal drift" + "-" * 20)
+        print("")
+        self._check_temporal_drift(df, threading, mode, self.DRIFT_THRESHOLD, factors)
 
-        #stat_file = "stats_tp_" + tp_file.stem.removeprefix("tp_") + ".csv"
-        #self._create_csv(stat_file, stats_df)
-
-    def _validate_temporal_drift(self, df: pd.DataFrame):
-        self._check_temporal_drift(df, "single", "compress", self.DRIFT_THRESHOLD, [])
-        self._check_temporal_drift(df, "single", "decompress", self.DRIFT_THRESHOLD, [])
-        single_thread_only = ["gzip", "bzip2", "lzop"]
-        self._check_temporal_drift(df, "multi", "compress", self.DRIFT_THRESHOLD, single_thread_only)
-        self._check_temporal_drift(df, "multi", "decompress", self.DRIFT_THRESHOLD, single_thread_only)
-
-    def _check_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float, excluded: list[str]):
-        df = df[~df["tool"].isin(excluded)]
-        drift_results = self._calculate_temporal_drift(df, mode, threshold)
+    def _check_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float, factors: list[str]):
+        drift_results = self._calculate_temporal_drift(df, threading, mode, threshold, factors)
         self._show_drift_analysis(threading, mode, threshold, drift_results)
         self._verify_temporal_drift(drift_results)
 
@@ -78,13 +74,12 @@ class ThroughputStatistics(Processor):
         print("Drift analysis for %s %s (threshold: %s%%)" % (threading, mode, threshold))
         print(table_str)
 
-    def _calculate_temporal_drift(self, df: pd.DataFrame, mode: str, threshold: float):
+    def _calculate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float, factors: list[str]):
         # comp is the prepared compression dataset
-        comp = self._extract_comp_dataframe(df, mode, "single")
+        comp = self._extract_comp_dataframe(df, mode, threading)
 
         # A cell identifies one experimental configuration
-        cell_columns = ["host", "tool", "dataset", "strength"]
-        comp["cell"] = comp[cell_columns].astype(str).agg("|".join, axis=1)
+        comp["cell"] = comp[factors].astype(str).agg("|".join, axis=1)
 
         # Remove each configuration's average throughput
         comp["centered_log_throughput"] = (
@@ -152,8 +147,12 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
-        comp = self._extract_comp_dataframe(df, "compress", "single")
+    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]) -> pd.DataFrame:
+        print("")
+        print("-" * 20 + " Calculate statistics" + "-" * 20)
+        print("")
+
+        comp = self._extract_comp_dataframe(df, mode, threading)
 
         # Flatten the DataFrame
         comp.columns = comp.columns.get_level_values(0)
@@ -187,8 +186,9 @@ class ThroughputStatistics(Processor):
         print("Screening threshold:", threshold)
         print("Observations above threshold:", (cooks_d > threshold).sum())
 
+        run_factors = factors + ["run"]
         diagnostics = compression_model.model.data.frame[
-            ["host", "tool", "dataset", "strength", "run"]
+            run_factors
         ].copy()
         diagnostics["cooks_d"] = cooks_d
         print(
@@ -235,9 +235,7 @@ class ThroughputStatistics(Processor):
         )
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        diagnostics = full_model.model.data.frame[
-            ["host", "tool", "dataset", "strength", "run"]
-        ].copy()
+        diagnostics = full_model.model.data.frame[run_factors].copy()
         diagnostics["studentized_residual"] = (
             full_model.get_influence().resid_studentized_internal
         )
@@ -246,7 +244,7 @@ class ThroughputStatistics(Processor):
             ]
         print("Extreme observations:", len(extreme))
         extremes = extreme.groupby(
-            ["host", "tool", "dataset", "strength"]
+            factors
         ).size().sort_values(ascending=False).head(10)
         print(extremes.to_string(dtype=False))
 
@@ -290,7 +288,6 @@ class ThroughputStatistics(Processor):
         print("ANOVA rank table:")
         print(table_str)
 
-        factors = ["host", "tool", "dataset", "strength"]
 
         # Check that the confidence intervals do not overlap
         #ci_values = self._calculate_ci(comp, full_formula, effects, factors)
