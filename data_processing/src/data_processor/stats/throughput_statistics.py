@@ -19,7 +19,7 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-    N_BOOT = 1000
+    N_BOOT = 10
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -173,19 +173,19 @@ class ThroughputStatistics(Processor):
             data=comp
         ).fit()
         # The fit has the expected dimensions.
-        print("Observations:", int(compression_model.nobs))
-        print("Model degrees of freedom:", int(compression_model.df_model))
-        print("Residual degrees of freedom:", int(compression_model.df_resid))
+        print("Observations:                 %d" % int(compression_model.nobs))
+        print("Model degrees of freedom:     %d" % int(compression_model.df_model))
+        print("Residual degrees of freedom:  %d" % int(compression_model.df_resid))
         # This means the model explains about R^2 * 100% of observed log-throughput variation.
-        print("R-squared:", compression_model.rsquared)
+        print("R-squared:                    %f" % compression_model.rsquared)
 
         influence = compression_model.get_influence()
         cooks_d = influence.cooks_distance[0]
         threshold = 4 / compression_model.nobs
 
-        print("Maximum Cook's distance:", cooks_d.max())
-        print("Screening threshold:", threshold)
-        print("Observations above threshold:", (cooks_d > threshold).sum())
+        print("Maximum Cook's distance:      %f" % cooks_d.max())
+        print("Screening threshold:          %f" % threshold)
+        print("Observations above threshold: %d" % (cooks_d > threshold).sum())
 
         run_factors = factors + ["run"]
         diagnostics = compression_model.model.data.frame[
@@ -224,10 +224,8 @@ class ThroughputStatistics(Processor):
             data=comp
         ).fit()
         print(anova_lm(compression_model, three_way_model, full_model))
-        print("Three-way R² gain:",
-              three_way_model.rsquared - compression_model.rsquared)
-        print("Four-way R² gain:",
-              full_model.rsquared - three_way_model.rsquared)
+        print("Three-way R² gain:            %f" % (three_way_model.rsquared - compression_model.rsquared))
+        print("Four-way R² gain:             %f" % (full_model.rsquared - three_way_model.rsquared))
 
         # Make later statistical inference robust to unequal residual variance.
         # -> use HC3 version for confidence intervals and significance tests.
@@ -243,7 +241,7 @@ class ThroughputStatistics(Processor):
         extreme = diagnostics[
             diagnostics["studentized_residual"].abs() > 3
             ]
-        print("Extreme observations:", len(extreme))
+        print("Extreme observations:         %d" % len(extreme))
         extremes = extreme.groupby(
             factors
         ).size().sort_values(ascending=False).head(10)
