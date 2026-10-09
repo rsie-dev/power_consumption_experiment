@@ -80,7 +80,7 @@ class ThroughputStatistics(Processor):
 
     def _calculate_temporal_drift(self, df: pd.DataFrame, mode: str, threshold: float):
         # comp is the prepared compression dataset
-        comp = self._extract_comp_dataframe(df, mode)
+        comp = self._extract_comp_dataframe(df, mode, "single")
 
         # A cell identifies one experimental configuration
         cell_columns = ["host", "tool", "dataset", "strength"]
@@ -129,11 +129,12 @@ class ThroughputStatistics(Processor):
         drift_results["drift_conclusion"] = drift_results.apply(self._classify_drift, axis=1, threshold=threshold)
         return drift_results
 
-    def _extract_comp_dataframe(self, df: pd.DataFrame, mode: str) -> pd.DataFrame:
+    def _extract_comp_dataframe(self, df: pd.DataFrame, mode: str, threading: str|None = None) -> pd.DataFrame:
         comp = df.copy()
         # comp is the prepared compression dataset
         comp = comp[comp["mode"] == mode]
-        comp = comp[comp["threading"] == "single"]
+        if threading:
+            comp = comp[comp["threading"] == threading]
 
         comp = comp.pint.dequantify()
         comp["log_throughput"] = np.log(comp["throughput"])
@@ -152,7 +153,7 @@ class ThroughputStatistics(Processor):
         return "inconclusive"
 
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
-        comp = self._extract_comp_dataframe(df, "compress")
+        comp = self._extract_comp_dataframe(df, "compress", "single")
 
         # Flatten the DataFrame
         comp.columns = comp.columns.get_level_values(0)
