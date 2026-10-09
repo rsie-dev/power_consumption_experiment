@@ -1,8 +1,9 @@
 import logging
 from pathlib import Path
-from itertools import product
+from itertools import product, combinations
 
 import tabulate
+from scipy.special import factorial2
 from tabulate import SEPARATING_LINE
 import pandas as pd
 import numpy as np
@@ -297,6 +298,26 @@ class ThroughputStatistics(Processor):
         mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
         self._print_mean_cis("dataset", mean_cis_dataset)
 
+        # All check that comparisons are clearly different.
+        # They are if every confidence interval excludes 1.0
+        factor_ratios_dataset = self._calculate_throughput_ratios_between_factor_levels(comp,
+                                                                                        full_model, full_model_hc3,
+                                                                                        "dataset", factors)
+        self._print_throughput_ratios_between_factor_levels("dataset", factor_ratios_dataset)
+        factor_ratios_tool = self._calculate_throughput_ratios_between_factor_levels(comp,
+                                                                                     full_model, full_model_hc3,
+                                                                                     "tool", factors)
+        self._print_throughput_ratios_between_factor_levels("tool", factor_ratios_tool)
+
+        combination_ci_tool_strength = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
+                                                                             ["tool", "strength"], factors, ORDER_STRENGTH)
+        self._print_mean_cis(["tool", "strength"], combination_ci_tool_strength)
+
+        combination_ratios_tool_strength = self._calculate_throughput_ratios_within_factor_levels(comp,
+                                                                                                  full_model, full_model_hc3,
+                                                                                                  ["tool", "strength"], factors)
+        self._print_throughput_ratios_within_factor_levels(["tool", "strength"], combination_ratios_tool_strength )
+
     def _show_factor_impacts(self, comp: pd.DataFrame):
         print("-" * 20 + " Factor means " + "-" * 20)
         means_dataset = self._calculate_mean(comp, "dataset")
@@ -432,33 +453,16 @@ class ThroughputStatistics(Processor):
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
                              factor: str, factors: list[str]):
-        levels = {
-            factor: comp[factor].unique().tolist()
-            for factor in factors
-        }
-
-        grid = pd.DataFrame(
-            product(*(levels[f] for f in factors)),
-            columns=factors
-        )
-
-        X_grid = np.asarray(
-            build_design_matrices(
-                [full_model.model.data.design_info],
-                grid
-            )[0]
-        )
-
-        beta = np.asarray(full_model.params)
-        cov = np.asarray(full_model_hc3.cov_params())
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+        beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         def marginal_mean_ci(factor):
             rows = []
             for level in levels[factor]:
-                L = X_grid[grid[factor] == level].mean(axis=0)
+                l = x_grid[grid[factor] == level].mean(axis=0)
 
-                estimate = L @ beta
-                se = np.sqrt(L @ cov @ L)
+                estimate = l @ beta
+                se = np.sqrt(l @ cov @ l)
 
                 rows.append({
                     factor: level,
@@ -477,8 +481,65 @@ class ThroughputStatistics(Processor):
         )
         return mean_cis
 
-    def _print_mean_cis(self, factor: str, mean_cis: pd.DataFrame):
-        headers = [factor, "Mean MiB/s", "CI low", "CI high"]
+    def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
+                                         full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
+                                         factor_combination: list[str], factors: list[str], factor2_levels: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+        beta, cov = self._get_beta_cov(full_model, full_model_hc3)
+
+        rows = []
+        factor1 = factor_combination[0]
+        factor2 = factor_combination[1]
+        for factor1_level in levels[factor1]:
+            for factor2_level in factor2_levels:
+                mask = (
+                        (grid[factor1] == factor1_level)
+                        & (grid[factor2] == factor2_level)
+                )
+
+                l = x_grid[mask].mean(axis=0)
+                estimate = l @ beta
+                se = np.sqrt(l @ cov @ l)
+
+                rows.append({
+                    "factor1": factor1_level,
+                    "factor2": factor2_level,
+                    "mean_MiB_s": np.exp(estimate) / 2 ** 20,
+                    "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
+                    "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
+                })
+
+        combination_ci = pd.DataFrame(rows)
+        return combination_ci
+
+    def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]):
+        levels = {
+            factor: comp[factor].unique().tolist()
+            for factor in factors
+        }
+
+        grid = pd.DataFrame(
+            product(*(levels[f] for f in factors)),
+            columns=factors
+        )
+
+        x_grid = np.asarray(
+            build_design_matrices(
+                [full_model.model.data.design_info],
+                grid
+            )[0]
+        )
+        return levels, grid, x_grid
+
+    def _get_beta_cov(self, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
+        beta = np.asarray(full_model.params)
+        cov = np.asarray(full_model_hc3.cov_params())
+        return beta, cov
+
+    def _print_mean_cis(self, factor: str | list[str], mean_cis: pd.DataFrame):
+        if isinstance(factor, str):
+            factor = [factor]
+        headers = factor + ["Mean MiB/s", "CI low", "CI high"]
         table_entries = []
         for _, row in mean_cis.iterrows():
             values = row.values[:]
@@ -489,4 +550,104 @@ class ThroughputStatistics(Processor):
                                       #floatfmt=".2f",
                                       )
         print("95%% confidence interval of means for: %s" % factor)
+        print(table_str)
+
+    def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
+                                                           full_model: RegressionResultsWrapper,
+                                                           full_model_hc3: OLSResults,
+                                                           factor: str, levels: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, levels)
+        beta, cov = self._get_beta_cov(full_model, full_model_hc3)
+
+        rows = []
+        for first, second in combinations(levels[factor], 2):
+            L_first = x_grid[grid[factor] == first].mean(axis=0)
+            L_second = x_grid[grid[factor] == second].mean(axis=0)
+
+            contrast = L_first - L_second
+            estimate = contrast @ beta
+            se = np.sqrt(contrast @ cov @ contrast)
+
+            rows.append({
+                "comparison": f"{first} / {second}",
+                "ratio": np.exp(estimate),
+                "ci_low": np.exp(estimate - 1.96 * se),
+                "ci_high": np.exp(estimate + 1.96 * se)
+            })
+
+        dataset_ratios = pd.DataFrame(rows)
+
+        dataset_ratios = dataset_ratios.sort_values(
+            by=["ratio"],
+            ascending=False,
+        )
+        return dataset_ratios
+
+    def _print_throughput_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
+        headers = ["Comparison", "Ratio", "CI low", "CI high"]
+        table_entries = []
+        for _, row in factor_ratios.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("Throughput ratios between factor levels of: %s" % factor)
+        print(table_str)
+
+    def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
+                                                          full_model: RegressionResultsWrapper,
+                                                          full_model_hc3: OLSResults,
+                                                          factor_combinations: list[str], factors: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+        beta, cov = self._get_beta_cov(full_model, full_model_hc3)
+
+        strength_pairs = [
+            ("min", "default"),
+            ("min", "max"),
+            ("default", "max")
+        ]
+
+        rows = []
+        for tool in levels["tool"]:
+            for first, second in strength_pairs:
+                l_first = x_grid[
+                    (grid["tool"] == tool)
+                    & (grid["strength"] == first)
+                    ].mean(axis=0)
+
+                l_second = x_grid[
+                    (grid["tool"] == tool)
+                    & (grid["strength"] == second)
+                    ].mean(axis=0)
+
+                contrast = l_first - l_second
+                estimate = contrast @ beta
+                se = np.sqrt(contrast @ cov @ contrast)
+
+                rows.append({
+                    "tool": tool,
+                    "comparison": f"{first} / {second}",
+                    "ratio": np.exp(estimate),
+                    "ci_low": np.exp(estimate - 1.96 * se),
+                    "ci_high": np.exp(estimate + 1.96 * se)
+                })
+
+        combination_ratios = pd.DataFrame(rows)
+        return combination_ratios
+
+    def _print_throughput_ratios_within_factor_levels(self, factor_combinations: list[str], factor_ratios: pd.DataFrame):
+        headers = factor_combinations + ["Ratio", "CI low", "CI high"]
+        table_entries = []
+        for _, row in factor_ratios.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("Throughput ratios within factor levels of: %s" % factor_combinations)
         print(table_str)
