@@ -387,7 +387,6 @@ class ThroughputStatistics(Processor):
         )
 
         boot_results = []
-
         for _ in range(n_boot):
             sampled_positions = np.concatenate([
                 rng.choice(group, size=len(group), replace=True)
@@ -419,7 +418,7 @@ class ThroughputStatistics(Processor):
 
         confidence_intervals = bootstrap_omega.quantile(
             [0.025, 0.975]
-        ).T
+        ).T # transpose, swap rows and columns
 
         confidence_intervals.columns = ["ci_low", "ci_high"]
 
