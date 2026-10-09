@@ -284,9 +284,15 @@ class ThroughputStatistics(Processor):
         print("ANOVA rank table:")
         print(table_str)
 
+        # Check that the confidence intervals do not overlap
         #ci_values = self._calculate_ci(comp, full_formula, effects)
         #self._print_ci(ci_values)
 
+        self._show_factor_impacts(comp)
+
+
+    def _show_factor_impacts(self, comp: pd.DataFrame):
+        print("-" * 20 + " Factor means " + "-" * 20)
         means_dataset = self._calculate_mean(comp, "dataset")
         self._print_means("dataset", means_dataset)
         means_tool = self._calculate_mean(comp, "tool")
