@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from itertools import product
 
 import tabulate
 from tabulate import SEPARATING_LINE
@@ -7,6 +8,10 @@ import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
 from statsmodels.stats.anova import anova_lm
+from statsmodels.regression.linear_model import RegressionResultsWrapper
+from statsmodels.regression.linear_model import OLSResults
+#from patsy import build_design_matrices
+from patsy.build import build_design_matrices
 
 from data_processor.constants import GROUP_COLS
 from data_processor.processor import Processor
@@ -289,7 +294,9 @@ class ThroughputStatistics(Processor):
         #self._print_ci(ci_values)
 
         self._show_factor_impacts(comp)
-
+        factors = ["host", "tool", "dataset", "strength"]
+        mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
+        self._print_mean_cis("dataset", mean_cis_dataset)
 
     def _show_factor_impacts(self, comp: pd.DataFrame):
         print("-" * 20 + " Factor means " + "-" * 20)
@@ -316,7 +323,7 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
-        print("95% confidence interval table")
+        print("95%% confidence interval table")
         print(table_str)
 
     def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) -> pd.DataFrame:
@@ -423,6 +430,67 @@ class ThroughputStatistics(Processor):
         if order:
             means = means[order]
         return means
+
+    def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
+                             factor: str, factors: list[str]):
+        levels = {
+            factor: comp[factor].unique().tolist()
+            for factor in factors
+        }
+
+        grid = pd.DataFrame(
+            product(*(levels[f] for f in factors)),
+            columns=factors
+        )
+
+        X_grid = np.asarray(
+            build_design_matrices(
+                [full_model.model.data.design_info],
+                grid
+            )[0]
+        )
+
+        beta = np.asarray(full_model.params)
+        cov = np.asarray(full_model_hc3.cov_params())
+
+        def marginal_mean_ci(factor):
+            rows = []
+            for level in levels[factor]:
+                L = X_grid[grid[factor] == level].mean(axis=0)
+
+                estimate = L @ beta
+                se = np.sqrt(L @ cov @ L)
+
+                rows.append({
+                    factor: level,
+                    "mean_MiB_s": np.exp(estimate) / 2 ** 20,
+                    "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
+                    "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
+                })
+
+            return pd.DataFrame(rows)
+
+        mean_cis = marginal_mean_ci(factor)
+
+        mean_cis = mean_cis.sort_values(
+            by=["mean_MiB_s"],
+            ascending=False,
+        )
+        return mean_cis
+
+    def _print_mean_cis(self, factor: str, mean_cis: pd.DataFrame):
+        headers = [factor, "Mean MiB/s", "CI low", "CI high"]
+        table_entries = []
+        for _, row in mean_cis.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("95%% confidence interval of means for: %s" % factor)
+        print(table_str)
 
     def _calculate_statistics_(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(
