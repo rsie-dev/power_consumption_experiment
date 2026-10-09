@@ -348,8 +348,11 @@ class ThroughputStatistics(Processor):
                                                                                          "strength", factors)
         self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
 
-        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
+        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
         self._print_effect_ranking_table(effect_ranking)
+
+        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
+        self._print_throughput_table(throughput_values_df)
 
     def _print_effect_ranking_table(self, table_df: pd.DataFrame):
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
@@ -368,7 +371,8 @@ class ThroughputStatistics(Processor):
         print("Effect ranking table")
         print(table_str)
 
-    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.DataFrame, anova_hc3: pd.DataFrame):
+    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.DataFrame,
+                                     anova_hc3: pd.DataFrame, factors: list[str]):
         effect_ranking = (
             effects[["df", "omega_squared"]]
             .join(confidence_intervals)
@@ -376,7 +380,7 @@ class ThroughputStatistics(Processor):
         )
 
         def clean_effect(term):
-            for factor in ["host", "tool", "dataset", "strength"]:
+            for factor in factors: #["host", "tool", "dataset", "strength"]:
                 term = term.replace(f"C({factor}, Sum)", factor)
             return term.replace(":", " × ")
 
@@ -431,6 +435,57 @@ class ThroughputStatistics(Processor):
         ].sort_values("Rank")
 
         return effect_ranking
+
+    def _print_throughput_table(self, throughput_values_df: pd.DataFrame):
+        headers = ["Factor", "Level", "Mean throughput (MiB/s)", "95% HC3 CI"]
+        table_entries = []
+        for _, row in throughput_values_df.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("Throughput values")
+        print(table_str)
+
+    def _create_throughput_table(self, comp: pd.DataFrame,
+                                 full_model: RegressionResultsWrapper, full_model_hc3: OLSResults, factors: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+        beta, cov = self._get_beta_cov(full_model, full_model_hc3)
+
+        tables = []
+        for factor in factors:
+            table = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov).rename(columns={
+                factor: "Level",
+                "mean_MiB_s": "Mean throughput (MiB/s)"
+            })
+
+            table.insert(0, "Factor", factor)
+            tables.append(table)
+
+        throughput_values = pd.concat(
+            tables,
+            ignore_index=True
+        )
+
+        throughput_values["95% HC3 CI"] = (
+                throughput_values["ci_low"].map(lambda x: f"{x:.3f}")
+                + "–"
+                + throughput_values["ci_high"].map(lambda x: f"{x:.3f}")
+        )
+
+        throughput_values = throughput_values[
+            [
+                "Factor",
+                "Level",
+                "Mean throughput (MiB/s)",
+                "95% HC3 CI"
+            ]
+        ]
+
+        return throughput_values
 
     def _show_factor_impacts(self, comp: pd.DataFrame):
         means_dataset = self._calculate_mean(comp, "dataset")
@@ -567,30 +622,30 @@ class ThroughputStatistics(Processor):
         levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
-        def marginal_mean_ci(factor):
-            rows = []
-            for level in levels[factor]:
-                l = x_grid[grid[factor] == level].mean(axis=0)
-
-                estimate = l @ beta
-                se = np.sqrt(l @ cov @ l)
-
-                rows.append({
-                    factor: level,
-                    "mean_MiB_s": np.exp(estimate) / 2 ** 20,
-                    "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
-                    "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
-                })
-
-            return pd.DataFrame(rows)
-
-        mean_cis = marginal_mean_ci(factor)
+        mean_cis = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov)
 
         mean_cis = mean_cis.sort_values(
             by=["mean_MiB_s"],
             ascending=False,
         )
         return mean_cis
+
+    def _marginal_mean_ci(self, factor: str, levels: dict, grid, x_grid: np.ndarray, beta: np.ndarray, cov: np.ndarray):
+        rows = []
+        for level in levels[factor]:
+            l = x_grid[grid[factor] == level].mean(axis=0)
+
+            estimate = l @ beta
+            se = np.sqrt(l @ cov @ l)
+
+            rows.append({
+                factor: level,
+                "mean_MiB_s": np.exp(estimate) / 2 ** 20,
+                "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
+                "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
+            })
+
+        return pd.DataFrame(rows)
 
     def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
                                          full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
@@ -623,7 +678,8 @@ class ThroughputStatistics(Processor):
         combination_ci = pd.DataFrame(rows)
         return combination_ci
 
-    def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]):
+    def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]) \
+            -> tuple[dict, pd.DataFrame, np.ndarray]:
         levels = {
             factor: comp[factor].unique().tolist()
             for factor in factors
