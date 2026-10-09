@@ -293,9 +293,16 @@ class ThroughputStatistics(Processor):
         #ci_values = self._calculate_ci(comp, full_formula, effects)
         #self._print_ci(ci_values)
 
+        print("")
+        print("-" * 20 + " Factor means " + "-" * 20)
+        print("")
         self._show_factor_impacts(comp)
+
         factors = ["host", "tool", "dataset", "strength"]
 
+        print("")
+        print("-" * 20 + " Factor means CIs " + "-" * 20)
+        print("")
         # dataset
         mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
         self._print_mean_cis("dataset", mean_cis_dataset)
@@ -340,7 +347,6 @@ class ThroughputStatistics(Processor):
         self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
 
     def _show_factor_impacts(self, comp: pd.DataFrame):
-        print("-" * 20 + " Factor means " + "-" * 20)
         means_dataset = self._calculate_mean(comp, "dataset")
         self._print_means("dataset", means_dataset)
         means_tool = self._calculate_mean(comp, "tool")
