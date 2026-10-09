@@ -289,8 +289,10 @@ class ThroughputStatistics(Processor):
         print("ANOVA rank table:")
         print(table_str)
 
+        factors = ["host", "tool", "dataset", "strength"]
+
         # Check that the confidence intervals do not overlap
-        #ci_values = self._calculate_ci(comp, full_formula, effects)
+        #ci_values = self._calculate_ci(comp, full_formula, effects, factors)
         #self._print_ci(ci_values)
 
         print("")
@@ -298,7 +300,6 @@ class ThroughputStatistics(Processor):
         print("")
         self._show_factor_impacts(comp)
 
-        factors = ["host", "tool", "dataset", "strength"]
 
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
@@ -327,7 +328,9 @@ class ThroughputStatistics(Processor):
         self._print_mean_cis(["tool", "strength"], combination_ci_tool_strength)
         combination_ratios_tool_strength = self._calculate_throughput_ratios_within_factor_levels(comp,
                                                                                                   full_model, full_model_hc3,
-                                                                                                  ["tool", "strength"], factors)
+                                                                                                  ["tool", "strength"],
+                                                                                                  factors,
+                                                                                                  ORDER_STRENGTH)
         self._print_throughput_ratios_within_factor_levels(["tool", "strength"], combination_ratios_tool_strength )
 
         # host
@@ -373,14 +376,13 @@ class ThroughputStatistics(Processor):
         print("95%% confidence interval table")
         print(table_str)
 
-    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) -> pd.DataFrame:
+    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) -> pd.DataFrame:
         rng = np.random.default_rng(12345)
         n_boot = 1000
 
         print("Calculating confidence intervals...")
 
         boot_data = comp.reset_index(drop=True)
-        factors = ["host", "tool", "dataset", "strength"]
 
         groups = list(
             boot_data.groupby(factors, observed=True).indices.values()
@@ -588,10 +590,10 @@ class ThroughputStatistics(Processor):
 
         rows = []
         for first, second in combinations(levels[factor], 2):
-            L_first = x_grid[grid[factor] == first].mean(axis=0)
-            L_second = x_grid[grid[factor] == second].mean(axis=0)
+            l_first = x_grid[grid[factor] == first].mean(axis=0)
+            l_second = x_grid[grid[factor] == second].mean(axis=0)
 
-            contrast = L_first - L_second
+            contrast = l_first - l_second
             estimate = contrast @ beta
             se = np.sqrt(contrast @ cov @ contrast)
 
@@ -627,27 +629,26 @@ class ThroughputStatistics(Processor):
     def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
                                                           full_model: RegressionResultsWrapper,
                                                           full_model_hc3: OLSResults,
-                                                          factor_combinations: list[str], factors: list[str]):
+                                                          factor_combination: list[str], factors: list[str],
+                                                          factor2_levels: list[str]):
         levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
-        strength_pairs = [
-            ("min", "default"),
-            ("min", "max"),
-            ("default", "max")
-        ]
+        factor2_pairs  = list(combinations(factor2_levels, 2))
 
         rows = []
-        for tool in levels["tool"]:
-            for first, second in strength_pairs:
+        factor1 = factor_combination[0]
+        factor2 = factor_combination[1]
+        for factor1_level in levels[factor1]:
+            for first, second in factor2_pairs:
                 l_first = x_grid[
-                    (grid["tool"] == tool)
-                    & (grid["strength"] == first)
+                    (grid[factor1] == factor1_level)
+                    & (grid[factor2] == first)
                     ].mean(axis=0)
 
                 l_second = x_grid[
-                    (grid["tool"] == tool)
-                    & (grid["strength"] == second)
+                    (grid[factor1] == factor1_level)
+                    & (grid[factor2] == second)
                     ].mean(axis=0)
 
                 contrast = l_first - l_second
@@ -655,8 +656,8 @@ class ThroughputStatistics(Processor):
                 se = np.sqrt(contrast @ cov @ contrast)
 
                 rows.append({
-                    "tool": tool,
-                    "comparison": f"{first} / {second}",
+                    factor1: factor1_level,
+                    factor2: f"{first} / {second}",
                     "ratio": np.exp(estimate),
                     "ci_low": np.exp(estimate - 1.96 * se),
                     "ci_high": np.exp(estimate + 1.96 * se)
@@ -665,8 +666,8 @@ class ThroughputStatistics(Processor):
         combination_ratios = pd.DataFrame(rows)
         return combination_ratios
 
-    def _print_throughput_ratios_within_factor_levels(self, factor_combinations: list[str], factor_ratios: pd.DataFrame):
-        headers = factor_combinations + ["Ratio", "CI low", "CI high"]
+    def _print_throughput_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
+        headers = factor_combination + ["Ratio", "CI low", "CI high"]
         table_entries = []
         for _, row in factor_ratios.iterrows():
             values = row.values[:]
@@ -676,5 +677,5 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
-        print("Throughput ratios within factor levels of: %s" % factor_combinations)
+        print("Throughput ratios within factor levels of: %s" % factor_combination)
         print(table_str)
