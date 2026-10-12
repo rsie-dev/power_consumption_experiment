@@ -32,9 +32,14 @@ class ThroughputStatistics(Processor):
 
     def _process_threading(self, df: pd.DataFrame, threading: str, excludes: list[str], factors: list[str]):
         df = df[~df["tool"].isin(excludes)]
-        self._process_threading_mode(df, threading, "compress", factors)
+        #self._process_threading_mode(df, threading, "compress", factors)
+        self._process_threading_mode(df, threading, "decompress", factors)
 
     def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+        print("")
+        print("-" * 20 + " Process %s" % mode + "-" * 20)
+        print("")
+        self._validate_data_quantity(df, threading, mode, factors)
         self._validate_temporal_drift(df, threading, mode, factors)
         self._calculate_statistics(df, threading, mode, factors)
 
@@ -179,30 +184,12 @@ class ThroughputStatistics(Processor):
         # This means the model explains about R^2 * 100% of observed log-throughput variation.
         print("R-squared:                    %f" % compression_model.rsquared)
 
-        influence = compression_model.get_influence()
-        cooks_d = influence.cooks_distance[0]
-        threshold = 4 / compression_model.nobs
-
-        print("Maximum Cook's distance:      %f" % cooks_d.max())
-        print("Screening threshold:          %f" % threshold)
-        print("Observations above threshold: %d" % (cooks_d > threshold).sum())
-
-        run_factors = factors + ["run"]
-        diagnostics = compression_model.model.data.frame[
-            run_factors
-        ].copy()
-        diagnostics["cooks_d"] = cooks_d
-        print(
-            diagnostics.nlargest(10, "cooks_d")
-            .to_string(index=False)
-        )
-
         full_formula = """
-        log_throughput ~
-        C(host, Sum) *
-        C(tool, Sum) *
-        C(dataset, Sum) *
-        C(strength, Sum)
+            log_throughput ~
+            C(host, Sum) *
+            C(tool, Sum) *
+            C(dataset, Sum) *
+            C(strength, Sum)
         """
         full_model = smf.ols(full_formula, data=comp).fit()
         print(anova_lm(compression_model, full_model))
@@ -227,58 +214,32 @@ class ThroughputStatistics(Processor):
         print("Three-way R² gain:            %f" % (three_way_model.rsquared - compression_model.rsquared))
         print("Four-way R² gain:             %f" % (full_model.rsquared - three_way_model.rsquared))
 
-        # Make later statistical inference robust to unequal residual variance.
-        # -> use HC3 version for confidence intervals and significance tests.
-        full_model_hc3 = full_model.get_robustcov_results(
-            cov_type="HC3"
-        )
+        # Now check:
+        # 1. residual variance across fitted values -> UI
+        # 2. Check residual normality and extreme tails -> UI
+
+        diagnostics = self._find_observations_that_strongly_influence_model(compression_model, factors)
+        self._print_observations_that_strongly_influence_model(diagnostics, factors)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
         extremes = self._get_diagnostics(full_model, factors)
         self._print_diagnostics(extremes, factors)
 
-        # Test which factors and interactions affect mean compression throughput
-        anova_hc3 = anova_lm(
-            full_model,
-            typ=3,
-            robust="hc3"
+        # Make later statistical inference robust to unequal residual variance.
+        # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
+        # variability and keeps the method consistent with compression.
+        # -> use HC3 version for confidence intervals and significance tests.
+        full_model_hc3 = full_model.get_robustcov_results(
+            cov_type="HC3"
         )
-        print("ANOVA HC3:")
-        print(anova_hc3)
 
-        # Rank factors and interactions by explained variation.
-        anova_ss = anova_lm(full_model, typ=3)
-        mse = (
-                anova_ss.loc["Residual", "sum_sq"]
-                / anova_ss.loc["Residual", "df"]
-        )
-        y = full_model.model.endog
-        ss_total = np.sum((y - y.mean()) ** 2)
-        effects = anova_ss.drop(
-            index=["Intercept", "Residual"]
-        ).copy()
-        effects["omega_squared"] = (
-                                   effects["sum_sq"] - effects["df"] * mse
-                                   ) / (ss_total + mse)
-        effects["omega_squared"] = effects["omega_squared"].clip(lower=0)
-        ranked = effects[["df", "omega_squared"]].sort_values("omega_squared", ascending=False)
-        ranked["omega_squared_percent"] = ranked["omega_squared"] * 100
-        headers = ["Factor", "DF", "omega squared", "omega squared %"]
-        table_entries = []
-        for idx, row in ranked.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      floatfmt=".2f",
-                                      )
-        print("ANOVA rank table:")
-        print(table_str)
+        anova_hc3_df = self._calculate_anova_hc3(full_model)
+        self._print_anova_hc3(anova_hc3_df)
 
+        effects, ranked = self._calculate_anova_table(full_model)
+        self._print_anova_table(ranked)
 
-        # Check that the confidence intervals do not overlap
+        # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
         self._print_ci(ci_values)
 
@@ -286,7 +247,6 @@ class ThroughputStatistics(Processor):
         print("-" * 20 + " Factor means " + "-" * 20)
         print("")
         self._show_factor_impacts(comp)
-
 
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
@@ -341,6 +301,128 @@ class ThroughputStatistics(Processor):
 
         throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
         self._print_throughput_table(throughput_values_df)
+
+    def _print_anova_table(self, ranked: pd.DataFrame):
+        headers = ["Factor", "DF", "omega squared", "omega squared %"]
+        table_entries = []
+        for idx, row in ranked.iterrows():
+            values = list(row.values[:])
+            values[0] = int(values[0])
+            values.insert(0, str(idx))
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      floatfmt=".2f",
+                                      )
+        print("")
+        print("ANOVA rank table:")
+        print(table_str)
+
+    def _calculate_anova_table(self, full_model: RegressionResultsWrapper):
+        # Rank factors and interactions by explained variation by omega^2.
+        # Reason: RQ asks which effects explain the most variation, which \(p\)-values cannot determine.
+        anova_ss = anova_lm(full_model, typ=3)
+        mse = (
+                anova_ss.loc["Residual", "sum_sq"]
+                / anova_ss.loc["Residual", "df"]
+        )
+        y = full_model.model.endog
+        ss_total = np.sum((y - y.mean()) ** 2)
+        effects = anova_ss.drop(
+            index=["Intercept", "Residual"]
+        ).copy()
+        effects["omega_squared"] = (
+                                     effects["sum_sq"] - effects["df"] * mse
+                                   ) / (ss_total + mse)
+        effects["omega_squared"] = effects["omega_squared"].clip(lower=0)
+        ranked = effects[["df", "omega_squared"]].sort_values("omega_squared", ascending=False)
+        ranked["omega_squared_percent"] = ranked["omega_squared"] * 100
+        return effects, ranked
+
+    def _print_anova_hc3(self, anova_hc3_df: pd.DataFrame):
+        headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]
+        table_entries = []
+        for idx, row in anova_hc3_df.iterrows():
+            values = list(row.values[:])
+            values.insert(0, str(idx))
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("")
+        print("ANOVA HC3:")
+        print(table_str)
+
+    def _calculate_anova_hc3(self, full_model: RegressionResultsWrapper):
+        # Create robust inference for decompression effects.
+        # Reason: HC3 protects significance tests and confidence intervals against unequal
+        # configuration variability and keeps the method consistent with compression.
+        # Test which factors and interactions affect mean compression throughput
+        anova_hc3 = anova_lm(
+            full_model,
+            typ=3,
+            robust="hc3"
+        )
+        return anova_hc3
+
+    def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame, factors: list[str]):
+        headers = factors + ["run", "cooks_d"]
+        table_entries = []
+        for _, row in diagnostics.iterrows():
+            values = row.values[:]
+            table_entries.append(values)
+        table_str = tabulate.tabulate(table_entries,
+                                      headers=headers,
+                                      tablefmt="simple",
+                                      #floatfmt=".2f",
+                                      )
+        print("Influence table")
+        print(table_str)
+
+    def _find_observations_that_strongly_influence_model(self, compression_model, factors: list[str]):
+        # Screen for observations that strongly influence the decompression model.
+        # Reason: A small number of influential trials could distort effect estimates.
+        influence = compression_model.get_influence()
+        cooks_d = influence.cooks_distance[0]
+        threshold = 4 / compression_model.nobs
+
+        print("")
+        print("Maximum Cook's distance:      %f" % cooks_d.max())
+        print("Screening threshold:          %f" % threshold)
+        print("Observations above threshold: %d" % (cooks_d > threshold).sum())
+
+        run_factors = factors + ["run"]
+        diagnostics = compression_model.model.data.frame[
+            run_factors
+        ].copy()
+        diagnostics["cooks_d"] = cooks_d
+
+        diagnostics = diagnostics.sort_values(
+            by=["cooks_d"],
+            ascending=False,
+        )
+        diagnostics = diagnostics.head(10)
+        return diagnostics
+
+    def _validate_data_quantity(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+        comp = self._extract_comp_dataframe(df, mode, threading)
+        comp = comp.pint.quantify()
+        cell_counts = comp.groupby(
+            factors,
+            observed=True
+        ).size()
+
+        print("Observations:                 %d" % len(comp))
+        print("Configurations:               %d" % len(cell_counts))
+        print("Min trials per configuration: %d" % cell_counts.min())
+        print("Max trials per configuration: %d" % cell_counts.max())
+        missing = comp["log_throughput"].isna().sum()
+        print("Missing response values:      %d" % missing)
+        if missing:
+            raise ValueError("Missing response values: %d" % missing)
 
     def _print_effect_ranking_table(self, table_df: pd.DataFrame):
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
@@ -488,6 +570,7 @@ class ThroughputStatistics(Processor):
                                       headers=headers,
                                       tablefmt="simple",
                                       )
+        print("")
         print("Extreme observations:         %d" % total)
         print(table_str)
 
@@ -531,11 +614,14 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
+        print("")
         print("95%% confidence interval table")
         print(table_str)
 
     def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) \
             -> tuple[pd.DataFrame, pd.DataFrame]:
+        # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
+        # Reason: This confirms whether the top-three ranking is stable.
         rng = np.random.default_rng(12345)
 
         print("Calculating confidence intervals...")
