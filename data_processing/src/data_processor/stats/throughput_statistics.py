@@ -88,7 +88,7 @@ class ThroughputStatistics(Processor):
 
     def _calculate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float):
         # comp is the prepared compression dataset
-        comp = self._extract_comp_dataframe(df, mode, threading)
+        comp = self._extract_data(df, mode, threading)
 
         # A cell identifies one experimental configuration
         comp["cell"] = comp[self.factors].astype(str).agg("|".join, axis=1)
@@ -136,7 +136,7 @@ class ThroughputStatistics(Processor):
         drift_results["drift_conclusion"] = drift_results.apply(self._classify_drift, axis=1, threshold=threshold)
         return drift_results
 
-    def _extract_comp_dataframe(self, df: pd.DataFrame, mode: str, threading: str) -> pd.DataFrame:
+    def _extract_data(self, df: pd.DataFrame, mode: str, threading: str) -> pd.DataFrame:
         extracted = df.copy()
         extracted = extracted[extracted["mode"] == mode]
         extracted = extracted[extracted["threading"] == threading]
@@ -157,12 +157,12 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str) -> pd.DataFrame:
+    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str):
         print("")
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
 
-        comp = self._extract_comp_dataframe(df, mode, threading)
+        comp = self._extract_data(df, mode, threading)
 
         # Flatten the DataFrame
         comp.columns = comp.columns.get_level_values(0)
@@ -411,7 +411,7 @@ class ThroughputStatistics(Processor):
         return diagnostics
 
     def _validate_data_quantity(self, df: pd.DataFrame, threading: str, mode: str):
-        comp = self._extract_comp_dataframe(df, mode, threading)
+        comp = self._extract_data(df, mode, threading)
         comp = comp.pint.quantify()
         cell_counts = comp.groupby(
             self.factors,
