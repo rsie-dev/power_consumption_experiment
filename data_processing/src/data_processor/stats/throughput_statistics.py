@@ -18,7 +18,6 @@ from data_processor.constants import ORDER_STRENGTH
 
 
 class ThroughputStatistics(Processor):
-    VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
