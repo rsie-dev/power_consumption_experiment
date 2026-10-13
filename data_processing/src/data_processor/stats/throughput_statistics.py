@@ -37,8 +37,8 @@ class ThroughputStatistics(Processor):
 
     def _process_threading(self, df: pd.DataFrame, threading: str, excludes: list[str], factors: list[str]):
         df = df[~df["tool"].isin(excludes)]
-        self._process_threading_mode(df, threading, "compress", factors)
-        #self._process_threading_mode(df, threading, "decompress", factors)
+        #self._process_threading_mode(df, threading, "compress", factors)
+        self._process_threading_mode(df, threading, "decompress", factors)
 
     def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
         print("")
@@ -251,7 +251,6 @@ class ThroughputStatistics(Processor):
 
         #self._show_factor_means(comp, relevant_factors)
         self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors, factors)
-        return
 
         # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
@@ -431,7 +430,7 @@ class ThroughputStatistics(Processor):
         print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
 
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
-        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "cumulative ω² %", "95% bootstrap CI", "HC3 F", "HC3 p"]
+        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)", "95% bootstrap CI", "HC3 F", "HC3 p"]
         table_entries = []
         for _, row in table_df.iterrows():
             values = row.values[:]
