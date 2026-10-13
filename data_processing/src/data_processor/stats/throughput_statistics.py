@@ -1,11 +1,13 @@
 import logging
 from pathlib import Path
 from itertools import product, combinations
+import re
 
 import tabulate
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
+from pandas.core.interchange.dataframe_protocol import DataFrame
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
@@ -19,7 +21,7 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-    N_BOOT = 1000
+    N_BOOT = 1
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -233,74 +235,143 @@ class ThroughputStatistics(Processor):
             cov_type="HC3"
         )
 
-        anova_hc3_df = self._calculate_anova_hc3(full_model)
-        self._print_anova_hc3(anova_hc3_df)
+        anova_hc3 = self._calculate_anova_hc3(full_model)
+        self._print_anova_hc3(anova_hc3)
 
         effects, ranked = self._calculate_anova_table(full_model)
         self._print_anova_table(ranked)
+        relevant_factors = self._extract_relevant_factors(ranked, 95)
+        print("relevant factors: %s" % relevant_factors)
+
+        print("")
+        print("-" * 20 + " Factor means " + "-" * 20)
+        print("")
+        #self._show_factor_impacts(comp)
 
         # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
         self._print_ci(ci_values)
 
         print("")
-        print("-" * 20 + " Factor means " + "-" * 20)
-        print("")
-        self._show_factor_impacts(comp)
-
-        print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
-        # dataset
-        mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
-        self._print_mean_cis("dataset", mean_cis_dataset)
-        # All check that comparisons are clearly different.
-        # They are if every confidence interval excludes 1.0
-        factor_ratios_dataset = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                        full_model, full_model_hc3,
-                                                                                        "dataset", factors)
-        self._print_throughput_ratios_between_factor_levels("dataset", factor_ratios_dataset)
 
-        # tool
-        mean_cis_tool = self._calculate_factor_ci(comp, full_model, full_model_hc3, "tool", factors)
-        self._print_mean_cis("tool", mean_cis_tool)
-        factor_ratios_tool = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                     full_model, full_model_hc3,
-                                                                                     "tool", factors)
-        self._print_throughput_ratios_between_factor_levels("tool", factor_ratios_tool)
+        ## dataset
+        #mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
+        #self._print_mean_cis("dataset", mean_cis_dataset)
+
+        ## All check that comparisons are clearly different.
+        ## They are if every confidence interval excludes 1.0
+        #factor_ratios_dataset = self._calculate_throughput_ratios_between_factor_levels(comp,
+        #                                                                                full_model, full_model_hc3,
+        #                                                                                "dataset", factors)
+        #self._print_throughput_ratios_between_factor_levels("dataset", factor_ratios_dataset)
+
+        ## tool
+        #mean_cis_tool = self._calculate_factor_ci(comp, full_model, full_model_hc3, "tool", factors)
+        #self._print_mean_cis("tool", mean_cis_tool)
+        #factor_ratios_tool = self._calculate_throughput_ratios_between_factor_levels(comp,
+        #                                                                             full_model, full_model_hc3,
+        #                                                                             "tool", factors)
+        #self._print_throughput_ratios_between_factor_levels("tool", factor_ratios_tool)
 
 
-        combination_ci_tool_strength = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
-                                                                             ["tool", "strength"], factors, ORDER_STRENGTH)
-        self._print_mean_cis(["tool", "strength"], combination_ci_tool_strength)
-        combination_ratios_tool_strength = self._calculate_throughput_ratios_within_factor_levels(comp,
-                                                                                                  full_model, full_model_hc3,
-                                                                                                  ["tool", "strength"],
-                                                                                                  factors,
-                                                                                                  ORDER_STRENGTH)
-        self._print_throughput_ratios_within_factor_levels(["tool", "strength"], combination_ratios_tool_strength )
+        #combination_ci_tool_strength = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
+        #                                                                     ["tool", "strength"], factors, ORDER_STRENGTH)
+        #self._print_mean_cis(["tool", "strength"], combination_ci_tool_strength)
+        #combination_ratios_tool_strength = self._calculate_throughput_ratios_within_factor_levels(comp,
+        #                                                                                          full_model, full_model_hc3,
+        #                                                                                          ["tool", "strength"],
+        #                                                                                          factors,
+        #                                                                                          ORDER_STRENGTH)
+        #self._print_throughput_ratios_within_factor_levels(["tool", "strength"], combination_ratios_tool_strength )
 
-        # host
-        mean_cis_host = self._calculate_factor_ci(comp, full_model, full_model_hc3, "host", factors)
-        self._print_mean_cis("host", mean_cis_host)
-        factor_ratios_host = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                     full_model, full_model_hc3,
-                                                                                     "host", factors)
-        self._print_throughput_ratios_between_factor_levels("host", factor_ratios_host)
+        ## host
+        #mean_cis_host = self._calculate_factor_ci(comp, full_model, full_model_hc3, "host", factors)
+        #self._print_mean_cis("host", mean_cis_host)
+        #factor_ratios_host = self._calculate_throughput_ratios_between_factor_levels(comp,
+        #                                                                             full_model, full_model_hc3,
+        #                                                                             "host", factors)
+        #self._print_throughput_ratios_between_factor_levels("host", factor_ratios_host)
 
-        # strength
-        mean_cis_strength = self._calculate_factor_ci(comp, full_model, full_model_hc3, "strength", factors)
-        self._print_mean_cis("strength", mean_cis_strength)
-        factor_ratios_strength = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                         full_model, full_model_hc3,
-                                                                                         "strength", factors)
-        self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
+        ## strength
+        #mean_cis_strength = self._calculate_factor_ci(comp, full_model, full_model_hc3, "strength", factors)
+        #self._print_mean_cis("strength", mean_cis_strength)
+        #factor_ratios_strength = self._calculate_throughput_ratios_between_factor_levels(comp,
+        #                                                                                 full_model, full_model_hc3,
+        #                                                                                 "strength", factors)
+        #self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
 
-        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
-        self._print_effect_ranking_table(effect_ranking)
+        for relevant_factor in relevant_factors:
+            if isinstance(relevant_factor, str):
+                mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor, factors)
+                self._print_mean_cis(relevant_factor, mean_cis)
 
-        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
-        self._print_throughput_table(throughput_values_df)
+                factor_ratios = self._calculate_throughput_ratios_between_factor_levels(comp,
+                                                                                    full_model, full_model_hc3,
+                                                                                    relevant_factor, factors)
+                self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
+            else:
+                factor2_levels = self._get_factor_levels(relevant_factor[1], df)
+                combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
+                                                                       relevant_factor, factors, factor2_levels)
+                self._print_mean_cis(relevant_factor, combination_ci)
+
+                combination_ratios = self._calculate_throughput_ratios_within_factor_levels(comp,
+                                                                                            full_model, full_model_hc3,
+                                                                                            relevant_factor,
+                                                                                            factors,
+                                                                                            factor2_levels)
+                self._print_throughput_ratios_within_factor_levels(relevant_factor, combination_ratios)
+
+        return
+
+        print("")
+        #effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
+        #self._print_effect_ranking_table(effect_ranking)
+
+        #throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
+        #self._print_throughput_table(throughput_values_df)
+
+    def _get_factor_levels(self, factor, df: pd.DataFrame):
+        if factor == "strength":
+            return ORDER_STRENGTH
+        if factor == "tool":
+            tools = df["tool"].dropna().unique().tolist()
+            return tools
+        raise RuntimeError("invalid factor: %s" %factor)
+
+    def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
+        relevant = []
+
+        first_interaction = None
+        for idx, _ in ranked.iterrows():
+            factors = self._extract_factors(str(idx))
+            if isinstance(factors, tuple):
+                first_interaction = factors
+                break
+
+        n = (ranked["omega_squared_percent"].cumsum() < target).sum() + 1
+        relevant_rows = ranked.iloc[:n]
+        for idx, _ in relevant_rows.iterrows():
+            factors = self._extract_factors(str(idx))
+            relevant.append(factors)
+
+        if first_interaction not in relevant:
+            relevant.append(first_interaction)
+
+        return relevant
+
+    def _extract_factors(self, entry: str) -> str | tuple:
+        regex = r"C\(\s*([^,]+)\s*,"
+        factors = []
+        for part in entry.split(":"):
+            search_result = re.search(regex, part)
+            factor = search_result.group(1).strip()
+            factors.append(factor)
+        if len(factors) == 1:
+            return factors[0]
+        return tuple(factors)
 
     def _print_anova_table(self, ranked: pd.DataFrame):
         headers = ["Factor", "DF", "omega squared", "omega squared %"]
@@ -782,6 +853,11 @@ class ThroughputStatistics(Processor):
                 })
 
         combination_ci = pd.DataFrame(rows)
+        combination_ci = combination_ci.sort_values(
+            by=["factor1", "mean_MiB_s"],
+            ascending=[True, False],
+        )
+
         return combination_ci
 
     def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]) \
@@ -812,7 +888,7 @@ class ThroughputStatistics(Processor):
     def _print_mean_cis(self, factor: str | list[str], mean_cis: pd.DataFrame):
         if isinstance(factor, str):
             factor = [factor]
-        headers = factor + ["Mean MiB/s", "CI low", "CI high"]
+        headers = list(factor) + ["Mean MiB/s", "CI low", "CI high"]
         table_entries = []
         for _, row in mean_cis.iterrows():
             values = row.values[:]
@@ -822,7 +898,7 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
-        print("95%% confidence interval of means for: %s" % factor)
+        print("95%% confidence interval of means for: %s" % list(factor))
         print(table_str)
 
     def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
@@ -878,7 +954,7 @@ class ThroughputStatistics(Processor):
         levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
-        factor2_pairs  = list(combinations(factor2_levels, 2))
+        factor2_pairs = list(combinations(factor2_levels, 2))
 
         rows = []
         factor1 = factor_combination[0]
@@ -908,10 +984,11 @@ class ThroughputStatistics(Processor):
                 })
 
         combination_ratios = pd.DataFrame(rows)
+
         return combination_ratios
 
     def _print_throughput_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
-        headers = factor_combination + ["Ratio", "CI low", "CI high"]
+        headers = list(factor_combination) + ["Ratio", "CI low", "CI high"]
         table_entries = []
         for _, row in factor_ratios.iterrows():
             values = row.values[:]
@@ -921,5 +998,5 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
-        print("Throughput ratios within factor levels of: %s" % factor_combination)
+        print("Throughput ratios within factor levels of: %s" % list(factor_combination))
         print(table_str)
