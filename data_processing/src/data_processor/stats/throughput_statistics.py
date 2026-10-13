@@ -428,7 +428,7 @@ class ThroughputStatistics(Processor):
         print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
 
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
-        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
+        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "cumulative ω² %", "95% bootstrap CI", "HC3 F", "HC3 p"]
         table_entries = []
         for _, row in table_df.iterrows():
             values = row.values[:]
@@ -505,6 +505,11 @@ class ThroughputStatistics(Processor):
                 "HC3 p"
             ]
         ].sort_values("Rank")
+
+        effect_ranking["cumulative_omega_squared_percent"] = (
+                effect_ranking["omega_squared"].cumsum() * 100
+        )
+        effect_ranking.insert(5, "cumulative_omega_squared_percent", effect_ranking.pop("cumulative_omega_squared_percent"))
 
         return effect_ranking
 
