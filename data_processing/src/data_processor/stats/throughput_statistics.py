@@ -617,53 +617,6 @@ class ThroughputStatistics(Processor):
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
-
-        ## dataset
-        #mean_cis_dataset = self._calculate_factor_ci(comp, full_model, full_model_hc3, "dataset", factors)
-        #self._print_mean_cis("dataset", mean_cis_dataset)
-
-        ## All check that comparisons are clearly different.
-        ## They are if every confidence interval excludes 1.0
-        #factor_ratios_dataset = self._calculate_throughput_ratios_between_factor_levels(comp,
-        #                                                                                full_model, full_model_hc3,
-        #                                                                                "dataset", factors)
-        #self._print_throughput_ratios_between_factor_levels("dataset", factor_ratios_dataset)
-
-        ## tool
-        #mean_cis_tool = self._calculate_factor_ci(comp, full_model, full_model_hc3, "tool", factors)
-        #self._print_mean_cis("tool", mean_cis_tool)
-        #factor_ratios_tool = self._calculate_throughput_ratios_between_factor_levels(comp,
-        #                                                                             full_model, full_model_hc3,
-        #                                                                             "tool", factors)
-        #self._print_throughput_ratios_between_factor_levels("tool", factor_ratios_tool)
-
-
-        #combination_ci_tool_strength = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
-        #                                                                     ["tool", "strength"], factors, ORDER_STRENGTH)
-        #self._print_mean_cis(["tool", "strength"], combination_ci_tool_strength)
-        #combination_ratios_tool_strength = self._calculate_throughput_ratios_within_factor_levels(comp,
-        #                                                                                          full_model, full_model_hc3,
-        #                                                                                          ["tool", "strength"],
-        #                                                                                          factors,
-        #                                                                                          ORDER_STRENGTH)
-        #self._print_throughput_ratios_within_factor_levels(["tool", "strength"], combination_ratios_tool_strength )
-
-        ## host
-        #mean_cis_host = self._calculate_factor_ci(comp, full_model, full_model_hc3, "host", factors)
-        #self._print_mean_cis("host", mean_cis_host)
-        #factor_ratios_host = self._calculate_throughput_ratios_between_factor_levels(comp,
-        #                                                                             full_model, full_model_hc3,
-        #                                                                             "host", factors)
-        #self._print_throughput_ratios_between_factor_levels("host", factor_ratios_host)
-
-        ## strength
-        #mean_cis_strength = self._calculate_factor_ci(comp, full_model, full_model_hc3, "strength", factors)
-        #self._print_mean_cis("strength", mean_cis_strength)
-        #factor_ratios_strength = self._calculate_throughput_ratios_between_factor_levels(comp,
-        #                                                                                 full_model, full_model_hc3,
-        #                                                                                 "strength", factors)
-        #self._print_throughput_ratios_between_factor_levels("strength", factor_ratios_strength)
-
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor, factors)
