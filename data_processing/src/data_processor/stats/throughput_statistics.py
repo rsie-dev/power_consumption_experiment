@@ -881,8 +881,8 @@ class ThroughputStatistics(Processor):
     def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
                                                            full_model: RegressionResultsWrapper,
                                                            full_model_hc3: OLSResults,
-                                                           factor: str, levels: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, levels)
+                                                           factor: str, factors: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         rows = []
