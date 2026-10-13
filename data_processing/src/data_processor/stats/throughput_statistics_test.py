@@ -11,7 +11,7 @@ from .throughput_statistics import ThroughputStatistics
 
 @pytest.fixture
 def calculator():
-    return ThroughputStatistics(Mock(spec=Path))
+    return ThroughputStatistics(Mock(spec=Path), 0)
 
 
 def test_extract_factors_one(calculator):

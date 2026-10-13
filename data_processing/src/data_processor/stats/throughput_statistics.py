@@ -20,11 +20,11 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-    N_BOOT = 1000
 
-    def __init__(self, resources: Path):
+    def __init__(self, resources: Path, n_boot: int):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._n_boot = n_boot
 
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
@@ -712,7 +712,7 @@ class ThroughputStatistics(Processor):
         )
 
         boot_results = []
-        for _ in range(self.N_BOOT):
+        for _ in range(self._n_boot):
             sampled_positions = np.concatenate([
                 rng.choice(group, size=len(group), replace=True)
                 for group in groups

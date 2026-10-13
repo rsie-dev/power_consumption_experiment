@@ -64,7 +64,8 @@ class Processor:
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
                                                        parents=[common_parser])
-        parser_stats_tp .add_argument('tp_file', type=Path, help="calculated throughput file")
+        parser_stats_tp.add_argument('--boot', default=1000, type=int, help="bootstrap count")
+        parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
 
 
@@ -141,7 +142,7 @@ class Processor:
     def _stats_tp(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        statistics = ThroughputStatistics(resources_folder)
+        statistics = ThroughputStatistics(resources_folder, args.boot)
         statistics.process(args.tp_file)
 
     def _calc_cr(self, args):
