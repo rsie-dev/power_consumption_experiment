@@ -661,8 +661,6 @@ class ThroughputStatistics(Processor):
         # Reason: This confirms whether the top-three ranking is stable.
         rng = np.random.default_rng(12345)
 
-        print("Calculating confidence intervals...")
-
         boot_data = comp.reset_index(drop=True)
 
         groups = list(
@@ -670,6 +668,7 @@ class ThroughputStatistics(Processor):
         )
 
         boot_results = []
+        print("Calculating confidence intervals...")
         for _ in tqdm(range(self._n_boot), colour="green"):
             sampled_positions = np.concatenate([
                 rng.choice(group, size=len(group), replace=True)
