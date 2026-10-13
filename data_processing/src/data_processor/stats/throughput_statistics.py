@@ -14,7 +14,7 @@ from patsy.build import build_design_matrices
 from tqdm import tqdm
 
 from data_processor.processor import Processor
-from data_processor.constants import get_factor_levels, ORDER_STRENGTH
+from data_processor.constants import get_factor_levels
 
 
 class ThroughputStatistics(Processor):
@@ -249,8 +249,9 @@ class ThroughputStatistics(Processor):
         print("")
         print("Relevant factors: %s" % " > ".join([str(f) for f in relevant_factors]))
 
-        #self._show_factor_means(comp, relevant_factors, df)
-        self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors, factors, df)
+        #self._show_factor_means(comp, relevant_factors)
+        self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors, factors)
+        return
 
         # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
@@ -318,7 +319,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      floatfmt=".2f",
                                       )
         print("")
         print("ANOVA rank table:")
@@ -610,7 +610,7 @@ class ThroughputStatistics(Processor):
         extremes_df = extremes.reset_index(name="count")
         return extremes_df
 
-    def _show_factor_means(self, comp: pd.DataFrame, relevant_factors: list, df):
+    def _show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
         print("")
         print("-" * 20 + " Factor means " + "-" * 20)
         print("")
@@ -619,14 +619,14 @@ class ThroughputStatistics(Processor):
                 means_df = self._calculate_mean(comp, relevant_factor)
                 self._print_means(relevant_factor, means_df)
             else:
-                factor2_levels = get_factor_levels(relevant_factor[1], df)
+                factor2_levels = get_factor_levels(relevant_factor[1], comp)
                 means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
                 self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
 
     def _show_factor_means_ci(self, comp: pd.DataFrame,
                               full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
                               relevant_factors: list,
-                              factors: list[str], df):
+                              factors: list[str]):
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
@@ -640,7 +640,7 @@ class ThroughputStatistics(Processor):
                                                                                         relevant_factor, factors)
                 self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
             else:
-                factor2_levels = get_factor_levels(relevant_factor[1], df)
+                factor2_levels = get_factor_levels(relevant_factor[1], comp)
                 combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
                                                                        relevant_factor, factors, factor2_levels)
                 self._print_mean_cis(relevant_factor, combination_ci)
