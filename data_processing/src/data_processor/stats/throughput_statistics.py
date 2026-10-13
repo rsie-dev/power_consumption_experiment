@@ -25,6 +25,7 @@ class ThroughputStatistics(Processor):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._n_boot = n_boot
+        self._rng = np.random.default_rng(12345)
 
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
@@ -669,7 +670,7 @@ class ThroughputStatistics(Processor):
             -> tuple[pd.DataFrame, pd.Series]:
         # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
         # Reason: This confirms whether the top-three ranking is stable.
-        rng = np.random.default_rng(12345)
+
 
         boot_data = comp.reset_index(drop=True)
 
@@ -681,7 +682,7 @@ class ThroughputStatistics(Processor):
         print("Calculating confidence intervals...")
         for _ in tqdm(range(self._n_boot), colour="green"):
             sampled_positions = np.concatenate([
-                rng.choice(group, size=len(group), replace=True)
+                self._rng.choice(group, size=len(group), replace=True)
                 for group in groups
             ])
 
