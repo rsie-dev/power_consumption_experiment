@@ -7,7 +7,6 @@ import tabulate
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
-from pandas.core.interchange.dataframe_protocol import DataFrame
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
@@ -21,7 +20,7 @@ class ThroughputStatistics(Processor):
     VALUE_COLS = ["throughput"]
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-    N_BOOT = 1
+    N_BOOT = 1000
 
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -241,7 +240,8 @@ class ThroughputStatistics(Processor):
         effects, ranked = self._calculate_anova_table(full_model)
         self._print_anova_table(ranked)
         relevant_factors = self._extract_relevant_factors(ranked, 95)
-        print("relevant factors: %s" % relevant_factors)
+        print("")
+        print("Relevant factors: %s" % relevant_factors)
 
         print("")
         print("-" * 20 + " Factor means " + "-" * 20)
@@ -324,14 +324,12 @@ class ThroughputStatistics(Processor):
                                                                                             factor2_levels)
                 self._print_throughput_ratios_within_factor_levels(relevant_factor, combination_ratios)
 
-        return
-
         print("")
-        #effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
-        #self._print_effect_ranking_table(effect_ranking)
+        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
+        self._print_effect_ranking_table(mode, effect_ranking)
 
-        #throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
-        #self._print_throughput_table(throughput_values_df)
+        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
+        self._print_throughput_table(throughput_values_df)
 
     def _get_factor_levels(self, factor, df: pd.DataFrame):
         if factor == "strength":
@@ -495,7 +493,7 @@ class ThroughputStatistics(Processor):
         if missing:
             raise ValueError("Missing response values: %d" % missing)
 
-    def _print_effect_ranking_table(self, table_df: pd.DataFrame):
+    def _print_effect_ranking_table(self, mode: str, table_df: pd.DataFrame):
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
         table_entries = []
         for _, row in table_df.iterrows():
@@ -509,7 +507,7 @@ class ThroughputStatistics(Processor):
                                       #floatfmt=".2f",
                                       colalign=coalign
                                       )
-        print("Effect ranking table")
+        print("Effect ranking table for: %s" % mode)
         print(table_str)
 
     def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.DataFrame,
@@ -578,7 +576,7 @@ class ThroughputStatistics(Processor):
         return effect_ranking
 
     def _print_throughput_table(self, throughput_values_df: pd.DataFrame):
-        headers = ["Factor", "Level", "Mean throughput (MiB/s)", "95% HC3 CI"]
+        headers = ["Factor", "Level", "Marginal geometric mean throughput (MiB/s)", "95% HC3 CI"]
         table_entries = []
         for _, row in throughput_values_df.iterrows():
             values = row.values[:]
@@ -625,6 +623,16 @@ class ThroughputStatistics(Processor):
                 "95% HC3 CI"
             ]
         ]
+
+        throughput_values["Factor"] = pd.Categorical(
+            throughput_values["Factor"],
+            categories=factors,
+            ordered=True
+        )
+        throughput_values = throughput_values.sort_values(
+            ["Factor", "Mean throughput (MiB/s)"],
+            ascending=[True, False]
+        )
 
         return throughput_values
 
