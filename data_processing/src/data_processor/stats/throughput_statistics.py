@@ -131,16 +131,14 @@ class ThroughputStatistics(Processor):
         drift_results["drift_conclusion"] = drift_results.apply(self._classify_drift, axis=1, threshold=threshold)
         return drift_results
 
-    def _extract_comp_dataframe(self, df: pd.DataFrame, mode: str, threading: str|None = None) -> pd.DataFrame:
-        comp = df.copy()
-        # comp is the prepared compression dataset
-        comp = comp[comp["mode"] == mode]
-        if threading:
-            comp = comp[comp["threading"] == threading]
+    def _extract_comp_dataframe(self, df: pd.DataFrame, mode: str, threading: str) -> pd.DataFrame:
+        extracted = df.copy()
+        extracted = extracted[extracted["mode"] == mode]
+        extracted = extracted[extracted["threading"] == threading]
 
-        comp = comp.pint.dequantify()
-        comp["log_throughput"] = np.log(comp["throughput"])
-        return comp
+        extracted = extracted.pint.dequantify()
+        extracted["log_throughput"] = np.log(extracted["throughput"])
+        return extracted
 
     def _classify_drift(self, row, threshold: float):
         low = row["ci_low_run1_to_run30_percent"]
