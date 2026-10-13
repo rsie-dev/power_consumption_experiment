@@ -355,7 +355,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("")
         print("ANOVA HC3:")
@@ -382,7 +381,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("Influence table")
         print(table_str)
@@ -441,7 +439,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       colalign=coalign
                                       )
         print("Effect ranking table for: %s %s" % (threading, mode))
@@ -525,7 +522,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("Throughput values for: %s %s" % (threading, mode))
         print(table_str)
@@ -660,7 +656,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("")
         print("95%% confidence interval table")
@@ -736,7 +731,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("Throughput means for: %s" % factor)
         print(table_str)
@@ -872,7 +866,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("95%% confidence interval of means for: %s" % list(factor))
         print(table_str)
@@ -917,7 +910,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("Throughput ratios between factor levels of: %s" % factor)
         print(table_str)
@@ -972,7 +964,6 @@ class ThroughputStatistics(Processor):
         table_str = tabulate.tabulate(table_entries,
                                       headers=headers,
                                       tablefmt="simple",
-                                      #floatfmt=".2f",
                                       )
         print("Throughput ratios within factor levels of: %s" % list(factor_combination))
         print(table_str)
