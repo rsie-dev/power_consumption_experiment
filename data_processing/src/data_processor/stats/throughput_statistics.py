@@ -242,7 +242,7 @@ class ThroughputStatistics(Processor):
         self._print_anova_table(ranked)
         relevant_factors = self._extract_relevant_factors(ranked, 95)
         print("")
-        print("Relevant factors: %s" % relevant_factors)
+        print("Relevant factors: %s" % " > ".join([str(f) for f in relevant_factors]))
 
         self._show_factor_impacts(comp, relevant_factors, df)
 
