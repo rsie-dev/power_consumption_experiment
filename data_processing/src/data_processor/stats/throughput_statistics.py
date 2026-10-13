@@ -426,7 +426,7 @@ class ThroughputStatistics(Processor):
         print("Effect ranking table for: %s" % mode)
         print(table_str)
 
-    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.DataFrame,
+    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
                                      anova_hc3: pd.DataFrame, factors: list[str]):
         effect_ranking = (
             effects[["df", "omega_squared"]]
@@ -644,7 +644,7 @@ class ThroughputStatistics(Processor):
         print(table_str)
 
     def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) \
-            -> tuple[pd.DataFrame, pd.DataFrame]:
+            -> tuple[pd.DataFrame, pd.Series]:
         # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
         # Reason: This confirms whether the top-three ranking is stable.
         rng = np.random.default_rng(12345)
