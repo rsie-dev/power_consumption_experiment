@@ -14,7 +14,7 @@ from patsy.build import build_design_matrices
 from tqdm import tqdm
 
 from data_processor.processor import Processor
-from data_processor.constants import ORDER_STRENGTH
+from data_processor.constants import get_factor_levels, ORDER_STRENGTH
 
 
 class ThroughputStatistics(Processor):
@@ -156,7 +156,7 @@ class ThroughputStatistics(Processor):
 
     def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]) -> pd.DataFrame:
         print("")
-        print("-" * 20 + " Calculate statistics" + "-" * 20)
+        print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
 
         comp = self._extract_comp_dataframe(df, mode, threading)
@@ -250,21 +250,12 @@ class ThroughputStatistics(Processor):
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
         self._print_ci(ci_values)
 
-
         print("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
         self._print_effect_ranking_table(mode, effect_ranking)
 
         throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
         self._print_throughput_table(throughput_values_df)
-
-    def _get_factor_levels(self, factor, df: pd.DataFrame):
-        if factor == "strength":
-            return ORDER_STRENGTH
-        if factor == "tool":
-            tools = df["tool"].dropna().unique().tolist()
-            return tools
-        raise RuntimeError("invalid factor: %s" %factor)
 
     def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
         relevant = []
@@ -605,7 +596,7 @@ class ThroughputStatistics(Processor):
                 means_df = self._calculate_mean(comp, relevant_factor)
                 self._print_means(relevant_factor, means_df)
             else:
-                factor2_levels = self._get_factor_levels(relevant_factor[1], df)
+                factor2_levels = get_factor_levels(relevant_factor[1], df)
                 means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
                 self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
 
@@ -626,7 +617,7 @@ class ThroughputStatistics(Processor):
                                                                                         relevant_factor, factors)
                 self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
             else:
-                factor2_levels = self._get_factor_levels(relevant_factor[1], df)
+                factor2_levels = get_factor_levels(relevant_factor[1], df)
                 combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
                                                                        relevant_factor, factors, factor2_levels)
                 self._print_mean_cis(relevant_factor, combination_ci)
