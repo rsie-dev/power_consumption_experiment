@@ -146,9 +146,9 @@ class ThroughputStatistics(Processor):
 
         if low >= -threshold and high <= threshold:
             return "no material drift"
-        elif low > threshold:
+        if low > threshold:
             return "material increase"
-        elif high < -threshold:
+        if high < -threshold:
             return "material decrease"
         return "inconclusive"
 
