@@ -244,7 +244,7 @@ class ThroughputStatistics(Processor):
         print("")
         print("Relevant factors: %s" % " > ".join([str(f) for f in relevant_factors]))
 
-        self._show_factor_means(comp, relevant_factors, df)
+        #self._show_factor_means(comp, relevant_factors, df)
         self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors, factors, df)
 
         # Check that the top confidence intervals do not overlap
