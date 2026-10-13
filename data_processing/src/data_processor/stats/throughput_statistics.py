@@ -28,32 +28,35 @@ class ThroughputStatistics(Processor):
             seed = 12345
         self._rng = np.random.default_rng(seed)
 
+    @property
+    def factors(self):
+        return ["host", "tool", "dataset", "strength"]
+
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
-        factors_single = ["host", "tool", "dataset", "strength"]
-        #self._process_threading(df, "single", factors_single)
-        self._process_threading(df, "multi", factors_single)
+        #self._process_threading(df, "single")
+        self._process_threading(df, "multi")
 
-    def _process_threading(self, df: pd.DataFrame, threading: str, factors: list[str]):
-        #self._process_threading_mode(df, threading, "compress", factors)
-        self._process_threading_mode(df, threading, "decompress", factors)
+    def _process_threading(self, df: pd.DataFrame, threading: str):
+        #self._process_threading_mode(df, threading, "compress")
+        self._process_threading_mode(df, threading, "decompress")
 
-    def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+    def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str):
         print("")
         print("-" * 20 + " Process %s" % mode + "-" * 20)
         print("")
-        self._validate_data_quantity(df, threading, mode, factors)
-        self._validate_temporal_drift(df, threading, mode, factors)
-        self._calculate_statistics(df, threading, mode, factors)
+        self._validate_data_quantity(df, threading, mode)
+        self._validate_temporal_drift(df, threading, mode)
+        self._calculate_statistics(df, threading, mode)
 
-    def _validate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+    def _validate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str):
         print("")
         print("-" * 20 + " Validate temporal drift" + "-" * 20)
         print("")
-        self._check_temporal_drift(df, threading, mode, self.DRIFT_THRESHOLD, factors)
+        self._check_temporal_drift(df, threading, mode, self.DRIFT_THRESHOLD)
 
-    def _check_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float, factors: list[str]):
-        drift_results = self._calculate_temporal_drift(df, threading, mode, threshold, factors)
+    def _check_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float):
+        drift_results = self._calculate_temporal_drift(df, threading, mode, threshold)
         self._show_drift_analysis(threading, mode, threshold, drift_results)
         self._verify_temporal_drift(drift_results)
 
@@ -83,12 +86,12 @@ class ThroughputStatistics(Processor):
         print("Drift analysis for %s %s (threshold: %s%%)" % (threading, mode, threshold))
         print(table_str)
 
-    def _calculate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float, factors: list[str]):
+    def _calculate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float):
         # comp is the prepared compression dataset
         comp = self._extract_comp_dataframe(df, mode, threading)
 
         # A cell identifies one experimental configuration
-        comp["cell"] = comp[factors].astype(str).agg("|".join, axis=1)
+        comp["cell"] = comp[self.factors].astype(str).agg("|".join, axis=1)
 
         # Remove each configuration's average throughput
         comp["centered_log_throughput"] = (
@@ -154,7 +157,7 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]) -> pd.DataFrame:
+    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str) -> pd.DataFrame:
         print("")
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
@@ -221,14 +224,14 @@ class ThroughputStatistics(Processor):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        self._print_residual_variance(comp, full_model, factors)
+        self._print_residual_variance(comp, full_model)
 
-        diagnostics = self._find_observations_that_strongly_influence_model(full_model, factors)
-        self._print_observations_that_strongly_influence_model(diagnostics, factors)
+        diagnostics = self._find_observations_that_strongly_influence_model(full_model)
+        self._print_observations_that_strongly_influence_model(diagnostics)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        extremes = self._get_diagnostics(full_model, factors)
-        self._print_diagnostics(extremes, factors)
+        extremes = self._get_diagnostics(full_model)
+        self._print_diagnostics(extremes)
 
         # Make later statistical inference robust to unequal residual variance.
         # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
@@ -248,25 +251,25 @@ class ThroughputStatistics(Processor):
         print("Relevant factors: %s" % " > ".join([str(f) for f in relevant_factors]))
 
         #self._show_factor_means(comp, relevant_factors)
-        self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors, factors)
+        self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
+        ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects)
         self._print_ci(ci_values)
 
         print("")
-        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
+        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(threading, mode, effect_ranking)
 
-        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
+        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3)
         self._print_throughput_table(threading, mode, throughput_values_df)
 
-    def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]):
+    def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
         diagnostics_comp_mt = comp.copy()
         diagnostics_comp_mt["residual"] = full_model.resid
 
         residual_sd_comp_mt = diagnostics_comp_mt.groupby(
-            factors
+            self.factors
         )["residual"].std()
 
         print(residual_sd_comp_mt.describe())
@@ -370,8 +373,8 @@ class ThroughputStatistics(Processor):
         )
         return anova_hc3
 
-    def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame, factors: list[str]):
-        headers = factors + ["run", "cooks_d"]
+    def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame):
+        headers = self.factors + ["run", "cooks_d"]
         table_entries = []
         for _, row in diagnostics.iterrows():
             values = row.values[:]
@@ -384,7 +387,7 @@ class ThroughputStatistics(Processor):
         print("Influence table")
         print(table_str)
 
-    def _find_observations_that_strongly_influence_model(self, compression_model, factors: list[str]):
+    def _find_observations_that_strongly_influence_model(self, compression_model):
         # Screen for observations that strongly influence the decompression model.
         # Reason: A small number of influential trials could distort effect estimates.
         influence = compression_model.get_influence()
@@ -396,7 +399,7 @@ class ThroughputStatistics(Processor):
         print("Maximum Cook's distance:      %f" % cooks_d.max())
         print("Observations above threshold: %d" % (cooks_d > threshold).sum())
 
-        run_factors = factors + ["run"]
+        run_factors = self.factors + ["run"]
         diagnostics = compression_model.model.data.frame[
             run_factors
         ].copy()
@@ -409,11 +412,11 @@ class ThroughputStatistics(Processor):
         diagnostics = diagnostics.head(10)
         return diagnostics
 
-    def _validate_data_quantity(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
+    def _validate_data_quantity(self, df: pd.DataFrame, threading: str, mode: str):
         comp = self._extract_comp_dataframe(df, mode, threading)
         comp = comp.pint.quantify()
         cell_counts = comp.groupby(
-            factors,
+            self.factors,
             observed=True
         ).size()
 
@@ -445,7 +448,7 @@ class ThroughputStatistics(Processor):
         print(table_str)
 
     def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
-                                     anova_hc3: pd.DataFrame, factors: list[str]):
+                                     anova_hc3: pd.DataFrame):
         effect_ranking = (
             effects[["df", "omega_squared"]]
             .join(confidence_intervals)
@@ -453,7 +456,7 @@ class ThroughputStatistics(Processor):
         )
 
         def clean_effect(term):
-            for factor in factors: #["host", "tool", "dataset", "strength"]:
+            for factor in self.factors:
                 term = term.replace(f"C({factor}, Sum)", factor)
             return term.replace(":", " × ")
 
@@ -528,12 +531,12 @@ class ThroughputStatistics(Processor):
         print(table_str)
 
     def _create_throughput_table(self, comp: pd.DataFrame,
-                                 full_model: RegressionResultsWrapper, full_model_hc3: OLSResults, factors: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+                                 full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         tables = []
-        for factor in factors:
+        for factor in self.factors:
             table = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov).rename(columns={
                 factor: "Level",
                 "mean_MiB_s": "Mean throughput (MiB/s)"
@@ -564,7 +567,7 @@ class ThroughputStatistics(Processor):
 
         throughput_values["Factor"] = pd.Categorical(
             throughput_values["Factor"],
-            categories=factors,
+            categories=self.factors,
             ordered=True
         )
         throughput_values = throughput_values.sort_values(
@@ -574,11 +577,11 @@ class ThroughputStatistics(Processor):
 
         return throughput_values
 
-    def _print_diagnostics(self, extremes_df: pd.DataFrame, factors: list[str]):
+    def _print_diagnostics(self, extremes_df: pd.DataFrame):
         total = extremes_df["count"].sum()
 
         extremes_df = extremes_df.head(10)
-        headers = factors + ["count"]
+        headers = self.factors + ["count"]
         table_entries = []
         for _, row in extremes_df.iterrows():
             values = row.values[:]
@@ -591,9 +594,9 @@ class ThroughputStatistics(Processor):
         print("Extreme observations:         %d" % total)
         print(table_str)
 
-    def _get_diagnostics(self, full_model: RegressionResultsWrapper, factors: list[str]) -> pd.DataFrame:
+    def _get_diagnostics(self, full_model: RegressionResultsWrapper) -> pd.DataFrame:
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        run_factors = factors + ["run"]
+        run_factors = self.factors + ["run"]
         diagnostics = full_model.model.data.frame[run_factors].copy()
         diagnostics["studentized_residual"] = (
             full_model.get_influence().resid_studentized_internal
@@ -602,7 +605,7 @@ class ThroughputStatistics(Processor):
             diagnostics["studentized_residual"].abs() > 3
             ]
         extremes = extreme.groupby(
-            factors
+            self.factors
         ).size().sort_values(ascending=False)
         extremes_df = extremes.reset_index(name="count")
         return extremes_df
@@ -622,30 +625,28 @@ class ThroughputStatistics(Processor):
 
     def _show_factor_means_ci(self, comp: pd.DataFrame,
                               full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
-                              relevant_factors: list,
-                              factors: list[str]):
+                              relevant_factors: list):
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
-                mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor, factors)
+                mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
                 self._print_mean_cis(relevant_factor, mean_cis)
 
                 factor_ratios = self._calculate_throughput_ratios_between_factor_levels(comp,
                                                                                         full_model, full_model_hc3,
-                                                                                        relevant_factor, factors)
+                                                                                        relevant_factor)
                 self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
             else:
                 factor2_levels = get_factor_levels(relevant_factor[1], comp)
                 combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
-                                                                       relevant_factor, factors, factor2_levels)
+                                                                       relevant_factor, factor2_levels)
                 self._print_mean_cis(relevant_factor, combination_ci)
 
                 combination_ratios = self._calculate_throughput_ratios_within_factor_levels(comp,
                                                                                             full_model, full_model_hc3,
                                                                                             relevant_factor,
-                                                                                            factors,
                                                                                             factor2_levels)
                 self._print_throughput_ratios_within_factor_levels(relevant_factor, combination_ratios)
 
@@ -665,7 +666,7 @@ class ThroughputStatistics(Processor):
         print("95%% confidence interval table")
         print(table_str)
 
-    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame, factors: list[str]) \
+    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) \
             -> tuple[pd.DataFrame, pd.Series]:
         # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
         # Reason: This confirms whether the top-three ranking is stable.
@@ -674,7 +675,7 @@ class ThroughputStatistics(Processor):
         boot_data = comp.reset_index(drop=True)
 
         groups = list(
-            boot_data.groupby(factors, observed=True).indices.values()
+            boot_data.groupby(self.factors, observed=True).indices.values()
         )
 
         boot_results = []
@@ -770,8 +771,8 @@ class ThroughputStatistics(Processor):
         return means
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
-                             factor: str, factors: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+                             factor: str):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         mean_cis = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov)
@@ -801,8 +802,8 @@ class ThroughputStatistics(Processor):
 
     def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
                                          full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
-                                         factor_combination: list[str], factors: list[str], factor2_levels: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+                                         factor_combination: list[str], factor2_levels: list[str]):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         rows = []
@@ -835,16 +836,16 @@ class ThroughputStatistics(Processor):
 
         return combination_ci
 
-    def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]) \
+    def _calculate_x_grid(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper) \
             -> tuple[dict, pd.DataFrame, np.ndarray]:
         levels = {
             factor: comp[factor].unique().tolist()
-            for factor in factors
+            for factor in self.factors
         }
 
         grid = pd.DataFrame(
-            product(*(levels[f] for f in factors)),
-            columns=factors
+            product(*(levels[f] for f in self.factors)),
+            columns=self.factors
         )
 
         x_grid = np.asarray(
@@ -879,8 +880,8 @@ class ThroughputStatistics(Processor):
     def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
                                                            full_model: RegressionResultsWrapper,
                                                            full_model_hc3: OLSResults,
-                                                           factor: str, factors: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+                                                           factor: str):
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         rows = []
@@ -924,9 +925,9 @@ class ThroughputStatistics(Processor):
     def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
                                                           full_model: RegressionResultsWrapper,
                                                           full_model_hc3: OLSResults,
-                                                          factor_combination: list[str], factors: list[str],
+                                                          factor_combination: list[str],
                                                           factor2_levels: list[str]):
-        levels, grid, x_grid = self._calculate_x_grid(comp, full_model, factors)
+        levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
         factor2_pairs = list(combinations(factor2_levels, 2))
