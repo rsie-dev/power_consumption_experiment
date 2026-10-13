@@ -11,6 +11,7 @@ from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
 from patsy.build import build_design_matrices
+from tqdm import tqdm
 
 from data_processor.processor import Processor
 from data_processor.constants import ORDER_STRENGTH
@@ -712,7 +713,7 @@ class ThroughputStatistics(Processor):
         )
 
         boot_results = []
-        for _ in range(self._n_boot):
+        for _ in tqdm(range(self._n_boot), colour="green"):
             sampled_positions = np.concatenate([
                 rng.choice(group, size=len(group), replace=True)
                 for group in groups

@@ -24,6 +24,7 @@ dependencies = [
 	"statsmodels==0.14.6",
 	"tabulate==0.10.0",
 	"humanize==4.15.0",
+	"tqdm==4.67.3",
 ]
 
 [project.optional-dependencies]
