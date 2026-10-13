@@ -305,7 +305,7 @@ class ThroughputStatistics(Processor):
         return tuple(factors)
 
     def _print_anova_table(self, ranked: pd.DataFrame):
-        headers = ["Factor", "DF", "omega squared", "omega squared %"]
+        headers = ["Factor", "DF", "ω²", "ω² %"]
         table_entries = []
         for idx, row in ranked.iterrows():
             values = list(row.values[:])
@@ -490,7 +490,6 @@ class ThroughputStatistics(Processor):
         )
 
         effect_ranking = effect_ranking.rename(columns={
-            "omega_squared": "ω²",
             "F": "HC3 F"
         })
 
@@ -500,7 +499,7 @@ class ThroughputStatistics(Processor):
                 "Effect",
                 "Effect type",
                 "df",
-                "ω²",
+                "omega_squared",
                 "95% bootstrap CI",
                 "HC3 F",
                 "HC3 p"
@@ -646,7 +645,7 @@ class ThroughputStatistics(Processor):
                 self._print_throughput_ratios_within_factor_levels(relevant_factor, combination_ratios)
 
     def _print_ci(self, sorted_ci_values: pd.DataFrame):
-        headers = ["Factor", "omega squared", "CI low", "CI high"]
+        headers = ["Factor", "ω²", "CI low", "CI high"]
         table_entries = []
         for idx, row in sorted_ci_values.iterrows():
             values = list(row.values[:])
