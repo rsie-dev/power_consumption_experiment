@@ -244,10 +244,7 @@ class ThroughputStatistics(Processor):
         print("")
         print("Relevant factors: %s" % relevant_factors)
 
-        print("")
-        print("-" * 20 + " Factor means " + "-" * 20)
-        print("")
-        #self._show_factor_impacts(comp)
+        self._show_factor_impacts(comp, relevant_factors, df)
 
         # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects, factors)
@@ -670,17 +667,18 @@ class ThroughputStatistics(Processor):
         extremes_df = extremes.reset_index(name="count")
         return extremes_df
 
-    def _show_factor_impacts(self, comp: pd.DataFrame):
-        means_dataset = self._calculate_mean(comp, "dataset")
-        self._print_means("dataset", means_dataset)
-        means_tool = self._calculate_mean(comp, "tool")
-        self._print_means("tool", means_tool)
-        means_host = self._calculate_mean(comp, "host")
-        self._print_means("host", means_host)
-        means_tool_strength = self._calculate_mean_combined(comp, ["tool", "strength"], ORDER_STRENGTH)
-        self._print_means("tool * strength", means_tool_strength, ORDER_STRENGTH)
-        means_strength = self._calculate_mean(comp, "strength", ORDER_STRENGTH)
-        self._print_means("strength", means_strength)
+    def _show_factor_impacts(self, comp: pd.DataFrame, relevant_factors: list, df):
+        print("")
+        print("-" * 20 + " Factor impacts " + "-" * 20)
+        print("")
+        for relevant_factor in relevant_factors:
+            if isinstance(relevant_factor, str):
+                means_df = self._calculate_mean(comp, relevant_factor)
+                self._print_means(relevant_factor, means_df)
+            else:
+                factor2_levels = self._get_factor_levels(relevant_factor[1], df)
+                means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
+                self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
 
     def _print_ci(self, sorted_ci_values: pd.DataFrame):
         headers = ["Factor", "omega squared", "CI low", "CI high"]
@@ -790,7 +788,7 @@ class ThroughputStatistics(Processor):
     def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list | None = None):
         means = (
             comp.groupby(
-                factor,
+                list(factor),
                 observed=True
             )["log_throughput"]
             .mean()
