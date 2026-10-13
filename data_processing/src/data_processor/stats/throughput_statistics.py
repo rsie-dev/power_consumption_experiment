@@ -29,12 +29,13 @@ class ThroughputStatistics(Processor):
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
         factors_single = ["host", "tool", "dataset", "strength"]
-        self._process_threading(df, "single", [], factors_single)
+        #self._process_threading(df, "single", [], factors_single)
+        self._process_threading(df, "multi", [], factors_single)
 
     def _process_threading(self, df: pd.DataFrame, threading: str, excludes: list[str], factors: list[str]):
         df = df[~df["tool"].isin(excludes)]
-        #self._process_threading_mode(df, threading, "compress", factors)
-        self._process_threading_mode(df, threading, "decompress", factors)
+        self._process_threading_mode(df, threading, "compress", factors)
+        #self._process_threading_mode(df, threading, "decompress", factors)
 
     def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str, factors: list[str]):
         print("")
@@ -177,6 +178,7 @@ class ThroughputStatistics(Processor):
             data=comp
         ).fit()
         # The fit has the expected dimensions.
+        print("Two-way model:")
         print("Observations:                 %d" % int(compression_model.nobs))
         print("Model degrees of freedom:     %d" % int(compression_model.df_model))
         print("Residual degrees of freedom:  %d" % int(compression_model.df_resid))
@@ -192,6 +194,7 @@ class ThroughputStatistics(Processor):
         """
         full_model = smf.ols(full_formula, data=comp).fit()
         print(anova_lm(compression_model, full_model))
+        print("Full model:")
         print("R² increase:", full_model.rsquared - compression_model.rsquared)
 
         three_way_formula = """
@@ -217,7 +220,9 @@ class ThroughputStatistics(Processor):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        diagnostics = self._find_observations_that_strongly_influence_model(compression_model, factors)
+        self._print_residual_variance(comp, full_model, factors)
+
+        diagnostics = self._find_observations_that_strongly_influence_model(full_model, factors)
         self._print_observations_that_strongly_influence_model(diagnostics, factors)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
@@ -250,10 +255,22 @@ class ThroughputStatistics(Processor):
 
         print("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3, factors)
-        self._print_effect_ranking_table(mode, effect_ranking)
+        self._print_effect_ranking_table(threading, mode, effect_ranking)
 
         throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3, factors)
-        self._print_throughput_table(throughput_values_df)
+        self._print_throughput_table(threading, mode, throughput_values_df)
+
+    def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, factors: list[str]):
+        diagnostics_comp_mt = comp.copy()
+        diagnostics_comp_mt["residual"] = full_model.resid
+
+        residual_sd_comp_mt = diagnostics_comp_mt.groupby(
+            factors
+        )["residual"].std()
+
+        print(residual_sd_comp_mt.describe())
+        sd_ratio = residual_sd_comp_mt.max() / residual_sd_comp_mt.min()
+        print("Largest / smallest residual SD ratio: %f" % sd_ratio)
 
     def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
         relevant = []
@@ -375,8 +392,8 @@ class ThroughputStatistics(Processor):
         threshold = 4 / compression_model.nobs
 
         print("")
+        print("Cook's threshold:             %f" % threshold)
         print("Maximum Cook's distance:      %f" % cooks_d.max())
-        print("Screening threshold:          %f" % threshold)
         print("Observations above threshold: %d" % (cooks_d > threshold).sum())
 
         run_factors = factors + ["run"]
@@ -408,8 +425,9 @@ class ThroughputStatistics(Processor):
         print("Missing response values:      %d" % missing)
         if missing:
             raise ValueError("Missing response values: %d" % missing)
+        print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
 
-    def _print_effect_ranking_table(self, mode: str, table_df: pd.DataFrame):
+    def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "95% bootstrap CI", "HC3 F", "HC3 p"]
         table_entries = []
         for _, row in table_df.iterrows():
@@ -423,7 +441,7 @@ class ThroughputStatistics(Processor):
                                       #floatfmt=".2f",
                                       colalign=coalign
                                       )
-        print("Effect ranking table for: %s" % mode)
+        print("Effect ranking table for: %s %s" % (threading, mode))
         print(table_str)
 
     def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
@@ -491,7 +509,7 @@ class ThroughputStatistics(Processor):
 
         return effect_ranking
 
-    def _print_throughput_table(self, throughput_values_df: pd.DataFrame):
+    def _print_throughput_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
         headers = ["Factor", "Level", "Marginal geometric mean throughput (MiB/s)", "95% HC3 CI"]
         table_entries = []
         for _, row in throughput_values_df.iterrows():
@@ -502,7 +520,7 @@ class ThroughputStatistics(Processor):
                                       tablefmt="simple",
                                       #floatfmt=".2f",
                                       )
-        print("Throughput values")
+        print("Throughput values for: %s %s" % (threading, mode))
         print(table_str)
 
     def _create_throughput_table(self, comp: pd.DataFrame,
