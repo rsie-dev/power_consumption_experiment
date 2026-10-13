@@ -18,7 +18,6 @@ from data_processor.constants import get_factor_levels
 
 
 class ThroughputStatistics(Processor):
-    SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
     def __init__(self, resources: Path, n_boot: int, seed: int | None):
@@ -32,11 +31,10 @@ class ThroughputStatistics(Processor):
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
         factors_single = ["host", "tool", "dataset", "strength"]
-        #self._process_threading(df, "single", [], factors_single)
-        self._process_threading(df, "multi", [], factors_single)
+        #self._process_threading(df, "single", factors_single)
+        self._process_threading(df, "multi", factors_single)
 
-    def _process_threading(self, df: pd.DataFrame, threading: str, excludes: list[str], factors: list[str]):
-        df = df[~df["tool"].isin(excludes)]
+    def _process_threading(self, df: pd.DataFrame, threading: str, factors: list[str]):
         #self._process_threading_mode(df, threading, "compress", factors)
         self._process_threading_mode(df, threading, "decompress", factors)
 
