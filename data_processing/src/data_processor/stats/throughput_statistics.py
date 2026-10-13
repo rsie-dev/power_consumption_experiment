@@ -21,11 +21,13 @@ class ThroughputStatistics(Processor):
     SINGLE_THREAD_ONLY = ["gzip", "bzip2", "lzop"]
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, n_boot: int):
+    def __init__(self, resources: Path, n_boot: int, seed: int | None):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._n_boot = n_boot
-        self._rng = np.random.default_rng(12345)
+        if seed is None:
+            seed = 12345
+        self._rng = np.random.default_rng(seed)
 
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
