@@ -45,18 +45,19 @@ class ThroughputStatistics(Processor):
         print("")
         print("-" * 20 + " Process %s" % mode + "-" * 20)
         print("")
-        self._validate_data_quantity(df, threading, mode)
-        self._validate_temporal_drift(df, threading, mode)
-        self._calculate_statistics(df, threading, mode)
+        comp = self._extract_data(df, mode, threading)
+        self._validate_data_quantity(comp, threading, mode)
+        self._validate_temporal_drift(comp, threading, mode)
+        self._calculate_statistics(comp, threading, mode)
 
-    def _validate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str):
+    def _validate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str):
         print("")
         print("-" * 20 + " Validate temporal drift" + "-" * 20)
         print("")
-        self._check_temporal_drift(df, threading, mode, self.DRIFT_THRESHOLD)
+        self._check_temporal_drift(comp, threading, mode, self.DRIFT_THRESHOLD)
 
-    def _check_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float):
-        drift_results = self._calculate_temporal_drift(df, threading, mode, threshold)
+    def _check_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str, threshold: float):
+        drift_results = self._calculate_temporal_drift(comp, threading, mode, threshold)
         self._show_drift_analysis(threading, mode, threshold, drift_results)
         self._verify_temporal_drift(drift_results)
 
@@ -86,9 +87,8 @@ class ThroughputStatistics(Processor):
         print("Drift analysis for %s %s (threshold: %s%%)" % (threading, mode, threshold))
         print(table_str)
 
-    def _calculate_temporal_drift(self, df: pd.DataFrame, threading: str, mode: str, threshold: float):
-        # comp is the prepared compression dataset
-        comp = self._extract_data(df, mode, threading)
+    def _calculate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str, threshold: float):
+        comp = comp.copy()
 
         # A cell identifies one experimental configuration
         comp["cell"] = comp[self.factors].astype(str).agg("|".join, axis=1)
@@ -157,12 +157,10 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, df: pd.DataFrame, threading: str, mode: str):
+    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str):
         print("")
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
-
-        comp = self._extract_data(df, mode, threading)
 
         # Flatten the DataFrame
         comp.columns = comp.columns.get_level_values(0)
@@ -411,14 +409,15 @@ class ThroughputStatistics(Processor):
         diagnostics = diagnostics.head(10)
         return diagnostics
 
-    def _validate_data_quantity(self, df: pd.DataFrame, threading: str, mode: str):
-        comp = self._extract_data(df, mode, threading)
+    def _validate_data_quantity(self, comp: pd.DataFrame, threading: str, mode: str):
+        comp = comp.copy()
         comp = comp.pint.quantify()
         cell_counts = comp.groupby(
             self.factors,
             observed=True
         ).size()
 
+        print("Validate data quantity of:    %s %s" % (threading, mode))
         print("Observations:                 %d" % len(comp))
         print("Configurations:               %d" % len(cell_counts))
         print("Min trials per configuration: %d" % cell_counts.min())
