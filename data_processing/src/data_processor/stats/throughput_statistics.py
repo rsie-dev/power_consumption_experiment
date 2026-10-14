@@ -45,7 +45,11 @@ class ThroughputStatistics(Processor):
         print("")
         print("-" * 20 + " Process %s" % mode + "-" * 20)
         print("")
+
         comp = self._extract_data(df, mode, threading)
+        comp = comp.pint.dequantify()
+        comp["log_throughput"] = np.log(comp["throughput"])
+
         self._validate_data_quantity(comp, threading, mode)
         self._validate_temporal_drift(comp, threading, mode)
         self._calculate_statistics(comp, threading, mode)
@@ -137,13 +141,9 @@ class ThroughputStatistics(Processor):
         return drift_results
 
     def _extract_data(self, df: pd.DataFrame, mode: str, threading: str) -> pd.DataFrame:
-        extracted = df.copy()
-        extracted = extracted[extracted["mode"] == mode]
-        extracted = extracted[extracted["threading"] == threading]
-
-        extracted = extracted.pint.dequantify()
-        extracted["log_throughput"] = np.log(extracted["throughput"])
-        return extracted
+        df = df[df["mode"] == mode]
+        df = df[df["threading"] == threading]
+        return df
 
     def _classify_drift(self, row, threshold: float):
         low = row["ci_low_run1_to_run30_percent"]
