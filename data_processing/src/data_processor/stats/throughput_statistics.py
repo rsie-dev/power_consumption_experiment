@@ -284,7 +284,24 @@ class ThroughputStatistics(Processor):
         )["residual"].std()
 
         print(residual_sd_comp_mt.describe())
-        sd_ratio = residual_sd_comp_mt.max() / residual_sd_comp_mt.min()
+        if residual_sd_comp_mt.min():
+            sd_ratio = residual_sd_comp_mt.max() / residual_sd_comp_mt.min()
+        else:
+            sd_ratio = np.inf
+            zero_mask = np.isclose(
+                residual_sd_comp_mt,
+                0.0,
+                atol=1e-12,
+                rtol=0
+            )
+            zero_sd_configurations = (
+                residual_sd_comp_mt[zero_mask]
+                .rename("residual_sd")
+                .reset_index()
+            )
+
+            print("Note: no variation found for these configurations")
+            print(zero_sd_configurations)
         print("Largest / smallest residual SD ratio: %f" % sd_ratio)
 
     def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
