@@ -956,8 +956,8 @@ class ThroughputStatistics(Processor):
                 se = np.sqrt(contrast @ cov @ contrast)
 
                 rows.append({
-                    factor1: factor1_level,
-                    factor2: f"{first} / {second}",
+                    "factor1": factor1_level,
+                    "factor2": f"{first} / {second}",
                     "ratio": np.exp(estimate),
                     "ci_low": np.exp(estimate - 1.96 * se),
                     "ci_high": np.exp(estimate + 1.96 * se)
