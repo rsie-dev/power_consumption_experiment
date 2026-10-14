@@ -621,7 +621,7 @@ class ThroughputStatistics(Processor):
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
-        for relevant_factor in relevant_factors[2:4]:
+        for relevant_factor in relevant_factors:
             print("")
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
@@ -893,11 +893,8 @@ class ThroughputStatistics(Processor):
 
     def _print_throughput_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str, factor_ratios: pd.DataFrame):
         headers = header + ["Ratio", "CI low", "CI high"]
-        table_entries = []
-        for _, row in factor_ratios.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(factor_ratios,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
