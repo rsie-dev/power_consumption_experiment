@@ -628,6 +628,7 @@ class ThroughputStatistics(Processor):
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
         for relevant_factor in relevant_factors:
+            print("")
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
                 self._print_mean_cis(relevant_factor, mean_cis)
@@ -646,7 +647,7 @@ class ThroughputStatistics(Processor):
                                                                                             full_model, full_model_hc3,
                                                                                             relevant_factor,
                                                                                             factor2_levels)
-                self._print_throughput_ratios_within_factor_levels(relevant_factor, combination_ratios)
+                self._print_throughput_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
 
     def _print_ci(self, sorted_ci_values: pd.DataFrame):
         headers = ["Factor", "ω²", "CI low", "CI high"]
@@ -904,7 +905,13 @@ class ThroughputStatistics(Processor):
         return dataset_ratios
 
     def _print_throughput_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
-        headers = ["Comparison", "Ratio", "CI low", "CI high"]
+        self._print_throughput_ratios_of_factor_levels("between ", ["Comparison"], factor, factor_ratios)
+
+    def _print_throughput_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
+        self._print_throughput_ratios_of_factor_levels("within", factor_combination, str(factor_combination), factor_ratios)
+
+    def _print_throughput_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str, factor_ratios: pd.DataFrame):
+        headers = header + ["Ratio", "CI low", "CI high"]
         table_entries = []
         for _, row in factor_ratios.iterrows():
             values = row.values[:]
@@ -913,7 +920,7 @@ class ThroughputStatistics(Processor):
                                       headers=headers,
                                       tablefmt="simple",
                                       )
-        print("Throughput ratios between factor levels of: %s" % factor)
+        print(f"Throughput ratios {kind} factor levels of: {factor_combination}")
         print(table_str)
 
     def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
@@ -957,15 +964,3 @@ class ThroughputStatistics(Processor):
 
         return combination_ratios
 
-    def _print_throughput_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
-        headers = list(factor_combination) + ["Ratio", "CI low", "CI high"]
-        table_entries = []
-        for _, row in factor_ratios.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      )
-        print("Throughput ratios within factor levels of: %s" % list(factor_combination))
-        print(table_str)
