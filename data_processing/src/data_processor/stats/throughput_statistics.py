@@ -54,9 +54,17 @@ class ThroughputStatistics(Processor):
         self._calculate_statistics(comp, threading, mode)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.pint.dequantify()
-        df["log_throughput"] = np.log(df["throughput"])
-        return df
+        result = df.copy()
+
+        throughput = (
+            df["throughput"]
+            .pint.to("byte / second")
+            .pint.magnitude
+        )
+
+        result["throughput"] = throughput
+        result["log_throughput"] = np.log(throughput)
+        return result
 
     def _validate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str):
         print("")
