@@ -87,8 +87,8 @@ class ThroughputStatistics(Processor):
         ]
 
         headers = ["host", "change %", "CI low %", "CI high %", "drift conclusion"]
-        table_columns = drift_results[columns]
-        table_str = tabulate.tabulate(table_columns,
+        table_df = drift_results[columns]
+        table_str = tabulate.tabulate(table_df,
                                       showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
@@ -328,13 +328,7 @@ class ThroughputStatistics(Processor):
 
     def _print_anova_table(self, ranked: pd.DataFrame):
         headers = ["Factor", "DF", "ω²", "ω² %"]
-        table_entries = []
-        for idx, row in ranked.iterrows():
-            values = list(row.values[:])
-            values[0] = int(values[0])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(ranked,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -365,12 +359,7 @@ class ThroughputStatistics(Processor):
 
     def _print_anova_hc3(self, anova_hc3_df: pd.DataFrame):
         headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]
-        table_entries = []
-        for idx, row in anova_hc3_df.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(anova_hc3_df,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -392,11 +381,8 @@ class ThroughputStatistics(Processor):
 
     def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame):
         headers = self.factors + ["run", "cooks_d"]
-        table_entries = []
-        for _, row in diagnostics.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(diagnostics,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -448,13 +434,10 @@ class ThroughputStatistics(Processor):
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
                    "95% bootstrap CI", "HC3 F", "HC3 p"]
-        table_entries = []
-        for _, row in table_df.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
         coalign = ["global"] * len(headers)
         coalign[2] = "right"
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(table_df,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       colalign=coalign
@@ -534,11 +517,8 @@ class ThroughputStatistics(Processor):
 
     def _print_throughput_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
         headers = ["Factor", "Level", "Marginal geometric mean throughput (MiB/s)", "95% HC3 CI"]
-        table_entries = []
-        for _, row in throughput_values_df.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(throughput_values_df,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -597,11 +577,8 @@ class ThroughputStatistics(Processor):
 
         extremes_df = extremes_df.head(10)
         headers = self.factors + ["count"]
-        table_entries = []
-        for _, row in extremes_df.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(extremes_df,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -644,7 +621,7 @@ class ThroughputStatistics(Processor):
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
-        for relevant_factor in relevant_factors:
+        for relevant_factor in relevant_factors[2:4]:
             print("")
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
@@ -668,12 +645,7 @@ class ThroughputStatistics(Processor):
 
     def _print_ci(self, sorted_ci_values: pd.DataFrame):
         headers = ["Factor", "ω²", "CI low", "CI high"]
-        table_entries = []
-        for idx, row in sorted_ci_values.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(sorted_ci_values,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -743,12 +715,7 @@ class ThroughputStatistics(Processor):
             headers += extra_columns
         else:
             headers += ["Mean throughput MiB/s"]
-        table_entries = []
-        for idx, row in means.iterrows():
-            values = list(row.values[:])
-            values.insert(0, str(idx))
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(means,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
@@ -879,11 +846,8 @@ class ThroughputStatistics(Processor):
         if isinstance(factor, str):
             factor = [factor]
         headers = list(factor) + ["Mean MiB/s", "CI low", "CI high"]
-        table_entries = []
-        for _, row in mean_cis.iterrows():
-            values = row.values[:]
-            table_entries.append(values)
-        table_str = tabulate.tabulate(table_entries,
+        table_str = tabulate.tabulate(mean_cis,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       )
