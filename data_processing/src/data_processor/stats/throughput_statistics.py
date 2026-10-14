@@ -517,12 +517,28 @@ class ThroughputStatistics(Processor):
         return effect_ranking
 
     def _print_throughput_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
-        headers = ["Factor", "Level", "Marginal geometric mean throughput (MiB/s)", "95% HC3 CI"]
-        table_str = tabulate.tabulate(throughput_values_df,
-                                      showindex=False,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      )
+        display_df = throughput_values_df.copy()
+        for column in ["mean_throughput", "ci_low", "ci_high"]:
+            display_df[column] = display_df[column].pint.to("MiB/s")
+
+        unit = display_df["ci_low"].pint.units
+
+        display_df["95% CI"] = (
+                display_df["ci_low"].pint.magnitude.map("{:.3f}".format)
+                + " - "
+                + display_df["ci_high"].pint.to(unit).pint.magnitude.map("{:.3f}".format)
+        )
+        display_df = display_df.drop(columns=["ci_low", "ci_high"])
+
+        headers = ["Factor", "Level", "Marginal geometric mean throughput", "95% HC3 CI"]
+        colalign = ["global"] * len(headers)
+        colalign[3] = "center"
+        table_str = tabulate_pint(
+            display_df,
+            showindex=False,
+            headers=headers,
+            colalign=colalign,
+        )
         print("Throughput values for: %s %s" % (threading, mode))
         print(table_str)
 
@@ -533,9 +549,8 @@ class ThroughputStatistics(Processor):
 
         tables = []
         for factor in self.factors:
-            table = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov).rename(columns={
+            table = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov, comp).rename(columns={
                 factor: "Level",
-                "mean_MiB_s": "Mean throughput (MiB/s)"
             })
 
             table.insert(0, "Factor", factor)
@@ -546,18 +561,13 @@ class ThroughputStatistics(Processor):
             ignore_index=True
         )
 
-        throughput_values["95% HC3 CI"] = (
-                throughput_values["ci_low"].map(lambda x: f"{x:.3f}")
-                + "–"
-                + throughput_values["ci_high"].map(lambda x: f"{x:.3f}")
-        )
-
         throughput_values = throughput_values[
             [
                 "Factor",
                 "Level",
-                "Mean throughput (MiB/s)",
-                "95% HC3 CI"
+                "mean_throughput",
+                "ci_low",
+                "ci_high",
             ]
         ]
 
@@ -567,7 +577,9 @@ class ThroughputStatistics(Processor):
             ordered=True
         )
         throughput_values = throughput_values.sort_values(
-            ["Factor", "Mean throughput (MiB/s)"],
+            ["Factor",
+             "mean_throughput",
+             ],
             ascending=[True, False]
         )
 
@@ -765,15 +777,17 @@ class ThroughputStatistics(Processor):
         levels, grid, x_grid = self._calculate_x_grid(comp, full_model)
         beta, cov = self._get_beta_cov(full_model, full_model_hc3)
 
-        mean_cis = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov)
+        mean_cis = self._marginal_mean_ci(factor, levels, grid, x_grid, beta, cov, comp)
 
         mean_cis = mean_cis.sort_values(
-            by=["mean_MiB_s"],
+            by=["mean_throughput"],
             ascending=False,
         )
         return mean_cis
 
-    def _marginal_mean_ci(self, factor: str, levels: dict, grid, x_grid: np.ndarray, beta: np.ndarray, cov: np.ndarray):
+    def _marginal_mean_ci(self, factor: str, levels: dict, grid, x_grid: np.ndarray,
+                          beta: np.ndarray, cov: np.ndarray,
+                          comp: pd.DataFrame):
         rows = []
         for level in levels[factor]:
             l = x_grid[grid[factor] == level].mean(axis=0)
@@ -783,12 +797,16 @@ class ThroughputStatistics(Processor):
 
             rows.append({
                 factor: level,
-                "mean_MiB_s": np.exp(estimate) / 2 ** 20,
-                "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
-                "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
+                "mean_throughput": np.exp(estimate),
+                "ci_low": np.exp(estimate - 1.96 * se),
+                "ci_high": np.exp(estimate + 1.96 * se)
             })
 
-        return pd.DataFrame(rows)
+        marginal_means_df = pd.DataFrame(rows)
+        unit_ref = comp["throughput"].dtype
+        for column in ["mean_throughput", "ci_low", "ci_high"]:
+            marginal_means_df[column] = marginal_means_df[column].astype(unit_ref)
+        return marginal_means_df
 
     def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
                                          full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
@@ -813,16 +831,20 @@ class ThroughputStatistics(Processor):
                 rows.append({
                     "factor1": factor1_level,
                     "factor2": factor2_level,
-                    "mean_MiB_s": np.exp(estimate) / 2 ** 20,
-                    "ci_low": np.exp(estimate - 1.96 * se) / 2 ** 20,
-                    "ci_high": np.exp(estimate + 1.96 * se) / 2 ** 20
+                    "mean_throughput": np.exp(estimate),
+                    "ci_low": np.exp(estimate - 1.96 * se),
+                    "ci_high": np.exp(estimate + 1.96 * se),
                 })
 
         combination_ci = pd.DataFrame(rows)
         combination_ci = combination_ci.sort_values(
-            by=["factor1", "mean_MiB_s"],
+            by=["factor1", "mean_throughput"],
             ascending=[True, False],
         )
+
+        unit_ref = comp["throughput"].dtype
+        for column in ["mean_throughput", "ci_low", "ci_high"]:
+            combination_ci[column] = combination_ci[column].astype(unit_ref)
 
         return combination_ci
 
@@ -854,12 +876,15 @@ class ThroughputStatistics(Processor):
     def _print_mean_cis(self, factor: str | list[str], mean_cis: pd.DataFrame):
         if isinstance(factor, str):
             factor = [factor]
-        headers = list(factor) + ["Mean MiB/s", "CI low", "CI high"]
-        table_str = tabulate.tabulate(mean_cis,
-                                      showindex=False,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      )
+        headers = list(factor) + ["Mean", "CI low", "CI high"]
+        for column in ["mean_throughput", "ci_low", "ci_high"]:
+            mean_cis[column] = mean_cis[column].pint.to("MiB/s")
+        table_str = tabulate_pint(
+            mean_cis,
+            showindex=False,
+            headers=headers,
+            tablefmt="simple",
+        )
         print("95%% confidence interval of means for: %s" % list(factor))
         print(table_str)
 
