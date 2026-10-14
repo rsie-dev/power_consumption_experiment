@@ -67,7 +67,7 @@ class ThroughputStatistics(Processor):
         self._check_temporal_drift(comp, threading, mode, self.DRIFT_THRESHOLD)
 
     def _check_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str, threshold: float):
-        drift_results = self._calculate_temporal_drift(comp, threading, mode, threshold)
+        drift_results = self._calculate_temporal_drift(comp, threshold)
         self._show_drift_analysis(threading, mode, threshold, drift_results)
         self._verify_temporal_drift(drift_results)
 
@@ -82,14 +82,14 @@ class ThroughputStatistics(Processor):
             "host",
             "change_run1_to_run30_percent",
             "ci_low_run1_to_run30_percent",
-            "ci_high_run1_to_run30_percent"
+            "ci_high_run1_to_run30_percent",
+            "drift_conclusion",
         ]
 
         headers = ["host", "change %", "CI low %", "CI high %", "drift conclusion"]
-        table_entries = []
-        for _, row in drift_results[columns + ["drift_conclusion"]].iterrows():
-            table_entries.append(row.values[:])
-        table_str = tabulate.tabulate(table_entries,
+        table_columns = drift_results[columns]
+        table_str = tabulate.tabulate(table_columns,
+                                      showindex=False,
                                       headers=headers,
                                       tablefmt="simple",
                                       floatfmt=".3f",
@@ -97,7 +97,7 @@ class ThroughputStatistics(Processor):
         print("Drift analysis for %s %s (threshold: %s%%)" % (threading, mode, threshold))
         print(table_str)
 
-    def _calculate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str, threshold: float):
+    def _calculate_temporal_drift(self, comp: pd.DataFrame, threshold: float) -> pd.DataFrame:
         comp = comp.copy()
 
         # A cell identifies one experimental configuration
