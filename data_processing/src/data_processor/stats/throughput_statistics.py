@@ -35,12 +35,12 @@ class ThroughputStatistics(Processor):
 
     def process(self, tp_file: Path):
         df = self._frameio.load(tp_file)
-        #self._process_threading(df, "single")
-        self._process_threading(df, "multi")
+        self._process_threading(df, "single")
+        #self._process_threading(df, "multi")
 
     def _process_threading(self, df: pd.DataFrame, threading: str):
-        #self._process_threading_mode(df, threading, "compress")
-        self._process_threading_mode(df, threading, "decompress")
+        self._process_threading_mode(df, threading, "compress")
+        #self._process_threading_mode(df, threading, "decompress")
 
     def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str):
         print("")
