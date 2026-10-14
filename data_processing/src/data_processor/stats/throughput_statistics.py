@@ -16,6 +16,7 @@ from tqdm import tqdm
 from data_processor import ureg
 from data_processor.processor import Processor
 from data_processor.constants import get_factor_levels
+from data_processor.util import tabulate_pint
 
 
 class ThroughputStatistics(Processor):
@@ -713,29 +714,35 @@ class ThroughputStatistics(Processor):
         headers = [factor]
         if extra_columns:
             headers += extra_columns
+            for column in extra_columns:
+                means[column] = means[column].pint.to("MiB/s")
         else:
-            headers += ["Mean throughput MiB/s"]
-        table_str = tabulate.tabulate(means,
-                                      headers=headers,
-                                      tablefmt="simple",
-                                      )
+            headers += ["Mean throughput"]
+            means["geometric_mean_throughput"] = means["geometric_mean_throughput"].pint.to("MiB/s")
+        table_str = tabulate_pint(
+            means,
+            headers=headers,
+        )
         print("Throughput means for: %s" % factor)
         print(table_str)
 
     def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
+        unit_ref = comp["throughput"].dtype
         means = (
             comp.groupby(factor, observed=True)["log_throughput"]
             .mean()
             .pipe(np.exp)
-            .div(2 ** 20)
             .sort_values(ascending=False)
         )
         if order:
             means = means.reindex(order)
-        means = means.rename("geometric_mean_MiB_s").to_frame()
+        mean_column = "geometric_mean_throughput"
+        means = means.rename(mean_column).to_frame()
+        means[mean_column] = means[mean_column].astype(unit_ref)
         return means
 
-    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list | None = None):
+    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list):
+        unit_ref = comp["throughput"].dtype
         means = (
             comp.groupby(
                 list(factor),
@@ -743,12 +750,14 @@ class ThroughputStatistics(Processor):
             )["log_throughput"]
             .mean()
             .pipe(np.exp)
-            .div(2 ** 20)
         )
         means = means.unstack(factor[-1])
+        means = means.rename_axis(columns=factor[0])
 
-        if order:
-            means = means[order]
+        means = means[order]
+        for column in order:
+            means[column] = means[column].astype(unit_ref)
+
         return means
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
