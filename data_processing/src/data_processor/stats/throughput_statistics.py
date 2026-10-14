@@ -246,9 +246,10 @@ class ThroughputStatistics(Processor):
 
         effects, ranked = self._calculate_anova_table(full_model)
         self._print_anova_table(ranked)
-        relevant_factors = self._extract_relevant_factors(ranked, 95)
+        relevant_percent = 95
+        relevant_factors = self._extract_relevant_factors(ranked, relevant_percent)
         print("")
-        print("Relevant factors: %s" % " > ".join([str(f) for f in relevant_factors]))
+        print("Relevant %d%% factors: %s" % (relevant_percent, " > ".join([str(f) for f in relevant_factors])))
 
         #self._show_factor_means(comp, relevant_factors)
         self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
