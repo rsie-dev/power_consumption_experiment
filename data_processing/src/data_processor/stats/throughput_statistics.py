@@ -13,6 +13,7 @@ from statsmodels.regression.linear_model import OLSResults
 from patsy.build import build_design_matrices
 from tqdm import tqdm
 
+from data_processor import ureg
 from data_processor.processor import Processor
 from data_processor.constants import get_factor_levels
 
@@ -54,17 +55,10 @@ class ThroughputStatistics(Processor):
         self._calculate_statistics(comp, threading, mode)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
-        result = df.copy()
-
-        throughput = (
-            df["throughput"]
-            .pint.to("byte / second")
-            .pint.magnitude
-        )
-
-        result["throughput"] = throughput
-        result["log_throughput"] = np.log(throughput)
-        return result
+        reference = 1 * ureg.byte / ureg.second
+        normalized = df["throughput"] / reference
+        df["log_throughput"] = np.log(normalized).pint.magnitude
+        return df
 
     def _validate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str):
         print("")

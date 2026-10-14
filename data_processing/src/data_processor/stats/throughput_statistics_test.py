@@ -28,7 +28,6 @@ def test_calculate_base(calculator, sample_throughput):
     actual_df = calculator._calculate_base(sample_throughput)
 
     actual = actual_df["log_throughput"].iloc[0]
-    #assert actual.to("dimensionless").magnitude == pytest.approx(2.5)
     assert actual == pytest.approx(17.426212231014187)
 
 
