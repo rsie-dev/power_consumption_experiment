@@ -168,10 +168,6 @@ class ThroughputStatistics(Processor):
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
 
-        # Flatten the DataFrame
-        comp.columns = comp.columns.get_level_values(0)
-        comp.columns.name = None
-
         formula = """
         log_throughput ~ (
             C(host, Sum)
