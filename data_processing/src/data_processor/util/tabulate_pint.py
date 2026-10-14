@@ -25,7 +25,7 @@ def tabulate_pint(
         if isinstance(series.dtype, pint_pandas.PintType):
             unit = series.pint.units
             display_df[column] = series.pint.magnitude
-            header_names.append(f"{headers[i + o]} {unit:~P}")
+            header_names.append(f"{headers[i + o]} ({unit:~P})")
         else:
             header_names.append(headers[i + o])
 
