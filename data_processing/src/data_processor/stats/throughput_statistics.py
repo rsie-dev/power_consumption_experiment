@@ -433,8 +433,6 @@ class ThroughputStatistics(Processor):
         return diagnostics
 
     def _validate_data_quantity(self, comp: pd.DataFrame, threading: str, mode: str):
-        comp = comp.copy()
-        comp = comp.pint.quantify()
         cell_counts = comp.groupby(
             self.factors,
             observed=True
