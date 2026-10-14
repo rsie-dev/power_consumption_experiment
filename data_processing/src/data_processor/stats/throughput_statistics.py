@@ -22,38 +22,32 @@ from data_processor.util import tabulate_pint
 class ThroughputStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, n_boot: int, seed: int | None):
+    def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._n_boot = n_boot
         if seed is None:
             seed = 12345
         self._rng = np.random.default_rng(seed)
+        self._threading = threading
+        self._mode = mode
 
     @property
     def factors(self):
         return ["host", "tool", "dataset", "strength"]
 
     def process(self, tp_file: Path):
+        print("")
+        print("-" * 20 + " Process %s" % self._mode + "-" * 20)
+        print("")
+
         df = self._frameio.load(tp_file)
-        self._process_threading(df, "single")
-        #self._process_threading(df, "multi")
-
-    def _process_threading(self, df: pd.DataFrame, threading: str):
-        self._process_threading_mode(df, threading, "compress")
-        #self._process_threading_mode(df, threading, "decompress")
-
-    def _process_threading_mode(self, df: pd.DataFrame, threading: str, mode: str):
-        print("")
-        print("-" * 20 + " Process %s" % mode + "-" * 20)
-        print("")
-
-        comp = self._extract_data(df, mode, threading)
+        comp = self._extract_data(df, self._mode, self._threading)
         comp = self._calculate_base(comp)
 
-        self._validate_data_quantity(comp, threading, mode)
-        self._validate_temporal_drift(comp, threading, mode)
-        self._calculate_statistics(comp, threading, mode)
+        self._validate_data_quantity(comp, self._threading, self._mode)
+        self._validate_temporal_drift(comp, self._threading, self._mode)
+        self._calculate_statistics(comp, self._threading, self._mode)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         reference = 1 * ureg.byte / ureg.second

@@ -1,5 +1,6 @@
 import logging.config
 import argparse
+from importlib.metadata import requires
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -54,6 +55,11 @@ class Processor:
         energy_parser = argparse.ArgumentParser(add_help=False)
         energy_parser.add_argument('used_energy_file', type=Path)
 
+        factor_parser = argparse.ArgumentParser(add_help=False)
+        factor_parser.add_argument('--threading', choices=['single', 'multi'],
+                                   required=True, help="threading configuration")
+        factor_parser.add_argument('--mode', choices=['compress', 'decompress'], help="operation mode")
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
@@ -63,7 +69,7 @@ class Processor:
         parser_stats_raw.set_defaults(func=self._stats_raw)
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
-                                                       parents=[common_parser])
+                                                       parents=[common_parser, factor_parser])
         parser_stats_tp.add_argument('--boot', default=1000, type=int, help="bootstrap count")
         parser_stats_tp.add_argument('--seed', type=int, help="RNG seed value")
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
@@ -143,7 +149,7 @@ class Processor:
     def _stats_tp(self, args):
         resources_folder = args.resources
         resources_folder.mkdir(parents=True, exist_ok=True)
-        statistics = ThroughputStatistics(resources_folder, args.boot, args.seed)
+        statistics = ThroughputStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode)
         statistics.process(args.tp_file)
 
     def _calc_cr(self, args):
