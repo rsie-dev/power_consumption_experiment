@@ -47,12 +47,16 @@ class ThroughputStatistics(Processor):
         print("")
 
         comp = self._extract_data(df, mode, threading)
-        comp = comp.pint.dequantify()
-        comp["log_throughput"] = np.log(comp["throughput"])
+        comp = self._calculate_base(comp)
 
         self._validate_data_quantity(comp, threading, mode)
         self._validate_temporal_drift(comp, threading, mode)
         self._calculate_statistics(comp, threading, mode)
+
+    def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.pint.dequantify()
+        df["log_throughput"] = np.log(df["throughput"])
+        return df
 
     def _validate_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str):
         print("")
