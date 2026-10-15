@@ -40,7 +40,7 @@ class ThroughputStatistics(Processor):
 
     def process(self, tp_file: Path):
         print("")
-        print("-" * 20 + " Process %s" % self._mode + "-" * 20)
+        print("-" * 20 + " Process %s %s " % (self._threading, self._mode) + "-" * 20)
         print("")
 
         df = self._frameio.load(tp_file)
