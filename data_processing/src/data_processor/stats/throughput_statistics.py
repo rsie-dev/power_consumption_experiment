@@ -490,6 +490,15 @@ class ThroughputStatistics(Processor):
                 ),
             )
         )
+
+        lines = latex.splitlines()
+        toprule_index = next(
+            i for i, line in enumerate(lines)
+            if line.strip() == r"\toprule"
+        )
+        lines.insert(toprule_index + 2, r"\cmidrule(lr){5-6}")
+        latex = "\n".join(lines)
+
         return latex
 
     def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
