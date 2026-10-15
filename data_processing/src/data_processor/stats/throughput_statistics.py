@@ -469,7 +469,7 @@ class ThroughputStatistics(Processor):
             ("Cumulative", r"$\omega^2$ (\%)"),
         ])
 
-        int_format = "S"
+        int_format = "S[table-format=2]"
         percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
         latex = (
             tex_df.style
