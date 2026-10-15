@@ -428,6 +428,7 @@ class ThroughputStatistics(Processor):
         print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
 
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
+        table_df = table_df.drop(columns=["ci_low", "ci_high"])
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
                    "95% bootstrap CI", "HC3 F", "HC3 p"]
         coalign = ["global"] * len(headers)
@@ -450,25 +451,43 @@ class ThroughputStatistics(Processor):
             f.write(latex)
 
     def _build_effect_ranking_lines(self, df: pd.DataFrame) -> str:
-        header_entries = ["{{Rank}}", "Effect", "{{df}}",
-                          "{{$\\omega^2$ (\\%)}}", "\\SI{{95}}{{\\percent}} bootstrap CI (\\%)",
-                          "{{Cumulative $\\omega^2$ (\\%)}}"]
+        df['df'] = df['df'].astype(int)
+        for column in ["omega_squared", "ci_low", "ci_high"]:
+            df["%s_percent" % column] = df[column] * 100
 
-        df["omega_squared_percent"] = df["omega_squared"] * 100
+        tex_df = df[["Rank", "Effect", "df",
+                     "omega_squared_percent", "ci_low_percent", "ci_high_percent",
+                     "cumulative_omega_squared_percent"]]
 
-        tex_df = df[["Rank", "Effect", "df", "omega_squared_percent", "95% bootstrap CI", "cumulative_omega_squared_percent"]]
-        tex_df['df'] = tex_df['df'].astype(int)
+        tex_df.columns = pd.MultiIndex.from_tuples([
+            ("Rank", ""),
+            ("Effect", ""),
+            ("df", ""),
+            (r"$\omega^2$ (\%)", ""),
+            (r"\SI{95}{\percent} bootstrap CI", "Low"),
+            (r"\SI{95}{\percent} bootstrap CI", "High"),
+            ("Cumulative", r"$\omega^2$ (\%)"),
+        ])
 
         int_format = "S"
         percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
-
         latex = (
             tex_df.style
             .hide(axis="index")
-            .relabel_index(header_entries, axis="columns")
+            .format_index(escape=None, axis=1)
             .to_latex(
+                siunitx=True,
                 hrules=True,
-                column_format=int_format + r"l" + int_format + percent_format + "c" + percent_format,
+                multicol_align="c",
+                column_format=(
+                    int_format +
+                    "l" +
+                    int_format +
+                    percent_format +
+                    percent_format +
+                    percent_format +
+                    percent_format
+                ),
             )
         )
         return latex
@@ -530,6 +549,8 @@ class ThroughputStatistics(Processor):
                 "df",
                 "omega_squared",
                 "95% bootstrap CI",
+                "ci_low",
+                "ci_high",
                 "HC3 F",
                 "HC3 p"
             ]
