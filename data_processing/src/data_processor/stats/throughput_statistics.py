@@ -51,7 +51,9 @@ class ThroughputStatistics(Processor):
         self._validate_temporal_drift(comp, self._threading, self._mode)
         effect_ranking_df = self._calculate_statistics(comp, self._threading, self._mode)
         if self._create_tex:
-            self._create_effect_ranking_tex(effect_ranking_df, tp_file)
+            base = tp_file.stem.removeprefix("tp_")
+            filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+            self._create_effect_ranking_tex(effect_ranking_df, filename)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         reference = 1 * ureg.byte / ureg.second
@@ -441,8 +443,7 @@ class ThroughputStatistics(Processor):
         print("Effect ranking table for: %s %s" % (threading, mode))
         print(table_str)
 
-    def _create_effect_ranking_tex(self, df: pd.DataFrame, tp_file: Path):
-        filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, tp_file.stem.removeprefix("tp_")) + ".tex"
+    def _create_effect_ranking_tex(self, df: pd.DataFrame, filename: str):
         tex_file = self._resources / filename
         self._logger.info("Generate: %s", tex_file)
 
