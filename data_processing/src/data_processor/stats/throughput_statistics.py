@@ -7,6 +7,7 @@ import tabulate
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
+from jinja2.filters import do_format
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
@@ -48,7 +49,9 @@ class ThroughputStatistics(Processor):
 
         self._validate_data_quantity(comp, self._threading, self._mode)
         self._validate_temporal_drift(comp, self._threading, self._mode)
-        self._calculate_statistics(comp, self._threading, self._mode)
+        effect_ranking_df = self._calculate_statistics(comp, self._threading, self._mode)
+        if self._create_tex:
+            self._create_effect_ranking_tex(effect_ranking_df, tp_file)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         reference = 1 * ureg.byte / ureg.second
@@ -158,7 +161,7 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str):
+    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> pd.DataFrame:
         print("")
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
@@ -259,6 +262,7 @@ class ThroughputStatistics(Processor):
 
         throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3)
         self._print_throughput_table(threading, mode, throughput_values_df)
+        return effect_ranking
 
     def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
         diagnostics_comp_mt = comp.copy()
@@ -435,6 +439,39 @@ class ThroughputStatistics(Processor):
                                       )
         print("Effect ranking table for: %s %s" % (threading, mode))
         print(table_str)
+
+    def _create_effect_ranking_tex(self, df: pd.DataFrame, tp_file: Path):
+        filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, tp_file.stem.removeprefix("tp_")) + ".tex"
+        tex_file = self._resources / filename
+        self._logger.info("Generate: %s", tex_file)
+
+        latex = self._build_effect_ranking_lines(df)
+        with tex_file.open(mode="w", encoding="UTF_8") as f:
+            f.write(latex)
+
+    def _build_effect_ranking_lines(self, df: pd.DataFrame) -> str:
+        header_entries = ["{{Rank}}", "Effect", "{{df}}",
+                          "{{$\\omega^2$ (\\%)}}", "\\SI{{95}}{{\\percent}} bootstrap CI (\\%)",
+                          "{{Cumulative $\\omega^2$ (\\%)}}"]
+
+        df["omega_squared_percent"] = df["omega_squared"] * 100
+
+        tex_df = df[["Rank", "Effect", "df", "omega_squared_percent", "95% bootstrap CI", "cumulative_omega_squared_percent"]]
+        tex_df['df'] = tex_df['df'].astype(int)
+
+        int_format = "S"
+        percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
+
+        latex = (
+            tex_df.style
+            .hide(axis="index")
+            .relabel_index(header_entries, axis="columns")
+            .to_latex(
+                hrules=True,
+                column_format=int_format + r"l" + int_format + percent_format + "c" + percent_format,
+            )
+        )
+        return latex
 
     def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
                                      anova_hc3: pd.DataFrame):
