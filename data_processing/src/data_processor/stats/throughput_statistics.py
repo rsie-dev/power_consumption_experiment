@@ -49,7 +49,10 @@ class ThroughputStatistics(Processor):
 
         self._validate_data_quantity(comp, self._threading, self._mode)
         self._validate_temporal_drift(comp, self._threading, self._mode)
-        effect_ranking_df = self._calculate_statistics(comp, self._threading, self._mode)
+
+        effect_ranking_df, means_ci  = self._calculate_statistics(comp, self._threading, self._mode)
+        self._create_means_ci_files(means_ci, tp_file)
+
         if self._create_tex:
             base = tp_file.stem.removeprefix("tp_")
             filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
@@ -59,6 +62,12 @@ class ThroughputStatistics(Processor):
             ]
             filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
             self._create_effect_ranking_tex(top_df, filename)
+
+    def _create_means_ci_files(self, means_ci: dict, tp_file: Path):
+        base = tp_file.stem.removeprefix("tp_")
+        for effect, df in means_ci.items():
+            filename = "tp_effect_%s_%s_%s_%s" % (self._threading, self._mode, effect, base) + ".csv"
+            self._frameio.persist(df, self._resources / filename)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         reference = 1 * ureg.byte / ureg.second
@@ -168,7 +177,7 @@ class ThroughputStatistics(Processor):
             return "material decrease"
         return "inconclusive"
 
-    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> pd.DataFrame:
+    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> tuple[pd.DataFrame, dict]:
         print("")
         print("-" * 20 + " Calculate statistics " + "-" * 20)
         print("")
@@ -257,7 +266,7 @@ class ThroughputStatistics(Processor):
         print("Relevant %d%% factors: %s" % (relevant_percent, " > ".join([str(f) for f in relevant_factors])))
 
         #self._show_factor_means(comp, relevant_factors)
-        self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
+        means_ci = self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
         ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects)
@@ -269,7 +278,7 @@ class ThroughputStatistics(Processor):
 
         throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3)
         self._print_throughput_table(threading, mode, throughput_values_df)
-        return effect_ranking
+        return effect_ranking, means_ci
 
     def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
         diagnostics_comp_mt = comp.copy()
@@ -699,15 +708,17 @@ class ThroughputStatistics(Processor):
 
     def _show_factor_means_ci(self, comp: pd.DataFrame,
                               full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
-                              relevant_factors: list):
+                              relevant_factors: list) -> dict:
         print("")
         print("-" * 20 + " Factor means CIs " + "-" * 20)
         print("")
+        result = {}
         for relevant_factor in relevant_factors:
             print("")
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
                 self._print_mean_cis(relevant_factor, mean_cis)
+                result[relevant_factor] = mean_cis
 
                 factor_ratios = self._calculate_throughput_ratios_between_factor_levels(comp,
                                                                                         full_model, full_model_hc3,
@@ -718,12 +729,14 @@ class ThroughputStatistics(Processor):
                 combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
                                                                        relevant_factor, factor2_levels)
                 self._print_mean_cis(relevant_factor, combination_ci)
+                result["_".join(relevant_factor)] = combination_ci
 
                 combination_ratios = self._calculate_throughput_ratios_within_factor_levels(comp,
                                                                                             full_model, full_model_hc3,
                                                                                             relevant_factor,
                                                                                             factor2_levels)
                 self._print_throughput_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
+        return result
 
     def _print_ci(self, sorted_ci_values: pd.DataFrame):
         headers = ["Factor", "ω²", "CI low", "CI high"]
@@ -897,8 +910,8 @@ class ThroughputStatistics(Processor):
                 se = np.sqrt(l @ cov @ l)
 
                 rows.append({
-                    "factor1": factor1_level,
-                    "factor2": factor2_level,
+                    factor1: factor1_level,
+                    factor2: factor2_level,
                     "mean_throughput": np.exp(estimate),
                     "ci_low": np.exp(estimate - 1.96 * se),
                     "ci_high": np.exp(estimate + 1.96 * se),
@@ -906,7 +919,7 @@ class ThroughputStatistics(Processor):
 
         combination_ci = pd.DataFrame(rows)
         combination_ci = combination_ci.sort_values(
-            by=["factor1", "mean_throughput"],
+            by=[factor1, "mean_throughput"],
             ascending=[True, False],
         )
 
