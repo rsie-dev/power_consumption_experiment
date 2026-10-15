@@ -7,7 +7,6 @@ import tabulate
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
-from jinja2.filters import do_format
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
@@ -18,6 +17,7 @@ from data_processor import ureg
 from data_processor.processor import Processor
 from data_processor.constants import get_factor_levels
 from data_processor.util import tabulate_pint
+from .effect_names import get_effect_name
 
 
 class ThroughputStatistics(Processor):
@@ -436,6 +436,7 @@ class ThroughputStatistics(Processor):
 
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
         table_df = table_df.drop(columns=["ci_low", "ci_high"])
+        table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
                    "95% bootstrap CI", "HC3 F", "HC3 p"]
         coalign = ["global"] * len(headers)
@@ -461,6 +462,8 @@ class ThroughputStatistics(Processor):
         df['df'] = df['df'].astype(int)
         for column in ["omega_squared", "ci_low", "ci_high"]:
             df["%s_percent" % column] = df[column] * 100
+
+        df["Effect"] = df["Effect"].map(get_effect_name)
 
         tex_df = df[["Rank", "Effect", "df",
                      "omega_squared_percent", "ci_low_percent", "ci_high_percent",
@@ -584,6 +587,7 @@ class ThroughputStatistics(Processor):
 
     def _print_throughput_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
+        display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         for column in ["mean_throughput", "ci_low", "ci_high"]:
             display_df[column] = display_df[column].pint.to("MiB/s")
 
