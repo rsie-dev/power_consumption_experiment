@@ -52,8 +52,13 @@ class ThroughputStatistics(Processor):
         effect_ranking_df = self._calculate_statistics(comp, self._threading, self._mode)
         if self._create_tex:
             base = tp_file.stem.removeprefix("tp_")
-            filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+            filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
             self._create_effect_ranking_tex(effect_ranking_df, filename)
+            top_df = effect_ranking_df[
+                effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
+            ]
+            filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+            self._create_effect_ranking_tex(top_df, filename)
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         reference = 1 * ureg.byte / ureg.second
@@ -452,6 +457,7 @@ class ThroughputStatistics(Processor):
             f.write(latex)
 
     def _build_effect_ranking_lines(self, df: pd.DataFrame) -> str:
+        df = df.copy()
         df['df'] = df['df'].astype(int)
         for column in ["omega_squared", "ci_low", "ci_high"]:
             df["%s_percent" % column] = df[column] * 100
