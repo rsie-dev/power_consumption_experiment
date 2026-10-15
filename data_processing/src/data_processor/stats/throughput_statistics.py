@@ -471,6 +471,8 @@ class ThroughputStatistics(Processor):
 
         int_format = "S[table-format=2]"
         percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
+        ci_format = ("S[round-mode=places, round-precision=2, table-format=2.2, "
+                     "table-fixed-width=true, table-column-width=0.9cm, table-text-alignment=center]")
         latex = (
             tex_df.style
             .hide(axis="index")
@@ -484,8 +486,8 @@ class ThroughputStatistics(Processor):
                     "l" +
                     int_format +
                     percent_format +
-                    percent_format +
-                    percent_format +
+                    ci_format +
+                    ci_format +
                     percent_format
                 ),
             )
