@@ -60,6 +60,9 @@ class Processor:
                                    required=True, help="threading configuration")
         factor_parser.add_argument('--mode', choices=['compress', 'decompress'], help="operation mode")
 
+        tex_parser = argparse.ArgumentParser(add_help=False)
+        tex_parser.add_argument('--tex', action='store_true', help="create latex table")
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
@@ -69,7 +72,7 @@ class Processor:
         parser_stats_raw.set_defaults(func=self._stats_raw)
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
-                                                       parents=[common_parser, factor_parser])
+                                                       parents=[common_parser, factor_parser, tex_parser])
         parser_stats_tp.add_argument('--boot', default=1000, type=int, help="bootstrap count")
         parser_stats_tp.add_argument('--seed', type=int, help="RNG seed value")
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
@@ -84,9 +87,7 @@ class Processor:
         filter_parser.add_argument('--no-tool', nargs="*", help="tools to skip")
         filter_parser.add_argument('--no-data-set', nargs="*", help="data sets to skip")
 
-        calc_parser = argparse.ArgumentParser(add_help=False, parents=[common_parser, filter_parser])
-        calc_parser.add_argument('--tex', action='store_true', help="create latex table")
-
+        calc_parser = argparse.ArgumentParser(add_help=False, parents=[common_parser, filter_parser, tex_parser])
         parser_calc_cr = subparsers_calc.add_parser('cr', help="calculate compression ratio",
                                                     parents=[calc_parser, energy_parser])
         parser_calc_cr.set_defaults(func=self._calc_cr)
@@ -141,20 +142,17 @@ class Processor:
         validate.validate()
 
     def _stats_raw(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         statistics = Statistics(resources_folder)
         statistics.process(args.used_energy_file)
 
     def _stats_tp(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
-        statistics = ThroughputStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode)
+        resources_folder = self._prepare_resource_folder(args.resources)
+        statistics = ThroughputStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
         statistics.process(args.tp_file)
 
     def _calc_cr(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         cr = CompressionRatio(resources_folder)
         params = CompressionRatio.Params(
             used_energy_file=args.used_energy_file,
@@ -165,8 +163,7 @@ class Processor:
         cr.process(params)
 
     def _calc_through(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         tp = Throughput(resources_folder)
         params = EnergyParams(
             used_energy_file=args.used_energy_file,
@@ -176,8 +173,7 @@ class Processor:
         tp.process(params)
 
     def _calc_power(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         tp = AveragePower(resources_folder)
         params = EnergyParams(
             used_energy_file=args.used_energy_file,
@@ -187,8 +183,7 @@ class Processor:
         tp.process(params)
 
     def _calc_energy_consumption(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         ec = EnergyConsumption(resources_folder)
         params = EnergyConsumption.ConsumptionParams(
             used_energy_file=args.used_energy_file,
@@ -199,8 +194,7 @@ class Processor:
         ec.process(params)
 
     def _calc_energy_efficiency(self, args):
-        resources_folder = args.resources
-        resources_folder.mkdir(parents=True, exist_ok=True)
+        resources_folder = self._prepare_resource_folder(args.resources)
         ec = EnergyEfficiency(resources_folder)
         params = EnergyEfficiency.EfficiencyParams(
             used_energy_file=args.used_energy_file,
@@ -209,6 +203,10 @@ class Processor:
             idle_power=args.idle_power,
         )
         ec.process(params)
+
+    def _prepare_resource_folder(self, resources_folder: Path ) -> Path:
+        resources_folder.mkdir(parents=True, exist_ok=True)
+        return resources_folder
 
 
 def app():
