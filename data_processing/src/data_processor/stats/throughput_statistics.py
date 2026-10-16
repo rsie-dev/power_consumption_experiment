@@ -5,10 +5,8 @@ import tabulate
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
-from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
-from tqdm import tqdm
 
 from data_processor import ureg
 from data_processor.constants import get_factor_levels
@@ -16,6 +14,7 @@ from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
 from .effect_names import get_effect_name
 from .factor_means import FactorMeans
+from .bootstrap_ci_calculator import BootstrapCiCalculator
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -23,6 +22,7 @@ class ThroughputStatistics(BaseStatistics):
         super().__init__(resources, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/s"
+        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, self._n_boot, self._rng)
 
     def process(self, tp_file: Path):
         print("")
@@ -203,8 +203,8 @@ class ThroughputStatistics(BaseStatistics):
         means_ci = factor_means.show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        ci_values, confidence_intervals = self._calculate_ci(comp, full_model.model.formula, effects)
-        self._print_ci(ci_values)
+        ci_values, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp, full_model.model.formula, effects)
+        self._bootstrap_ci_calculator.print_ci(ci_values)
 
         print("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
@@ -506,71 +506,6 @@ class ThroughputStatistics(BaseStatistics):
                 factor2_levels = get_factor_levels(relevant_factor[1], comp)
                 means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
                 self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
-
-    def _print_ci(self, sorted_ci_values: pd.DataFrame):
-        headers = ["Factor", "ω²", "CI low", "CI high"]
-        table_str = tabulate.tabulate(sorted_ci_values,
-                                      headers=headers,
-                                      )
-        print("")
-        print("95%% confidence interval table")
-        print(table_str)
-
-    def _calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) \
-            -> tuple[pd.DataFrame, pd.Series]:
-        # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
-        # Reason: This confirms whether the top-three ranking is stable.
-
-
-        boot_data = comp.reset_index(drop=True)
-
-        groups = list(
-            boot_data.groupby(self.factors, observed=True).indices.values()
-        )
-
-        boot_results = []
-        print("Calculating confidence intervals...")
-        for _ in tqdm(range(self._n_boot), colour="green"):
-            sampled_positions = np.concatenate([
-                self._rng.choice(group, size=len(group), replace=True)
-                for group in groups
-            ])
-
-            sample = boot_data.iloc[sampled_positions]
-
-            model = smf.ols(full_formula, data=sample).fit()
-            table = anova_lm(model, typ=3)
-
-            mse_boot = (
-                    table.loc["Residual", "sum_sq"]
-                    / table.loc["Residual", "df"]
-            )
-
-            y_boot = model.model.endog
-            ss_total_boot = np.sum((y_boot - y_boot.mean()) ** 2)
-
-            omega = (
-                            table["sum_sq"] - table["df"] * mse_boot
-                    ) / (ss_total_boot + mse_boot)
-
-            boot_results.append(
-                omega.drop(["Intercept", "Residual"]).clip(lower=0)
-            )
-
-        bootstrap_omega = pd.DataFrame(boot_results)
-
-        confidence_intervals = bootstrap_omega.quantile(
-            [0.025, 0.975]
-        ).T # transpose, swap rows and columns
-
-        confidence_intervals.columns = ["ci_low", "ci_high"]
-
-        results_with_ci = effects[["omega_squared"]].join(
-            confidence_intervals
-        )
-
-        sorted_values = results_with_ci.sort_values("omega_squared", ascending=False)
-        return sorted_values, confidence_intervals
 
     def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
         headers = [factor]
