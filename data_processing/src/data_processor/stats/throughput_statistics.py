@@ -14,29 +14,16 @@ from patsy.build import build_design_matrices
 from tqdm import tqdm
 
 from data_processor import ureg
-from data_processor.processor import Processor
 from data_processor.constants import get_factor_levels
 from data_processor.util import tabulate_pint
+from .base_statistics import BaseStatistics
 from .effect_names import get_effect_name
 
 
-class ThroughputStatistics(Processor):
-    DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
-
+class ThroughputStatistics(BaseStatistics):
     def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
-        super().__init__(resources)
+        super().__init__(resources, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._n_boot = n_boot
-        if seed is None:
-            seed = 12345
-        self._rng = np.random.default_rng(seed)
-        self._threading = threading
-        self._mode = mode
-        self._create_tex = create_tex
-
-    @property
-    def factors(self):
-        return ["host", "tool", "dataset", "strength"]
 
     def process(self, tp_file: Path):
         print("")
