@@ -198,7 +198,7 @@ class ThroughputStatistics(BaseStatistics):
 
         #self._show_factor_means(comp, relevant_factors)
         self._log_section("Factor means CIs")
-        factor_means = FactorMeans()
+        factor_means = FactorMeans(self.factors)
         means_ci = factor_means.show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
@@ -422,7 +422,7 @@ class ThroughputStatistics(BaseStatistics):
 
     def _create_throughput_table(self, comp: pd.DataFrame,
                                  full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
-        factor_means = FactorMeans()
+        factor_means = FactorMeans(self.factors)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, full_model)
         beta, cov = factor_means.get_beta_cov(full_model, full_model_hc3)
 

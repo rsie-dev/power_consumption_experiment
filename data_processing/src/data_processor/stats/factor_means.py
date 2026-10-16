@@ -12,12 +12,12 @@ from data_processor.util import tabulate_pint
 
 
 class FactorMeans:
-    def __init__(self):
-        pass
+    def __init__(self, factors: list[str]):
+        self._factors = factors
 
     @property
     def factors(self):
-        return ["host", "tool", "dataset", "strength"]
+        return self._factors
 
     def show_factor_means_ci(self, comp: pd.DataFrame,
                              full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
