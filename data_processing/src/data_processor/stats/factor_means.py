@@ -12,12 +12,21 @@ from data_processor.util import tabulate_pint
 
 
 class FactorMeans:
-    def __init__(self, factors: list[str]):
+    def __init__(self, factors: list[str], base_column):
         self._factors = factors
+        self._base_column = base_column
 
     @property
     def factors(self):
         return self._factors
+
+    @property
+    def base_column(self):
+        return self._base_column
+
+    @property
+    def base_upper(self):
+        return self._base_column.capitalize()
 
     def show_factor_means_ci(self, comp: pd.DataFrame,
                              full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
@@ -52,7 +61,7 @@ class FactorMeans:
         if isinstance(factor, str):
             factor = [factor]
         headers = list(factor) + ["Mean", "CI low", "CI high"]
-        for column in ["mean_throughput", "ci_low", "ci_high"]:
+        for column in ["mean_%s" % self.base_column, "ci_low", "ci_high"]:
             mean_cis[column] = mean_cis[column].pint.to("MiB/s")
         table_str = tabulate_pint(
             mean_cis,
@@ -74,7 +83,7 @@ class FactorMeans:
                                       showindex=False,
                                       headers=headers,
                                       )
-        print(f"Throughput ratios {kind} factor levels of: {factor_combination}")
+        print(f"{self.base_upper} ratios {kind} factor levels of: {factor_combination}")
         print(table_str)
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
@@ -85,7 +94,7 @@ class FactorMeans:
         mean_cis = self.marginal_mean_ci(factor, levels, grid, x_grid, beta, cov, comp)
 
         mean_cis = mean_cis.sort_values(
-            by=["mean_throughput"],
+            by=["mean_%s" % self.base_column],
             ascending=False,
         )
         return mean_cis
@@ -99,6 +108,7 @@ class FactorMeans:
         rows = []
         factor1 = factor_combination[0]
         factor2 = factor_combination[1]
+        mean_column = "mean_%s" % self.base_column
         for factor1_level in levels[factor1]:
             for factor2_level in factor2_levels:
                 mask = (
@@ -113,19 +123,19 @@ class FactorMeans:
                 rows.append({
                     factor1: factor1_level,
                     factor2: factor2_level,
-                    "mean_throughput": np.exp(estimate),
+                    mean_column: np.exp(estimate),
                     "ci_low": np.exp(estimate - 1.96 * se),
                     "ci_high": np.exp(estimate + 1.96 * se),
                 })
 
         combination_ci = pd.DataFrame(rows)
         combination_ci = combination_ci.sort_values(
-            by=[factor1, "mean_throughput"],
+            by=[factor1, mean_column],
             ascending=[True, False],
         )
 
-        unit_ref = comp["throughput"].dtype
-        for column in ["mean_throughput", "ci_low", "ci_high"]:
+        unit_ref = comp[self.base_column].dtype
+        for column in [mean_column, "ci_low", "ci_high"]:
             combination_ci[column] = combination_ci[column].astype(unit_ref)
 
         return combination_ci
@@ -206,6 +216,7 @@ class FactorMeans:
                          beta: np.ndarray, cov: np.ndarray,
                          comp: pd.DataFrame):
         rows = []
+        mean_column = "mean_%s" % self.base_column
         for level in levels[factor]:
             l = x_grid[grid[factor] == level].mean(axis=0)
 
@@ -214,14 +225,14 @@ class FactorMeans:
 
             rows.append({
                 factor: level,
-                "mean_throughput": np.exp(estimate),
+                mean_column: np.exp(estimate),
                 "ci_low": np.exp(estimate - 1.96 * se),
                 "ci_high": np.exp(estimate + 1.96 * se)
             })
 
         marginal_means_df = pd.DataFrame(rows)
-        unit_ref = comp["throughput"].dtype
-        for column in ["mean_throughput", "ci_low", "ci_high"]:
+        unit_ref = comp[self.base_column].dtype
+        for column in [mean_column, "ci_low", "ci_high"]:
             marginal_means_df[column] = marginal_means_df[column].astype(unit_ref)
         return marginal_means_df
 
