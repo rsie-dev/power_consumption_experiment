@@ -22,6 +22,7 @@ class ThroughputStatistics(BaseStatistics):
     def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._display_unit = "MiB/s"
 
     def process(self, tp_file: Path):
         print("")
@@ -198,7 +199,7 @@ class ThroughputStatistics(BaseStatistics):
 
         #self._show_factor_means(comp, relevant_factors)
         self._log_section("Factor means CIs")
-        factor_means = FactorMeans(self.factors, "throughput", "MiB/s")
+        factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
         means_ci = factor_means.show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
@@ -397,7 +398,7 @@ class ThroughputStatistics(BaseStatistics):
         display_df = throughput_values_df.copy()
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         for column in ["mean_throughput", "ci_low", "ci_high"]:
-            display_df[column] = display_df[column].pint.to("MiB/s")
+            display_df[column] = display_df[column].pint.to(self._display_unit)
 
         unit = display_df["ci_low"].pint.units
 
@@ -422,7 +423,7 @@ class ThroughputStatistics(BaseStatistics):
 
     def _create_throughput_table(self, comp: pd.DataFrame,
                                  full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
-        factor_means = FactorMeans(self.factors, "throughput", "MiB/s")
+        factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, full_model)
         beta, cov = factor_means.get_beta_cov(full_model, full_model_hc3)
 
@@ -576,10 +577,10 @@ class ThroughputStatistics(BaseStatistics):
         if extra_columns:
             headers += extra_columns
             for column in extra_columns:
-                means[column] = means[column].pint.to("MiB/s")
+                means[column] = means[column].pint.to(self._display_unit)
         else:
             headers += ["Mean throughput"]
-            means["geometric_mean_throughput"] = means["geometric_mean_throughput"].pint.to("MiB/s")
+            means["geometric_mean_throughput"] = means["geometric_mean_throughput"].pint.to(self._display_unit)
         table_str = tabulate_pint(
             means,
             headers=headers,
