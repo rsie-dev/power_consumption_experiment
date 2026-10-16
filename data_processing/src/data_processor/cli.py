@@ -6,7 +6,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .stats import Statistics, ThroughputStatistics
+from .stats import Statistics, ThroughputStatistics, EnergyEfficiencyStatistics
 from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
 
@@ -78,6 +78,12 @@ class Processor:
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
 
+        parser_stats_ee = subparsers_stats.add_parser('ee', help="calculate energy efficiency statistics",
+                                                      parents=[common_parser, factor_parser, tex_parser])
+        parser_stats_ee.add_argument('--boot', default=1000, type=int, help="bootstrap count")
+        parser_stats_ee.add_argument('--seed', type=int, help="RNG seed value")
+        parser_stats_ee.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
+        parser_stats_ee.set_defaults(func=self._stats_ee)
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
         subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
@@ -150,6 +156,11 @@ class Processor:
         resources_folder = self._prepare_resource_folder(args.resources)
         statistics = ThroughputStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
         statistics.process(args.tp_file)
+
+    def _stats_ee(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        statistics = EnergyEfficiencyStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
+        statistics.process(args.ee_file)
 
     def _calc_cr(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
