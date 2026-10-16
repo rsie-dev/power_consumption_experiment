@@ -8,12 +8,14 @@ from statsmodels.stats.anova import anova_lm
 
 from data_processor import ureg
 from .base_statistics import BaseStatistics
+from .factor_means import FactorMeans
 
 
 class EnergyEfficiencyStatistics(BaseStatistics):
     def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._display_unit = "MiB/joule"
 
     def process(self, ee_file: Path):
         self._log_section("Process %s %s" % (self._threading, self._mode))
@@ -40,8 +42,8 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         )
 
         # Dimensionless logarithms relative to 1 B/J
-        df["log_ee_total"] = np.log(df["ee_total_bpj"])
-        df["log_ee_net"] = np.log(df["ee_net_bpj"])
+        df["log_energy_efficiency_total"] = np.log(df["ee_total_bpj"])
+        df["log_energy_efficiency_net"] = np.log(df["ee_net_bpj"])
 
         #reference = 1 * ureg.byte / ureg.joule
         #normalized_total = df["energy_efficiency_total"] / reference
@@ -58,10 +60,10 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def _calculate_statistics(self, comp: pd.DataFrame):
         self._log_section("Calculate statistics")
 
-        total_two_way_model = self._fit_two_way_model(comp,"log_ee_total")
-        total_three_way_model, total_full_model = self._fit_higher_order_models(comp, "log_ee_total")
-        net_two_way_model = self._fit_two_way_model(comp, "log_ee_net")
-        net_three_way_model, net_full_model = self._fit_higher_order_models(comp, "log_ee_net")
+        total_two_way_model = self._fit_two_way_model(comp,"log_energy_efficiency_total")
+        total_three_way_model, total_full_model = self._fit_higher_order_models(comp, "log_energy_efficiency_total")
+        net_two_way_model = self._fit_two_way_model(comp, "log_energy_efficiency_net")
+        net_three_way_model, net_full_model = self._fit_higher_order_models(comp, "log_energy_efficiency_net")
 
         self._print_fitted_models("total", total_two_way_model, total_three_way_model, total_full_model)
         self._print_fitted_models("net", net_two_way_model, net_three_way_model, net_full_model)
@@ -101,5 +103,12 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             cov_type="HC3"
         )
 
-        total_means_ci = self._show_factor_means_ci(comp, total_three_way_model, total_three_way_model_hc3, total_relevant_factors)
-        #net_means_ci = self._show_factor_means_ci(comp, net_three_way_model, net_three_way_model_hc3, net_relevant_factors)
+        self._log_section("Factor mean CIs")
+        total_factor_means = FactorMeans(self.factors, "energy_efficiency_total", self._display_unit)
+        print("Factor mean CI total")
+        total_means_ci = total_factor_means.show_factor_means_ci(comp, total_three_way_model,
+                                                                 total_three_way_model_hc3, total_relevant_factors)
+        net_factor_means = FactorMeans(self.factors, "energy_efficiency_net", self._display_unit)
+        print("Factor mean CI net")
+        net_means_ci = net_factor_means.show_factor_means_ci(comp, net_three_way_model,
+                                                             net_three_way_model_hc3, net_relevant_factors)
