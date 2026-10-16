@@ -21,7 +21,7 @@ def sample_throughput() -> pd.DataFrame:
 
 @pytest.fixture
 def calculator():
-    return ThroughputStatistics(Mock(spec=Path), 0, None)
+    return ThroughputStatistics(Mock(spec=Path), 1, None, "single", "compress", False)
 
 
 def test_calculate_base(calculator, sample_throughput):
