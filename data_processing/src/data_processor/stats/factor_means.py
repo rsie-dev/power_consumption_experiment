@@ -22,29 +22,29 @@ class FactorMeans:
         return self._base_column.capitalize()
 
     def show_factor_means_ci(self, comp: pd.DataFrame,
-                             full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
+                             model: RegressionResultsWrapper, model_hc3: OLSResults,
                              relevant_factors: list) -> dict:
         result = {}
         for relevant_factor in relevant_factors:
             print("")
             if isinstance(relevant_factor, str):
-                mean_cis = self._calculate_factor_ci(comp, full_model, full_model_hc3, relevant_factor)
+                mean_cis = self._calculate_factor_ci(comp, model, model_hc3, relevant_factor)
                 self._print_mean_cis(relevant_factor, mean_cis)
                 result[relevant_factor] = mean_cis
 
                 factor_ratios = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                        full_model, full_model_hc3,
+                                                                                        model, model_hc3,
                                                                                         relevant_factor)
                 self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
             else:
                 factor2_levels = get_factor_levels(relevant_factor[1], comp)
-                combination_ci = self._calculate_factor_combination_ci(comp, full_model, full_model_hc3,
+                combination_ci = self._calculate_factor_combination_ci(comp, model, model_hc3,
                                                                        relevant_factor, factor2_levels)
                 self._print_mean_cis(relevant_factor, combination_ci)
                 result["_".join(relevant_factor)] = combination_ci
 
                 combination_ratios = self._calculate_throughput_ratios_within_factor_levels(comp,
-                                                                                            full_model, full_model_hc3,
+                                                                                            model, model_hc3,
                                                                                             relevant_factor,
                                                                                             factor2_levels)
                 self._print_throughput_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
@@ -79,10 +79,10 @@ class FactorMeans:
         print(f"{self.base_upper} ratios {kind} factor levels of: {factor_combination}")
         print(table_str)
 
-    def _calculate_factor_ci(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
+    def _calculate_factor_ci(self, comp: pd.DataFrame, model: RegressionResultsWrapper, model_hc3: OLSResults,
                              factor: str):
-        levels, grid, x_grid = self.calculate_x_grid(comp, full_model)
-        beta, cov = self.get_beta_cov(full_model, full_model_hc3)
+        levels, grid, x_grid = self.calculate_x_grid(comp, model)
+        beta, cov = self.get_beta_cov(model, model_hc3)
 
         mean_cis = self.marginal_mean_ci(factor, levels, grid, x_grid, beta, cov, comp)
 
@@ -93,10 +93,10 @@ class FactorMeans:
         return mean_cis
 
     def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
-                                         full_model: RegressionResultsWrapper, full_model_hc3: OLSResults,
+                                         model: RegressionResultsWrapper, model_hc3: OLSResults,
                                          factor_combination: list[str], factor2_levels: list[str]):
-        levels, grid, x_grid = self.calculate_x_grid(comp, full_model)
-        beta, cov = self.get_beta_cov(full_model, full_model_hc3)
+        levels, grid, x_grid = self.calculate_x_grid(comp, model)
+        beta, cov = self.get_beta_cov(model, model_hc3)
 
         rows = []
         factor1 = factor_combination[0]
@@ -134,11 +134,11 @@ class FactorMeans:
         return combination_ci
 
     def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
-                                                           full_model: RegressionResultsWrapper,
-                                                           full_model_hc3: OLSResults,
+                                                           model: RegressionResultsWrapper,
+                                                           model_hc3: OLSResults,
                                                            factor: str):
-        levels, grid, x_grid = self.calculate_x_grid(comp, full_model)
-        beta, cov = self.get_beta_cov(full_model, full_model_hc3)
+        levels, grid, x_grid = self.calculate_x_grid(comp, model)
+        beta, cov = self.get_beta_cov(model, model_hc3)
 
         rows = []
         for first, second in combinations(levels[factor], 2):
@@ -165,12 +165,12 @@ class FactorMeans:
         return dataset_ratios
 
     def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
-                                                          full_model: RegressionResultsWrapper,
-                                                          full_model_hc3: OLSResults,
+                                                          model: RegressionResultsWrapper,
+                                                          model_hc3: OLSResults,
                                                           factor_combination: list[str],
                                                           factor2_levels: list[str]):
-        levels, grid, x_grid = self.calculate_x_grid(comp, full_model)
-        beta, cov = self.get_beta_cov(full_model, full_model_hc3)
+        levels, grid, x_grid = self.calculate_x_grid(comp, model)
+        beta, cov = self.get_beta_cov(model, model_hc3)
 
         factor2_pairs = list(combinations(factor2_levels, 2))
 
@@ -206,8 +206,7 @@ class FactorMeans:
         return combination_ratios
 
     def marginal_mean_ci(self, factor: str, levels: dict, grid, x_grid: np.ndarray,
-                         beta: np.ndarray, cov: np.ndarray,
-                         comp: pd.DataFrame):
+                         beta: np.ndarray, cov: np.ndarray, comp: pd.DataFrame):
         rows = []
         mean_column = "mean_%s" % self._base_column
         for level in levels[factor]:
