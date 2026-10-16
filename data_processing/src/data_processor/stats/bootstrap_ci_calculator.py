@@ -18,7 +18,7 @@ class BootstrapCiCalculator:
                                       headers=headers,
                                       )
         print("")
-        print("95%% confidence interval table")
+        print("95% confidence interval table")
         print(table_str)
 
     def calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) \

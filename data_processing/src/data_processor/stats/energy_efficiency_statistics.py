@@ -9,6 +9,7 @@ from statsmodels.stats.anova import anova_lm
 from data_processor import ureg
 from .base_statistics import BaseStatistics
 from .factor_means import FactorMeans
+from .bootstrap_ci_calculator import BootstrapCiCalculator
 
 
 class EnergyEfficiencyStatistics(BaseStatistics):
@@ -16,6 +17,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         super().__init__(resources, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/joule"
+        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, self._n_boot, self._rng)
 
     def process(self, ee_file: Path):
         self._log_section("Process %s %s" % (self._threading, self._mode))
@@ -112,3 +114,16 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         print("Factor mean CI net")
         net_means_ci = net_factor_means.show_factor_means_ci(comp, net_three_way_model,
                                                              net_three_way_model_hc3, net_relevant_factors)
+
+        # Check that the top confidence intervals do not overlap
+        total_ci_values, total_confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp,
+                                                                                                 total_three_way_model.model.formula,
+                                                                                                 total_effects)
+        print("Bootstrap 95% CI total")
+        self._bootstrap_ci_calculator.print_ci(total_ci_values)
+
+        net_ci_values, net_confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp,
+                                                                                             net_three_way_model.model.formula,
+                                                                                             net_effects)
+        print("Bootstrap 95% CI net")
+        self._bootstrap_ci_calculator.print_ci(net_ci_values)
