@@ -179,14 +179,6 @@ class ThroughputStatistics(BaseStatistics):
         extremes = self._get_diagnostics(full_model)
         self._print_diagnostics(extremes)
 
-        # Make later statistical inference robust to unequal residual variance.
-        # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
-        # variability and keeps the method consistent with compression.
-        # -> use HC3 version for confidence intervals and significance tests.
-        full_model_hc3 = full_model.get_robustcov_results(
-            cov_type="HC3"
-        )
-
         anova_hc3 = self._calculate_anova_hc3(full_model)
         self._print_anova_hc3("", anova_hc3)
 
@@ -196,6 +188,14 @@ class ThroughputStatistics(BaseStatistics):
         relevant_factors = self._extract_relevant_factors(ranked, relevant_percent)
         print("")
         print("Relevant %d%% factors: %s" % (relevant_percent, " > ".join([str(f) for f in relevant_factors])))
+
+        # Make later statistical inference robust to unequal residual variance.
+        # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
+        # variability and keeps the method consistent with compression.
+        # -> use HC3 version for confidence intervals and significance tests.
+        full_model_hc3 = full_model.get_robustcov_results(
+            cov_type="HC3"
+        )
 
         #self._show_factor_means(comp, relevant_factors)
         means_ci = self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
