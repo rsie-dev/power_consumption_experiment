@@ -27,7 +27,7 @@ class EnergyEfficiency(BaseEnergyCalculator):
         energy_df = self._order_data(energy_df)
 
         self._print_table(energy_df)
-        energy_file = "energy_efficiency_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
+        energy_file = "ee_%s" % params.used_energy_file.stem.removeprefix("used_energy_") + ".csv"
         self._create_csv(energy_file, energy_df)
 
     def _print_table(self, df: pd.DataFrame) -> None:

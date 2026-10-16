@@ -6,9 +6,7 @@ import pandas as pd
 def sample_idle_power_df() -> pd.DataFrame:
     df = pd.DataFrame({
         "host": ["host1", "host2"],
-        "duration": [2, 2],
-        "energy": [10, 4],
+        "average_power": [5, 2]
     })
-    df["duration"] = df["duration"].astype("pint[second]")
-    df["energy"] = df["energy"].astype("pint[joule]")
+    df["average_power"] = df["average_power"].astype("pint[watt]")
     return df
