@@ -12,17 +12,10 @@ from data_processor.util import tabulate_pint
 
 
 class FactorMeans:
-    def __init__(self, factors: list[str], base_column):
+    def __init__(self, factors: list[str], base_column, display_unit):
         self._factors = factors
         self._base_column = base_column
-
-    @property
-    def factors(self):
-        return self._factors
-
-    @property
-    def base_column(self):
-        return self._base_column
+        self._display_unit = display_unit
 
     @property
     def base_upper(self):
@@ -61,8 +54,8 @@ class FactorMeans:
         if isinstance(factor, str):
             factor = [factor]
         headers = list(factor) + ["Mean", "CI low", "CI high"]
-        for column in ["mean_%s" % self.base_column, "ci_low", "ci_high"]:
-            mean_cis[column] = mean_cis[column].pint.to("MiB/s")
+        for column in ["mean_%s" % self._base_column, "ci_low", "ci_high"]:
+            mean_cis[column] = mean_cis[column].pint.to(self._display_unit)
         table_str = tabulate_pint(
             mean_cis,
             showindex=False,
@@ -94,7 +87,7 @@ class FactorMeans:
         mean_cis = self.marginal_mean_ci(factor, levels, grid, x_grid, beta, cov, comp)
 
         mean_cis = mean_cis.sort_values(
-            by=["mean_%s" % self.base_column],
+            by=["mean_%s" % self._base_column],
             ascending=False,
         )
         return mean_cis
@@ -108,7 +101,7 @@ class FactorMeans:
         rows = []
         factor1 = factor_combination[0]
         factor2 = factor_combination[1]
-        mean_column = "mean_%s" % self.base_column
+        mean_column = "mean_%s" % self._base_column
         for factor1_level in levels[factor1]:
             for factor2_level in factor2_levels:
                 mask = (
@@ -134,7 +127,7 @@ class FactorMeans:
             ascending=[True, False],
         )
 
-        unit_ref = comp[self.base_column].dtype
+        unit_ref = comp[self._base_column].dtype
         for column in [mean_column, "ci_low", "ci_high"]:
             combination_ci[column] = combination_ci[column].astype(unit_ref)
 
@@ -216,7 +209,7 @@ class FactorMeans:
                          beta: np.ndarray, cov: np.ndarray,
                          comp: pd.DataFrame):
         rows = []
-        mean_column = "mean_%s" % self.base_column
+        mean_column = "mean_%s" % self._base_column
         for level in levels[factor]:
             l = x_grid[grid[factor] == level].mean(axis=0)
 
@@ -231,7 +224,7 @@ class FactorMeans:
             })
 
         marginal_means_df = pd.DataFrame(rows)
-        unit_ref = comp[self.base_column].dtype
+        unit_ref = comp[self._base_column].dtype
         for column in [mean_column, "ci_low", "ci_high"]:
             marginal_means_df[column] = marginal_means_df[column].astype(unit_ref)
         return marginal_means_df
@@ -239,12 +232,12 @@ class FactorMeans:
     def calculate_x_grid(self, comp: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[dict, pd.DataFrame, np.ndarray]:
         levels = {
             factor: comp[factor].unique().tolist()
-            for factor in self.factors
+            for factor in self._factors
         }
 
         grid = pd.DataFrame(
-            product(*(levels[f] for f in self.factors)),
-            columns=self.factors
+            product(*(levels[f] for f in self._factors)),
+            columns=self._factors
         )
 
         x_grid = np.asarray(
