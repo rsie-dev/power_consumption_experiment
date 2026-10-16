@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from itertools import product, combinations
-import re
 
 import tabulate
 import pandas as pd
@@ -31,13 +30,13 @@ class ThroughputStatistics(BaseStatistics):
         print("")
 
         df = self._frameio.load(tp_file)
-        comp = self._extract_data(df, self._mode, self._threading)
+        comp = self._extract_data(df)
         comp = self._calculate_base(comp)
 
-        self._validate_data_quantity(comp, self._threading, self._mode)
+        self._validate_data_quantity(comp, "log_throughput")
         self._validate_temporal_drift(comp, self._threading, self._mode)
 
-        effect_ranking_df, means_ci  = self._calculate_statistics(comp, self._threading, self._mode)
+        effect_ranking_df, means_ci = self._calculate_statistics(comp, self._threading, self._mode)
         self._create_means_ci_files(means_ci, tp_file)
 
         if self._create_tex:
@@ -147,11 +146,6 @@ class ThroughputStatistics(BaseStatistics):
         drift_results["drift_conclusion"] = drift_results.apply(self._classify_drift, axis=1, threshold=threshold)
         return drift_results
 
-    def _extract_data(self, df: pd.DataFrame, mode: str, threading: str) -> pd.DataFrame:
-        df = df[df["mode"] == mode]
-        df = df[df["threading"] == threading]
-        return df
-
     def _classify_drift(self, row, threshold: float):
         low = row["ci_low_run1_to_run30_percent"]
         high = row["ci_high_run1_to_run30_percent"]
@@ -165,61 +159,11 @@ class ThroughputStatistics(BaseStatistics):
         return "inconclusive"
 
     def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> tuple[pd.DataFrame, dict]:
-        print("")
-        print("-" * 20 + " Calculate statistics " + "-" * 20)
-        print("")
+        self._log_section("Calculate statistics")
 
-        formula = """
-        log_throughput ~ (
-            C(host, Sum)
-            + C(tool, Sum)
-            + C(dataset, Sum)
-            + C(strength, Sum)
-        )**2
-        """
-
-        compression_model = smf.ols(
-            formula=formula,
-            data=comp
-        ).fit()
-        # The fit has the expected dimensions.
-        print("Two-way model:")
-        print("Observations:                 %d" % int(compression_model.nobs))
-        print("Model degrees of freedom:     %d" % int(compression_model.df_model))
-        print("Residual degrees of freedom:  %d" % int(compression_model.df_resid))
-        # This means the model explains about R^2 * 100% of observed log-throughput variation.
-        print("R-squared:                    %f" % compression_model.rsquared)
-
-        full_formula = """
-            log_throughput ~
-            C(host, Sum) *
-            C(tool, Sum) *
-            C(dataset, Sum) *
-            C(strength, Sum)
-        """
-        full_model = smf.ols(full_formula, data=comp).fit()
-        print(anova_lm(compression_model, full_model))
-        print("Full model:")
-        print("R² increase:", full_model.rsquared - compression_model.rsquared)
-
-        three_way_formula = """
-        log_throughput ~ (
-            C(host, Sum)
-            + C(tool, Sum)
-            + C(dataset, Sum)
-            + C(strength, Sum)
-        )**3
-        """
-
-        # Determine whether three-way interactions are sufficient
-        # or whether the four-way interaction is also needed.
-        three_way_model = smf.ols(
-            three_way_formula,
-            data=comp
-        ).fit()
-        print(anova_lm(compression_model, three_way_model, full_model))
-        print("Three-way R² gain:            %f" % (three_way_model.rsquared - compression_model.rsquared))
-        print("Four-way R² gain:             %f" % (full_model.rsquared - three_way_model.rsquared))
+        compression_model = self._fit_two_way_model(comp,"log_throughput")
+        three_way_model, full_model = self._fit_higher_order_models(comp, "log_throughput")
+        self._print_fitted_models("", compression_model, three_way_model, full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI
@@ -227,6 +171,7 @@ class ThroughputStatistics(BaseStatistics):
 
         self._print_residual_variance(comp, full_model)
 
+        print("")
         diagnostics = self._find_observations_that_strongly_influence_model(full_model)
         self._print_observations_that_strongly_influence_model(diagnostics)
 
@@ -243,10 +188,10 @@ class ThroughputStatistics(BaseStatistics):
         )
 
         anova_hc3 = self._calculate_anova_hc3(full_model)
-        self._print_anova_hc3(anova_hc3)
+        self._print_anova_hc3("", anova_hc3)
 
         effects, ranked = self._calculate_anova_table(full_model)
-        self._print_anova_table(ranked)
+        self._print_anova_table("", ranked)
         relevant_percent = 95
         relevant_factors = self._extract_relevant_factors(ranked, relevant_percent)
         print("")
@@ -256,7 +201,7 @@ class ThroughputStatistics(BaseStatistics):
         means_ci = self._show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        ci_values, confidence_intervals = self._calculate_ci(comp, full_formula, effects)
+        ci_values, confidence_intervals = self._calculate_ci(comp, full_model.model.formula, effects)
         self._print_ci(ci_values)
 
         print("")
@@ -295,140 +240,6 @@ class ThroughputStatistics(BaseStatistics):
             print("Note: no variation found for these configurations")
             print(zero_sd_configurations)
         print("Largest / smallest residual SD ratio: %f" % sd_ratio)
-
-    def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
-        relevant = []
-
-        first_interaction = None
-        for idx, _ in ranked.iterrows():
-            factors = self._extract_factors(str(idx))
-            if isinstance(factors, tuple):
-                first_interaction = factors
-                break
-
-        n = (ranked["omega_squared_percent"].cumsum() < target).sum() + 1
-        relevant_rows = ranked.iloc[:n]
-        for idx, _ in relevant_rows.iterrows():
-            factors = self._extract_factors(str(idx))
-            relevant.append(factors)
-
-        if first_interaction not in relevant:
-            relevant.append(first_interaction)
-
-        return relevant
-
-    def _extract_factors(self, entry: str) -> str | tuple:
-        regex = r"C\(\s*([^,]+)\s*,"
-        factors = []
-        for part in entry.split(":"):
-            search_result = re.search(regex, part)
-            factor = search_result.group(1).strip()
-            factors.append(factor)
-        if len(factors) == 1:
-            return factors[0]
-        return tuple(factors)
-
-    def _print_anova_table(self, ranked: pd.DataFrame):
-        headers = ["Factor", "DF", "ω²", "ω² %"]
-        table_str = tabulate.tabulate(ranked,
-                                      headers=headers,
-                                      )
-        print("")
-        print("ANOVA rank table:")
-        print(table_str)
-
-    def _calculate_anova_table(self, full_model: RegressionResultsWrapper):
-        # Rank factors and interactions by explained variation by omega^2.
-        # Reason: RQ asks which effects explain the most variation, which \(p\)-values cannot determine.
-        anova_ss = anova_lm(full_model, typ=3)
-        mse = (
-                anova_ss.loc["Residual", "sum_sq"]
-                / anova_ss.loc["Residual", "df"]
-        )
-        y = full_model.model.endog
-        ss_total = np.sum((y - y.mean()) ** 2)
-        effects = anova_ss.drop(
-            index=["Intercept", "Residual"]
-        ).copy()
-        effects["omega_squared"] = (
-                                     effects["sum_sq"] - effects["df"] * mse
-                                   ) / (ss_total + mse)
-        effects["omega_squared"] = effects["omega_squared"].clip(lower=0)
-        ranked = effects[["df", "omega_squared"]].sort_values("omega_squared", ascending=False)
-        ranked["omega_squared_percent"] = ranked["omega_squared"] * 100
-        return effects, ranked
-
-    def _print_anova_hc3(self, anova_hc3_df: pd.DataFrame):
-        headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]
-        table_str = tabulate.tabulate(anova_hc3_df,
-                                      headers=headers,
-                                      )
-        print("")
-        print("ANOVA HC3:")
-        print(table_str)
-
-    def _calculate_anova_hc3(self, full_model: RegressionResultsWrapper):
-        # Create robust inference for decompression effects.
-        # Reason: HC3 protects significance tests and confidence intervals against unequal
-        # configuration variability and keeps the method consistent with compression.
-        # Test which factors and interactions affect mean compression throughput
-        anova_hc3 = anova_lm(
-            full_model,
-            typ=3,
-            robust="hc3"
-        )
-        return anova_hc3
-
-    def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame):
-        headers = self.factors + ["run", "cooks_d"]
-        table_str = tabulate.tabulate(diagnostics,
-                                      showindex=False,
-                                      headers=headers,
-                                      )
-        print("Influence table")
-        print(table_str)
-
-    def _find_observations_that_strongly_influence_model(self, compression_model):
-        # Screen for observations that strongly influence the decompression model.
-        # Reason: A small number of influential trials could distort effect estimates.
-        influence = compression_model.get_influence()
-        cooks_d = influence.cooks_distance[0]
-        threshold = 4 / compression_model.nobs
-
-        print("")
-        print("Cook's threshold:             %f" % threshold)
-        print("Maximum Cook's distance:      %f" % cooks_d.max())
-        print("Observations above threshold: %d" % (cooks_d > threshold).sum())
-
-        run_factors = self.factors + ["run"]
-        diagnostics = compression_model.model.data.frame[
-            run_factors
-        ].copy()
-        diagnostics["cooks_d"] = cooks_d
-
-        diagnostics = diagnostics.sort_values(
-            by=["cooks_d"],
-            ascending=False,
-        )
-        diagnostics = diagnostics.head(10)
-        return diagnostics
-
-    def _validate_data_quantity(self, comp: pd.DataFrame, threading: str, mode: str):
-        cell_counts = comp.groupby(
-            self.factors,
-            observed=True
-        ).size()
-
-        print("Validate data quantity of:    %s %s" % (threading, mode))
-        print("Observations:                 %d" % len(comp))
-        print("Configurations:               %d" % len(cell_counts))
-        print("Min trials per configuration: %d" % cell_counts.min())
-        print("Max trials per configuration: %d" % cell_counts.max())
-        missing = comp["log_throughput"].isna().sum()
-        print("Missing response values:      %d" % missing)
-        if missing:
-            raise ValueError("Missing response values: %d" % missing)
-        print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
 
     def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
         table_df = table_df.drop(columns=["ci_low", "ci_high"])
@@ -1041,4 +852,3 @@ class ThroughputStatistics(BaseStatistics):
         combination_ratios = pd.DataFrame(rows)
 
         return combination_ratios
-
