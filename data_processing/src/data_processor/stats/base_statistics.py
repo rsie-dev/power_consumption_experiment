@@ -60,7 +60,8 @@ class BaseStatistics(Processor):
     def _print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
         # Check the fit has the expected dimensions.
         print()
-        print("Two-way model: %s" % kind)
+        extra = f" {kind}:" if kind else ":"
+        print("Two-way model%s" % extra)
         print("Observations:                 %d" % int(two_way_model.nobs))
         print("Model degrees of freedom:     %d" % int(two_way_model.df_model))
         print("Residual degrees of freedom:  %d" % int(two_way_model.df_resid))
