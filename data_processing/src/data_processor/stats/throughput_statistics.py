@@ -246,9 +246,8 @@ class ThroughputStatistics(BaseStatistics):
         return extremes_df
 
     def _show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
-        print("")
-        print("-" * 20 + " Factor means " + "-" * 20)
-        print("")
+        self._log_section("Factor means")
+
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
                 means_df = self._calculate_mean(comp, relevant_factor)
@@ -307,4 +306,3 @@ class ThroughputStatistics(BaseStatistics):
             means[column] = means[column].astype(unit_ref)
 
         return means
-
