@@ -11,7 +11,31 @@ from .base_statistics import BaseStatistics
 
 @pytest.fixture
 def calculator():
-    return BaseStatistics(Mock(spec=Path), 1, None, "single", "compress", False)
+    return BaseStatistics(Mock(spec=Path), "single", "compress", False)
+
+
+def test_build_interaction_formula(calculator):
+    actual_formula = calculator._build_interaction_formula("response", 2, ["host", "tool"])
+
+    expected_formula = """
+response ~ (
+    C(host, Sum)
+    + C(tool, Sum)
+)**2
+"""
+    assert actual_formula == expected_formula
+
+
+def test_build_full_formula(calculator):
+    actual_formula = calculator._build_full_formula("response", ["host", "tool"])
+
+    expected_formula = """
+response ~
+    C(host, Sum) *
+    C(tool, Sum)
+"""
+    assert actual_formula == expected_formula
+
 
 def test_extract_factors_one(calculator):
     actual_relevant_factors = calculator._extract_factors("C(tool, Sum)")

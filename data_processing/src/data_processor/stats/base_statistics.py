@@ -75,44 +75,42 @@ class BaseStatistics(Processor):
         print("Three-way R² gain:            %f" % (three_way_model.rsquared - two_way_model.rsquared))
         print("Four-way R² gain:             %f" % (full_model.rsquared - three_way_model.rsquared))
 
-    def _fit_two_way_model(self, data: pd.DataFrame, response):
+    def _build_interaction_formula(self, response: str, level: int, factors: list[str]):
+        return self._build_formula(response, level, factors, "+")
+
+    def _build_full_formula(self, response: str, factors: list[str]):
+        return self._build_formula(response, None, factors, "*")
+
+    def _build_formula(self, response: str, level: int | None, factors: list[str], operator: str):
+        opening = f"{response} ~ (" if level else f"{response} ~"
+        closing = f"\n)**{level}" if level else ""
+        terms = [f"C({name}, Sum)" for name in factors]
+        if level:
+            terms = "\n    + ".join(terms)
+        else:
+            terms = " *\n    ".join(terms)
         formula = f"""
-        {response} ~ (
-            C(host, Sum)
-            + C(tool, Sum)
-            + C(dataset, Sum)
-            + C(strength, Sum)
-        )**2
-        """
+{opening}
+    {terms}{closing}
+"""
+        return formula
+
+    def _fit_two_way_model(self, data: pd.DataFrame, response: str):
+        formula = self._build_interaction_formula(response, 2, self.factors)
 
         return smf.ols(
             formula=formula,
             data=data
         ).fit()
 
-    def _fit_higher_order_models(self, data: pd.DataFrame, response):
-        three_way_formula = f"""
-            {response} ~ (
-                C(host, Sum)
-                + C(tool, Sum)
-                + C(dataset, Sum)
-                + C(strength, Sum)
-            )**3
-        """
-
-        full_formula = f"""
-            {response} ~
-            C(host, Sum) *
-            C(tool, Sum) *
-            C(dataset, Sum) *
-            C(strength, Sum)
-        """
-
+    def _fit_higher_order_models(self, data: pd.DataFrame, response: str):
+        three_way_formula = self._build_interaction_formula(response, 3, self.factors)
         three_way_model = smf.ols(
             formula=three_way_formula,
             data=data
         ).fit()
 
+        full_formula = self._build_full_formula(response, self.factors)
         full_model = smf.ols(
             formula=full_formula,
             data=data
