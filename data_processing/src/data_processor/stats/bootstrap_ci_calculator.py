@@ -7,10 +7,12 @@ import tabulate
 
 
 class BootstrapCiCalculator:
-    def __init__(self, factors: list[str], n_boot: int, rng):
+    def __init__(self, factors: list[str], n_boot: int, seed: int | None):
         self._factors = factors
         self._n_boot = n_boot
-        self._rng = rng
+        if seed is None:
+            seed = 12345
+        self._rng = np.random.default_rng(seed)
 
     def print_ci(self, sorted_ci_values: pd.DataFrame):
         headers = ["Factor", "ω²", "CI low", "CI high"]
