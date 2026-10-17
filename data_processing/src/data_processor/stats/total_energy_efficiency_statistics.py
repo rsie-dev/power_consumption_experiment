@@ -29,7 +29,7 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
     def _validate_data(self, comp: pd.DataFrame):
         self._validate_data_quantity(comp, "energy_efficiency_total")
 
-    def _calculate_statistics(self, comp: pd.DataFrame):
+    def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Calculate statistics")
 
         two_way_model = self._fit_two_way_model(comp,"log_energy_efficiency_total")
@@ -65,7 +65,13 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         means_ci = total_factor_means.show_factor_means_ci(comp, three_way_model, three_way_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        ci_values, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp,
-                                                                                     three_way_model.model.formula,
-                                                                                     effects)
-        self._bootstrap_ci_calculator.print_ci(ci_values)
+        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp,
+                                                                             three_way_model.model.formula,
+                                                                             effects)
+        print("")
+        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
+        self._print_effect_ranking_table(self._threading, self._mode, effect_ranking)
+
+        factor_means_values_df = self._create_factor_means_table(comp, three_way_model, three_way_model_hc3, "energy_efficiency_total")
+        self._print_factor_table(factor_means_values_df, "energy_efficiency_total")
+        return effect_ranking, means_ci

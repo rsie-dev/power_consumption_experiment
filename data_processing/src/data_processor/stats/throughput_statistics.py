@@ -210,8 +210,8 @@ class ThroughputStatistics(BaseStatistics):
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(threading, mode, effect_ranking)
 
-        throughput_values_df = self._create_throughput_table(comp, full_model, full_model_hc3)
-        self._print_throughput_table(threading, mode, throughput_values_df)
+        factor_means_values_df = self._create_factor_means_table(comp, full_model, full_model_hc3)
+        self._print_factor_table(threading, mode, factor_means_values_df)
         return effect_ranking, means_ci
 
     def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
@@ -242,21 +242,6 @@ class ThroughputStatistics(BaseStatistics):
             print("Note: no variation found for these configurations")
             print(zero_sd_configurations)
         print("Largest / smallest residual SD ratio: %f" % sd_ratio)
-
-    def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
-        table_df = table_df.drop(columns=["ci_low", "ci_high"])
-        table_df["Effect"] = table_df["Effect"].map(get_effect_name)
-        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
-                   "95% bootstrap CI", "HC3 F", "HC3 p"]
-        coalign = ["global"] * len(headers)
-        coalign[2] = "right"
-        table_str = tabulate.tabulate(table_df,
-                                      showindex=False,
-                                      headers=headers,
-                                      colalign=coalign
-                                      )
-        print("Effect ranking table for: %s %s" % (threading, mode))
-        print(table_str)
 
     def _create_effect_ranking_tex(self, df: pd.DataFrame, filename: str):
         tex_file = self._resources / filename
@@ -322,79 +307,7 @@ class ThroughputStatistics(BaseStatistics):
 
         return latex
 
-    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
-                                     anova_hc3: pd.DataFrame):
-        effect_ranking = (
-            effects[["df", "omega_squared"]]
-            .join(confidence_intervals)
-            .join(anova_hc3[["F", "PR(>F)"]])
-        )
-
-        def clean_effect(term):
-            for factor in self.factors:
-                term = term.replace(f"C({factor}, Sum)", factor)
-            return term.replace(":", " × ")
-
-        type_names = {
-            1: "Main effect",
-            2: "Two-way interaction",
-            3: "Three-way interaction",
-            4: "Four-way interaction"
-        }
-
-        effect_ranking["Effect"] = [
-            clean_effect(term) for term in effect_ranking.index
-        ]
-
-        effect_ranking["Effect type"] = [
-            type_names[term.count(":") + 1]
-            for term in effect_ranking.index
-        ]
-
-        effect_ranking["Rank"] = (
-            effect_ranking["omega_squared"]
-            .rank(ascending=False, method="min")
-            .astype(int)
-        )
-
-        effect_ranking["95% bootstrap CI"] = (
-                effect_ranking["ci_low"].map(lambda x: f"{x:.6f}")
-                + "–"
-                + effect_ranking["ci_high"].map(lambda x: f"{x:.6f}")
-        )
-
-        effect_ranking["HC3 p"] = effect_ranking["PR(>F)"].map(
-            lambda p: "<0.001" if p < 0.001 else f"{p:.3f}"
-        )
-
-        effect_ranking = effect_ranking.rename(columns={
-            "F": "HC3 F"
-        })
-
-        effect_ranking = effect_ranking[
-            [
-                "Rank",
-                "Effect",
-                "Effect type",
-                "df",
-                "omega_squared",
-                "95% bootstrap CI",
-                "ci_low",
-                "ci_high",
-                "HC3 F",
-                "HC3 p"
-            ]
-        ].sort_values("Rank")
-
-        effect_ranking["cumulative_omega_squared_percent"] = (
-                effect_ranking["omega_squared"].cumsum() * 100
-        )
-        effect_ranking.insert(5, "cumulative_omega_squared_percent",
-                              effect_ranking.pop("cumulative_omega_squared_percent"))
-
-        return effect_ranking
-
-    def _print_throughput_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
+    def _print_factor_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         for column in ["mean_throughput", "ci_low", "ci_high"]:
@@ -421,8 +334,8 @@ class ThroughputStatistics(BaseStatistics):
         print("Throughput values for: %s %s" % (threading, mode))
         print(table_str)
 
-    def _create_throughput_table(self, comp: pd.DataFrame,
-                                 full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
+    def _create_factor_means_table(self, comp: pd.DataFrame,
+                                   full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
         factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, full_model)
         beta, cov = factor_means.get_beta_cov(full_model, full_model_hc3)
