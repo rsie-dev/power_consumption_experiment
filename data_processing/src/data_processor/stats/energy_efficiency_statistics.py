@@ -31,6 +31,16 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         effect_ranking_df, means_ci = self._calculate_statistics(comp)
         self._create_means_ci_files(means_ci, ee_file)
 
+        if self._create_tex:
+            base = ee_file.stem.removeprefix("tp_")
+            filename = "ee_%s_effect_ranking_%s_%s_%s_full" % (self.effect_name, self._threading, self._mode, base) + ".tex"
+            self._create_effect_ranking_tex(effect_ranking_df, filename)
+            top_df = effect_ranking_df[
+                effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
+            ]
+            filename = "ee_%s_effect_ranking_%s_%s_%s" % (self.effect_name, self._threading, self._mode, base) + ".tex"
+            self._create_effect_ranking_tex(top_df, filename)
+
     @property
     @abstractmethod
     def base_column(self) -> str:
