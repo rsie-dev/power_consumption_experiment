@@ -39,9 +39,8 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
 
-    @abstractmethod
     def _validate_data(self, comp: pd.DataFrame):
-        pass
+        self._validate_data_quantity(comp, self.base_column)
 
     def _validate_data_quantity(self, comp: pd.DataFrame, base_column: str):
         super()._validate_data_quantity(comp, base_column)

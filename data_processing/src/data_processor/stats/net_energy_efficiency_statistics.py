@@ -30,9 +30,6 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         #df["log_ee_net"] = np.log(normalized_net).pint.magnitude
         return df
 
-    def _validate_data(self, comp: pd.DataFrame):
-        self._validate_data_quantity(comp, self.base_column)
-
     def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Calculate statistics")
 
