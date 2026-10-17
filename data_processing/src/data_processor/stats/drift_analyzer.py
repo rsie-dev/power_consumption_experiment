@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
@@ -6,6 +8,7 @@ import tabulate
 
 class DriftAnalyzer:
     def __init__(self, factors: list[str], drift_threshold: float, threading: str, mode: str):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
         self._drift_threshold = drift_threshold
         self._threading = threading
@@ -45,8 +48,8 @@ class DriftAnalyzer:
                                       headers=headers,
                                       floatfmt=".3f",
                                       )
-        print("Drift analysis for %s %s (threshold: %s%%)" % (threading, mode, threshold))
-        print(table_str)
+        self._logger.info("Drift analysis for %s %s (threshold: %s%%)", threading, mode, threshold)
+        self._logger.info(table_str)
 
     def _calculate_temporal_drift(self, comp: pd.DataFrame, threshold: float) -> pd.DataFrame:
         comp = comp.copy()

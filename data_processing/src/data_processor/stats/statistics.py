@@ -74,7 +74,7 @@ class Statistics(Processor):
                                       headers=headers,
                                       tablefmt="simple"
                                       )
-        print(table_str)
+        self._logger.info(table_str)
 
     def _create_table_entries(self, df):
         table_df = df.copy()

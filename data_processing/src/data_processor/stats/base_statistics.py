@@ -28,9 +28,9 @@ class BaseStatistics(Processor):
         return ["host", "tool", "dataset", "strength"]
 
     def _log_section(self, title: str):
-        print("")
-        print("-" * 20 + f" {title} " + "-" * 20)
-        print("")
+        self._logger.info("")
+        self._logger.info("%s %s %s", "-" * 20, title, "-" * 20)
+        self._logger.info("")
 
     def _extract_data(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df[df["mode"] == self._mode]
@@ -43,37 +43,37 @@ class BaseStatistics(Processor):
             observed=True
         ).size()
 
-        print("Validate data quantity of:    %s %s" % (self._threading, self._mode))
-        print("Observations:                 %d" % len(comp))
-        print("Configurations:               %d" % len(cell_counts))
-        print("Min trials per configuration: %d" % cell_counts.min())
-        print("Max trials per configuration: %d" % cell_counts.max())
+        self._logger.info("Validate data quantity of:    %s %s", self._threading, self._mode)
+        self._logger.info("Observations:                 %d", len(comp))
+        self._logger.info("Configurations:               %d", len(cell_counts))
+        self._logger.info("Min trials per configuration: %d", cell_counts.min())
+        self._logger.info("Max trials per configuration: %d", cell_counts.max())
         missing = comp[base_column].isna().sum()
-        print("Missing response values:      %d" % missing)
+        self._logger.info("Missing response values:      %d", missing)
         if missing:
-            raise ValueError("Missing response values: %d" % missing)
-        print("Tools:                        %s" % ", ".join(comp["tool"].unique()))
+            raise ValueError("Missing response values: %d", missing)
+        self._logger.info("Tools:                        %s", ", ".join(comp["tool"].unique()))
 
     def _print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
         # Check the fit has the expected dimensions.
-        print()
+        self._logger.info("")
         extra = f" {kind}:" if kind else ":"
-        print("Two-way model%s" % extra)
-        print("Observations:                 %d" % int(two_way_model.nobs))
-        print("Model degrees of freedom:     %d" % int(two_way_model.df_model))
-        print("Residual degrees of freedom:  %d" % int(two_way_model.df_resid))
+        self._logger.info("Two-way model%s", extra)
+        self._logger.info("Observations:                 %d", int(two_way_model.nobs))
+        self._logger.info("Model degrees of freedom:     %d", int(two_way_model.df_model))
+        self._logger.info("Residual degrees of freedom:  %d", int(two_way_model.df_resid))
         # This means the model explains about R^2 * 100% of observed log-throughput variation.
-        print("R-squared:                    %f" % two_way_model.rsquared)
+        self._logger.info("R-squared:                    %f", two_way_model.rsquared)
 
         ## Determine whether three-way interactions are sufficient
         ## or whether the four-way interaction is also needed.
-        print(anova_lm(two_way_model, full_model))
-        print("Full model:")
-        print("R² increase:                  %f" % (full_model.rsquared - two_way_model.rsquared))
+        self._logger.info(anova_lm(two_way_model, full_model))
+        self._logger.info("Full model:")
+        self._logger.info("R² increase:                  %f", (full_model.rsquared - two_way_model.rsquared))
 
-        print(anova_lm(two_way_model, three_way_model, full_model))
-        print("Three-way R² gain:            %f" % (three_way_model.rsquared - two_way_model.rsquared))
-        print("Four-way R² gain:             %f" % (full_model.rsquared - three_way_model.rsquared))
+        self._logger.info(anova_lm(two_way_model, three_way_model, full_model))
+        self._logger.info("Three-way R² gain:            %f", (three_way_model.rsquared - two_way_model.rsquared))
+        self._logger.info("Four-way R² gain:             %f", (full_model.rsquared - three_way_model.rsquared))
 
     def _build_interaction_formula(self, response: str, level: int, factors: list[str]):
         return self._build_formula(response, level, factors, "+")
@@ -124,8 +124,8 @@ class BaseStatistics(Processor):
                                       showindex=False,
                                       headers=headers,
                                       )
-        print("Influence table")
-        print(table_str)
+        self._logger.info("Influence table")
+        self._logger.info(table_str)
 
     def _find_observations_that_strongly_influence_model(self, model):
         # Screen for observations that strongly influence the decompression model.
@@ -134,9 +134,9 @@ class BaseStatistics(Processor):
         cooks_d = influence.cooks_distance[0]
         threshold = 4 / model.nobs
 
-        print("Cook's threshold:             %f" % threshold)
-        print("Maximum Cook's distance:      %f" % cooks_d.max())
-        print("Observations above threshold: %d" % (cooks_d > threshold).sum())
+        self._logger.info("Cook's threshold:             %f", threshold)
+        self._logger.info("Maximum Cook's distance:      %f", cooks_d.max())
+        self._logger.info("Observations above threshold: %d", (cooks_d > threshold).sum())
 
         run_factors = self.factors + ["run"]
         diagnostics = model.model.data.frame[
@@ -156,10 +156,10 @@ class BaseStatistics(Processor):
         table_str = tabulate.tabulate(anova_hc3_df,
                                       headers=headers,
                                       )
-        print()
+        self._logger.info("")
         extra = f" {kind}:" if kind else ":"
-        print("ANOVA HC3%s" % extra)
-        print(table_str)
+        self._logger.info("ANOVA HC3%s", extra)
+        self._logger.info(table_str)
 
     def _calculate_anova_hc3(self, model: RegressionResultsWrapper):
         # Create robust inference for decompression effects.
@@ -178,10 +178,10 @@ class BaseStatistics(Processor):
         table_str = tabulate.tabulate(ranked,
                                       headers=headers,
                                       )
-        print("")
+        self._logger.info("")
         extra = f" {kind}:" if kind else ":"
-        print("ANOVA rank table%s" % extra)
-        print(table_str)
+        self._logger.info("ANOVA rank table%s", extra)
+        self._logger.info(table_str)
 
     def _calculate_anova_table(self, model: RegressionResultsWrapper):
         # Rank factors and interactions by explained variation by omega^2.
@@ -248,8 +248,8 @@ class BaseStatistics(Processor):
                                       headers=headers,
                                       colalign=coalign
                                       )
-        print("Effect ranking table for: %s %s" % (threading, mode))
-        print(table_str)
+        self._logger.info("Effect ranking table for: %s %s", threading, mode)
+        self._logger.info(table_str)
 
     def _create_effect_ranking_tex(self, df: pd.DataFrame, filename: str):
         tex_file = self._resources / filename

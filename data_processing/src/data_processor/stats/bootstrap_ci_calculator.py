@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -8,6 +10,7 @@ import tabulate
 
 class BootstrapCiCalculator:
     def __init__(self, factors: list[str], n_boot: int, seed: int | None):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
         self._n_boot = n_boot
         if seed is None:
@@ -19,8 +22,8 @@ class BootstrapCiCalculator:
         table_str = tabulate.tabulate(sorted_ci_values,
                                       headers=headers,
                                       )
-        print("")
-        print("95% confidence interval table")
+        self._logger.info("")
+        self._logger.info("95%% confidence interval table")
         print(table_str)
 
     def calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) \
@@ -34,7 +37,7 @@ class BootstrapCiCalculator:
         )
 
         boot_results = []
-        print("Calculating confidence intervals...")
+        self._logger.info("Calculating confidence intervals...")
         for _ in tqdm(range(self._n_boot), colour="green"):
             sampled_positions = np.concatenate([
                 self._rng.choice(group, size=len(group), replace=True)

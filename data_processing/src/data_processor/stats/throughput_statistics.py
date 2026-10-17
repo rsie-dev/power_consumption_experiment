@@ -74,7 +74,7 @@ class ThroughputStatistics(BaseStatistics):
 
         self._print_residual_variance(comp, full_model)
 
-        print("")
+        self._logger.info("")
         diagnostics = self._find_observations_that_strongly_influence_model(full_model)
         self._print_observations_that_strongly_influence_model(diagnostics)
 
@@ -89,8 +89,8 @@ class ThroughputStatistics(BaseStatistics):
         self._print_anova_table("", ranked)
         relevant_percent = 95
         relevant_factors = self._extract_relevant_factors(ranked, relevant_percent)
-        print("")
-        print("Relevant %d%% factors: %s" % (relevant_percent, " > ".join([str(f) for f in relevant_factors])))
+        self._logger.info("")
+        self._logger.info("Relevant %d%% factors: %s", relevant_percent, " > ".join([str(f) for f in relevant_factors]))
 
         # Make later statistical inference robust to unequal residual variance.
         # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
@@ -108,7 +108,7 @@ class ThroughputStatistics(BaseStatistics):
         # Check that the top confidence intervals do not overlap
         _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp, full_model.model.formula, effects)
 
-        print("")
+        self._logger.info("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(threading, mode, effect_ranking)
 
@@ -124,7 +124,7 @@ class ThroughputStatistics(BaseStatistics):
             self.factors
         )["residual"].std()
 
-        print(residual_sd_comp_mt.describe())
+        self._logger.info(residual_sd_comp_mt.describe())
         if residual_sd_comp_mt.min():
             sd_ratio = residual_sd_comp_mt.max() / residual_sd_comp_mt.min()
         else:
@@ -141,9 +141,9 @@ class ThroughputStatistics(BaseStatistics):
                 .reset_index()
             )
 
-            print("Note: no variation found for these configurations")
-            print(zero_sd_configurations)
-        print("Largest / smallest residual SD ratio: %f" % sd_ratio)
+            self._logger.info("Note: no variation found for these configurations")
+            self._logger.info(zero_sd_configurations)
+        self._logger.info("Largest / smallest residual SD ratio: %f", sd_ratio)
 
     def _print_factor_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
@@ -169,8 +169,8 @@ class ThroughputStatistics(BaseStatistics):
             headers=headers,
             colalign=colalign,
         )
-        print("Throughput values for: %s %s" % (threading, mode))
-        print(table_str)
+        self._logger.info("Throughput values for: %s %s", threading, mode)
+        self._logger.info(table_str)
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
                                    full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
@@ -225,9 +225,9 @@ class ThroughputStatistics(BaseStatistics):
                                       showindex=False,
                                       headers=headers,
                                       )
-        print("")
-        print("Extreme observations:         %d" % total)
-        print(table_str)
+        self._logger.info("")
+        self._logger.info("Extreme observations:         %d", total)
+        self._logger.info(table_str)
 
     def _get_diagnostics(self, full_model: RegressionResultsWrapper) -> pd.DataFrame:
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
@@ -270,8 +270,8 @@ class ThroughputStatistics(BaseStatistics):
             means,
             headers=headers,
         )
-        print("Throughput means for: %s" % factor)
-        print(table_str)
+        self._logger.info("Throughput means for: %s", factor)
+        self._logger.info(table_str)
 
     def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
         unit_ref = comp["throughput"].dtype

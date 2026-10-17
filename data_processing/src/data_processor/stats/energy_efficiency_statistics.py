@@ -33,12 +33,12 @@ class EnergyEfficiencyStatistics(BaseStatistics):
 
         if self._create_tex:
             base = ee_file.stem.removeprefix("tp_")
-            filename = "ee_%s_effect_ranking_%s_%s_%s_full" % (self.effect_name, self._threading, self._mode, base) + ".tex"
+            filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
             self._create_effect_ranking_tex(effect_ranking_df, filename)
             top_df = effect_ranking_df[
                 effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
             ]
-            filename = "ee_%s_effect_ranking_%s_%s_%s" % (self.effect_name, self._threading, self._mode, base) + ".tex"
+            filename = "ee_%s_effect_ranking_%s_%s_%s.tex" % (self.effect_name, self._threading, self._mode, base)
             self._create_effect_ranking_tex(top_df, filename)
 
     @property
@@ -56,7 +56,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def _validate_data_quantity(self, comp: pd.DataFrame, base_column: str):
         super()._validate_data_quantity(comp, base_column)
         n_negative = (comp[base_column] < 0).sum()
-        print("Negative energy count         %d" % n_negative)
+        self._logger.info("Negative energy count         %d", n_negative)
 
     @property
     @abstractmethod
@@ -66,7 +66,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def _create_means_ci_files(self, means_ci: dict, ee_file: Path):
         base = ee_file.stem.removeprefix("ee_")
         for effect, df in means_ci.items():
-            filename = "ee_%s_effect_%s_%s_%s_%s" % (self.effect_name, self._threading, self._mode, effect, base) + ".csv"
+            filename = "ee_%s_effect_%s_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, effect, base)
             self._frameio.persist(df, self._resources / filename)
 
     @abstractmethod
@@ -98,8 +98,8 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             headers=headers,
             colalign=colalign,
         )
-        print("%s values for: %s %s" % (self.base_column, self._threading, self._mode))
-        print(table_str)
+        self._logger.info("%s values for: %s %s", self.base_column, self._threading, self._mode)
+        self._logger.info(table_str)
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
                                    model: RegressionResultsWrapper, model_hc3: OLSResults):

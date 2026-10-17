@@ -1,3 +1,4 @@
+import logging
 from itertools import product, combinations
 
 import pandas as pd
@@ -13,6 +14,7 @@ from data_processor.util import tabulate_pint
 
 class FactorMeans:
     def __init__(self, factors: list[str], base_column, display_unit):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
         self._base_column = base_column
         self._display_unit = display_unit
@@ -26,7 +28,7 @@ class FactorMeans:
                              relevant_factors: list) -> dict:
         result = {}
         for relevant_factor in relevant_factors:
-            print("")
+            self._logger.info("")
             if isinstance(relevant_factor, str):
                 mean_cis = self._calculate_factor_ci(comp, model, model_hc3, relevant_factor)
                 self._print_mean_cis(relevant_factor, mean_cis)
@@ -61,8 +63,8 @@ class FactorMeans:
             showindex=False,
             headers=headers,
         )
-        print("95%% confidence interval of means for: %s" % list(factor))
-        print(table_str)
+        self._logger.info("95%% confidence interval of means for: %s" % list(factor))
+        self._logger.info(table_str)
 
     def _print_throughput_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
         self._print_throughput_ratios_of_factor_levels("between ", ["Comparison"], factor, factor_ratios)
@@ -76,8 +78,8 @@ class FactorMeans:
                                       showindex=False,
                                       headers=headers,
                                       )
-        print(f"{self.base_upper} ratios {kind} factor levels of: {factor_combination}")
-        print(table_str)
+        self._logger.info(f"{self.base_upper} ratios {kind} factor levels of: {factor_combination}")
+        self._logger.info(table_str)
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, model: RegressionResultsWrapper, model_hc3: OLSResults,
                              factor: str):
