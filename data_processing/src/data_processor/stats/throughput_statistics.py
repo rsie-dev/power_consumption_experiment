@@ -203,8 +203,7 @@ class ThroughputStatistics(BaseStatistics):
         means_ci = factor_means.show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        ci_values, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp, full_model.model.formula, effects)
-        self._bootstrap_ci_calculator.print_ci(ci_values)
+        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp, full_model.model.formula, effects)
 
         print("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
