@@ -11,6 +11,10 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
     def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources, n_boot, seed, threading, mode, create_tex)
 
+    @property
+    def base_column(self) -> str:
+        return "energy_efficiency_net"
+
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         df["ee_net_bpj"] = (
             df["energy_efficiency_net"]
@@ -27,7 +31,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         return df
 
     def _validate_data(self, comp: pd.DataFrame):
-        self._validate_data_quantity(comp, "energy_efficiency_net")
+        self._validate_data_quantity(comp, self.base_column)
 
     def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Calculate statistics")
@@ -60,7 +64,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         )
 
         self._log_section("Factor mean CIs")
-        factor_means = FactorMeans(self.factors, "energy_efficiency_net", self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
         print("Factor mean CI net")
         means_ci = factor_means.show_factor_means_ci(comp, three_way_model,
                                                      three_way_model_hc3, relevant_factors)
@@ -73,6 +77,6 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(self._threading, self._mode, effect_ranking)
 
-        factor_means_values_df = self._create_factor_means_table(comp, three_way_model, three_way_model_hc3, "energy_efficiency_net")
-        self._print_factor_table(factor_means_values_df, "energy_efficiency_net")
+        factor_means_values_df = self._create_factor_means_table(comp, three_way_model, three_way_model_hc3)
+        self._print_factor_table(factor_means_values_df)
         return effect_ranking, means_ci

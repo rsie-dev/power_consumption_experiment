@@ -30,6 +30,11 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         self._validate_data(comp)
         self._calculate_statistics(comp)
 
+    @property
+    @abstractmethod
+    def base_column(self) -> str:
+        pass
+
     @abstractmethod
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
@@ -47,10 +52,10 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         pass
 
-    def _print_factor_table(self, factor_means_values_df: pd.DataFrame, base_column: str):
+    def _print_factor_table(self, factor_means_values_df: pd.DataFrame):
         display_df = factor_means_values_df.copy()
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
-        mean_column = "mean_%s" % base_column
+        mean_column = "mean_%s" % self.base_column
         for column in [mean_column, "ci_low", "ci_high"]:
             display_df[column] = display_df[column].pint.to(self._display_unit)
 
@@ -63,7 +68,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         )
         display_df = display_df.drop(columns=["ci_low", "ci_high"])
 
-        headers = ["Factor", "Level", "Marginal geometric mean %s" % base_column, "95% HC3 CI"]
+        headers = ["Factor", "Level", "Marginal geometric mean %s" % self.base_column, "95% HC3 CI"]
         colalign = ["global"] * len(headers)
         colalign[3] = "center"
         table_str = tabulate_pint(
@@ -72,12 +77,12 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             headers=headers,
             colalign=colalign,
         )
-        print("%s values for: %s %s" % (base_column, self._threading, self._mode))
+        print("%s values for: %s %s" % (self.base_column, self._threading, self._mode))
         print(table_str)
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
-                                   model: RegressionResultsWrapper, model_hc3: OLSResults, base_column: str):
-        factor_means = FactorMeans(self.factors, base_column, self._display_unit)
+                                   model: RegressionResultsWrapper, model_hc3: OLSResults):
+        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, model)
         beta, cov = factor_means.get_beta_cov(model, model_hc3)
 
@@ -95,7 +100,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             ignore_index=True
         )
 
-        mean_column = "mean_%s" % base_column
+        mean_column = "mean_%s" % self.base_column
         throughput_values = throughput_values[
             [
                 "Factor",
