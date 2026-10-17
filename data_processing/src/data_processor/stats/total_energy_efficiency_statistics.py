@@ -15,6 +15,10 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
     def base_column(self) -> str:
         return "energy_efficiency_total"
 
+    @property
+    def effect_name(self) -> str:
+        return "total"
+
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         df["ee_total_bpj"] = (
             df["energy_efficiency_total"]

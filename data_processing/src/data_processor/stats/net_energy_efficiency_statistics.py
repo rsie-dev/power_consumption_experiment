@@ -15,6 +15,10 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
     def base_column(self) -> str:
         return "energy_efficiency_net"
 
+    @property
+    def effect_name(self) -> str:
+        return "net"
+
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         df["ee_net_bpj"] = (
             df["energy_efficiency_net"]
