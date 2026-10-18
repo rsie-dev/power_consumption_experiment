@@ -63,7 +63,7 @@ class Processor:
         tex_parser.add_argument('--tex', action='store_true', help="create latex table")
 
         log_parser = argparse.ArgumentParser(add_help=False)
-        log_parser.add_argument('--reslog', help="create logfile in resources")
+        log_parser.add_argument('--reslog', action='store_true', help="create logfile in resources")
 
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',

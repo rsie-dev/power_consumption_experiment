@@ -18,7 +18,7 @@ from .effect_names import get_effect_name
 class BaseStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, logfile: str | None, threading: str, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: bool, threading: str, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._logfile = logfile
@@ -28,12 +28,17 @@ class BaseStatistics(Processor):
 
     def process(self, used_power_file: Path):
         if self._logfile:
-            logfile_path = self._resources / self._logfile
+            logfile_path = self._resources / self.extra_log_name(used_power_file)
             cm = self._add_logfile(logfile_path)
+            self._logger.info("create extra logfile: %s", self.extra_log_name(used_power_file))
         else:
             cm = nullcontext()
         with cm:
             self._do_process(used_power_file)
+
+    @abstractmethod
+    def extra_log_name(self, input_file: Path) -> str:
+        pass
 
     @contextmanager
     def _add_logfile(self, logfile: Path):

@@ -14,12 +14,16 @@ from .effect_names import get_effect_name
 
 
 class EnergyEfficiencyStatistics(BaseStatistics):
-    def __init__(self, resources: Path, logfile: str | None, n_boot: int, seed: int | None,
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
                  threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/joule"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed)
+
+    def extra_log_name(self, input_file: Path) -> str:
+        base = input_file.stem.removeprefix("ee_")
+        return "ee_stat_%s_%s.log" % (self.effect_name, base)
 
     def _do_process(self, ee_file: Path):
         self._log_section("Process %s %s" % (self._threading, self._mode))
@@ -33,7 +37,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         self._create_means_ci_files(means_ci, ee_file)
 
         if self._create_tex:
-            base = ee_file.stem.removeprefix("tp_")
+            base = ee_file.stem.removeprefix("ee_")
             filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
             self._create_effect_ranking_tex(effect_ranking_df, filename)
             top_df = effect_ranking_df[
