@@ -104,7 +104,7 @@ class Processor:
         parser_stats_ee_merge = subparsers_stats_ee.add_parser('merge',
                                                                help="merges two effect ranking tables",
                                                                parents=[common_parser])
-        parser_stats_ee_merge.add_argument('rank-file', nargs=2, help="rank files to merge")
+        parser_stats_ee_merge.add_argument('rank_files', metavar="rank-file", nargs=2, help="rank files to merge")
         parser_stats_ee_merge.set_defaults(func=self._stats_ee_merge)
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
