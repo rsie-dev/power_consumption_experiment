@@ -5,7 +5,8 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .stats import Statistics, ThroughputStatistics, TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics
+from .stats import Statistics, ThroughputStatistics
+from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
 
@@ -100,6 +101,12 @@ class Processor:
                                                                       ee_parser, log_parser])
         parser_stats_ee_net.set_defaults(func=self._stats_ee_net)
 
+        parser_stats_ee_merge = subparsers_stats_ee.add_parser('merge',
+                                                               help="merges two effect ranking tables",
+                                                               parents=[common_parser])
+        parser_stats_ee_merge.add_argument('rank-file', nargs=2, help="rank files to merge")
+        parser_stats_ee_merge.set_defaults(func=self._stats_ee_merge)
+
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
         subparsers_calc = parser_calc.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                      description='valid subcommands')
@@ -184,6 +191,11 @@ class Processor:
         statistics = NetEnergyEfficiencyStatistics(resources_folder, args.reslog, args.boot, args.seed,
                                                    args.threading, args.mode, args.tex)
         statistics.process(args.ee_file)
+
+    def _stats_ee_merge(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        merger = EnergyEfficiencyMerger(resources_folder)
+        merger.merge(args.rank_files)
 
     def _calc_cr(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
