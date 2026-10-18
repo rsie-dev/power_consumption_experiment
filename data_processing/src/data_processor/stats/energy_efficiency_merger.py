@@ -54,8 +54,10 @@ class EnergyEfficiencyMerger(Processor):
         df["Effect"] = df["Effect"].map(get_effect_name)
 
         tex_df = df[["Effect", "df",
-                     "Rank", "omega_squared_percent", "ci_low_percent", "ci_high_percent", "cumulative_omega_squared_percent",
-                     "Rank2", "omega_squared_percent2", "ci_low_percent2", "ci_high_percent2", "cumulative_omega_squared_percent2"
+                     "Rank", "omega_squared_percent",
+                     "ci_low_percent", "ci_high_percent",
+                     "Rank2", "omega_squared_percent2",
+                     "ci_low_percent2", "ci_high_percent2",
                      ]]
 
         group1 = "$EE_{total}$"
@@ -69,13 +71,11 @@ class EnergyEfficiencyMerger(Processor):
             (group1, "", r"$\omega^2$ (\%)"),
             (group1, bootstrap, "Low"),
             (group1, bootstrap, "High"),
-            (group1, "Cumulative", r"$\omega^2$ (\%)"),
 
             (group2, "", "Rank"),
             (group2, "", r"$\omega^2$ (\%)"),
             (group2, bootstrap, "Low"),
             (group2, bootstrap, "High"),
-            (group2, "Cumulative", r"$\omega^2$ (\%)"),
         ])
 
         int_format = "S[table-format=2]"
@@ -97,12 +97,10 @@ class EnergyEfficiencyMerger(Processor):
                         percent_format +
                         ci_format +
                         ci_format +
-                        percent_format +
                         int_format +
                         percent_format +
                         ci_format +
-                        ci_format +
-                        percent_format
+                        ci_format
                 ),
             )
         )
@@ -112,8 +110,8 @@ class EnergyEfficiencyMerger(Processor):
             i for i, line in enumerate(lines)
             if line.strip() == r"\toprule"
         )
-        lines.insert(toprule_index + 2, r"\cmidrule(lr){3-7}\cmidrule(lr){8-12}")
-        lines.insert(toprule_index + 4, r"\cmidrule(lr){5-6}\cmidrule(lr){10-11}")
+        lines.insert(toprule_index + 2, r"\cmidrule(lr){3-6}\cmidrule(lr){7-10}")
+        lines.insert(toprule_index + 4, r"\cmidrule(lr){5-6}\cmidrule(lr){9-10}")
         latex = "\n".join(lines)
 
         return latex
