@@ -62,6 +62,9 @@ class Processor:
         tex_parser = argparse.ArgumentParser(add_help=False)
         tex_parser.add_argument('--tex', action='store_true', help="create latex table")
 
+        log_parser = argparse.ArgumentParser(add_help=False)
+        log_parser.add_argument('--reslog', help="create logfile in resources")
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
@@ -71,7 +74,7 @@ class Processor:
         parser_stats_raw.set_defaults(func=self._stats_raw)
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
-                                                       parents=[common_parser, factor_parser, tex_parser])
+                                                       parents=[common_parser, factor_parser, tex_parser, log_parser])
         parser_stats_tp.add_argument('--boot', default=1000, type=int, help="bootstrap count")
         parser_stats_tp.add_argument('--seed', type=int, help="RNG seed value")
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
@@ -86,12 +89,15 @@ class Processor:
         ee_parser.add_argument('--seed', type=int, help="RNG seed value")
         ee_parser.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
 
-        parser_stats_ee_total = subparsers_stats_ee.add_parser('total', help="calculate total energy efficiency statistics",
-                                                                parents=[common_parser, factor_parser, tex_parser, ee_parser])
+        parser_stats_ee_total = subparsers_stats_ee.add_parser('total',
+                                                               help="calculate total energy efficiency statistics",
+                                                               parents=[common_parser, factor_parser, tex_parser,
+                                                                        ee_parser, log_parser])
         parser_stats_ee_total.set_defaults(func=self._stats_ee_total)
 
         parser_stats_ee_net = subparsers_stats_ee.add_parser('net', help="calculate net energy efficiency statistics",
-                                                             parents=[common_parser, factor_parser, tex_parser, ee_parser])
+                                                             parents=[common_parser, factor_parser, tex_parser,
+                                                                      ee_parser, log_parser])
         parser_stats_ee_net.set_defaults(func=self._stats_ee_net)
 
         parser_calc = subparsers.add_parser('calc', help="calculate subcommands")
@@ -158,22 +164,25 @@ class Processor:
 
     def _stats_raw(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        statistics = Statistics(resources_folder)
+        statistics = Statistics(resources_folder, args.reslog)
         statistics.process(args.used_energy_file)
 
     def _stats_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        statistics = ThroughputStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
+        statistics = ThroughputStatistics(resources_folder, args.reslog, args.boot, args.seed,
+                                          args.threading, args.mode, args.tex)
         statistics.process(args.tp_file)
 
     def _stats_ee_total(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        statistics = TotalEnergyEfficiencyStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
+        statistics = TotalEnergyEfficiencyStatistics(resources_folder, args.reslog, args.boot, args.seed,
+                                                     args.threading, args.mode, args.tex)
         statistics.process(args.ee_file)
 
     def _stats_ee_net(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        statistics = NetEnergyEfficiencyStatistics(resources_folder, args.boot, args.seed, args.threading, args.mode, args.tex)
+        statistics = NetEnergyEfficiencyStatistics(resources_folder, args.reslog, args.boot, args.seed,
+                                                   args.threading, args.mode, args.tex)
         statistics.process(args.ee_file)
 
     def _calc_cr(self, args):

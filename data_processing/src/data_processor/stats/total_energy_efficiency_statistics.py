@@ -8,8 +8,8 @@ from .factor_means import FactorMeans
 
 
 class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
-    def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
-        super().__init__(resources, n_boot, seed, threading, mode, create_tex)
+    def __init__(self, resources: Path, logfile: str | None, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
+        super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
 
     @property
     def base_column(self) -> str:
@@ -46,7 +46,7 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        self._logger.info()
+        self._logger.info("")
         diagnostics = self._find_observations_that_strongly_influence_model(three_way_model)
         self._print_observations_that_strongly_influence_model(diagnostics)
 

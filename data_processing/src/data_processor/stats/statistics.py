@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from contextlib import contextmanager, nullcontext
 
 import tabulate
 from tabulate import SEPARATING_LINE
@@ -13,11 +14,20 @@ from data_processor.processor import Processor
 class Statistics(Processor):
     VALUE_COLS = ["energy", "duration", "size"]
 
-    def __init__(self, resources: Path):
+    def __init__(self, resources: Path, logfile: str | None):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def process(self, used_power_file: Path):
+        if self._logfile:
+            logfile_path = self._resources / self._logfile
+            cm = self._add_logfile(logfile_path)
+        else:
+            cm = nullcontext()
+        with cm:
+            self._do_process(used_power_file)
+
+    def _do_process(self, used_power_file: Path):
         df = self._frameio.load(used_power_file)
         stats_df = self._calculate_statistics(df)
 
@@ -25,6 +35,25 @@ class Statistics(Processor):
 
         stat_file = "stats_" + used_power_file.stem.removeprefix("used_energy_") + ".csv"
         self._create_csv(stat_file, stats_df)
+
+    @contextmanager
+    def _add_logfile(self, logfile: Path):
+        handler = logging.FileHandler(logfile, mode="w")
+        file_logger = ["", "paramiko.transport"]
+        try:
+            handler.setLevel(logging.DEBUG)
+            formatter_class, formatter_config = self._formatter_info
+            formatter = formatter_class(**formatter_config)
+            handler.setFormatter(formatter)
+            for logger in file_logger:
+                logging.getLogger(logger).addHandler(handler)
+            yield
+        finally:
+            try:
+                for logger in file_logger:
+                    logging.getLogger(logger).removeHandler(handler)
+            finally:
+                handler.close()
 
     def _calculate_statistics(self, df: pd.DataFrame) -> pd.DataFrame:
         stats_df = pd.concat(

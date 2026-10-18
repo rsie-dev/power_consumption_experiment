@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 import re
+from contextlib import contextmanager, nullcontext
+from abc import abstractmethod
 
 import numpy as np
 import pandas as pd
@@ -16,12 +18,44 @@ from .effect_names import get_effect_name
 class BaseStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, threading: str, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: str | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._logfile = logfile
         self._threading = threading
         self._mode = mode
         self._create_tex = create_tex
+
+    def process(self, used_power_file: Path):
+        if self._logfile:
+            logfile_path = self._resources / self._logfile
+            cm = self._add_logfile(logfile_path)
+        else:
+            cm = nullcontext()
+        with cm:
+            self._do_process(used_power_file)
+
+    @contextmanager
+    def _add_logfile(self, logfile: Path):
+        handler = logging.FileHandler(logfile, mode="w")
+        file_logger = [""]
+        try:
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(message)s')
+            handler.setFormatter(formatter)
+            for logger in file_logger:
+                logging.getLogger(logger).addHandler(handler)
+            yield
+        finally:
+            try:
+                for logger in file_logger:
+                    logging.getLogger(logger).removeHandler(handler)
+            finally:
+                handler.close()
+
+    @abstractmethod
+    def _do_process(self, used_power_file: Path):
+        pass
 
     @property
     def factors(self):
