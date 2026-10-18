@@ -34,10 +34,13 @@ class EnergyEfficiencyStatistics(BaseStatistics):
 
         self._validate_data(comp)
         effect_ranking_df, means_ci = self._calculate_statistics(comp)
+
+        base = ee_file.stem.removeprefix("ee_")
+        rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
+        self._create_csv(rank_filename, effect_ranking_df)
         self._create_means_ci_files(means_ci, ee_file)
 
         if self._create_tex:
-            base = ee_file.stem.removeprefix("ee_")
             filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
             self._create_effect_ranking_tex(effect_ranking_df, filename)
             top_df = effect_ranking_df[
