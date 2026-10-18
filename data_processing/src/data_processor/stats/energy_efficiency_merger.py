@@ -15,10 +15,31 @@ class EnergyEfficiencyMerger(Processor):
     def merge(self, rank_files: list[Path]):
         rank1_df = self._load_rank_file(rank_files[0])
         rank2_df = self._load_rank_file(rank_files[1])
-
         merged_df = self._merge_rank_files(rank1_df, rank2_df)
-        # ToDo: limit to the top 95%
-        self._create_effect_ranking_tex(merged_df, "merged.tex")
+
+        filtered = self._cutoff_top_ranks(95, rank1_df, rank2_df, merged_df)
+        self._create_effect_ranking_tex(filtered, "merged.tex")
+
+    def _cutoff_top_ranks(self, cutoff: float, rank1_df: pd.DataFrame, rank2_df: pd.DataFrame,
+                          merged_df: pd.DataFrame) -> pd.DataFrame:
+        effects1 = self._get_cutoff_positions(rank1_df, cutoff)
+        effects2 = self._get_cutoff_positions(rank2_df, cutoff)
+        filtered = merged_df.loc[
+            merged_df["Effect"].isin(effects1["Effect"])
+            | merged_df["Effect"].isin(effects2["Effect"])
+            ].copy()
+        return filtered
+
+    def _get_cutoff_positions(self, df: pd.DataFrame, cutoff: float):
+        positions = (
+            df["cumulative_omega_squared_percent"]
+            .ge(cutoff)
+            .to_numpy()
+            .nonzero()[0]
+        )
+        stop = int(positions[0]) + 1 if positions.size else len(df)
+        effects = df.iloc[:stop][["Effect"]].copy()
+        return effects
 
     def _load_rank_file(self, file_name: Path) -> pd.DataFrame:
         df = self._frameio.load(file_name)
