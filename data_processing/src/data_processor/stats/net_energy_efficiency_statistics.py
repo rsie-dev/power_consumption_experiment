@@ -36,7 +36,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         return df
 
     def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-        self._log_section("Calculate statistics")
+        self._log_section("Check models")
 
         two_way_model = self._fit_two_way_model(comp, "log_energy_efficiency_net")
         three_way_model, full_model = self._fit_higher_order_models(comp, "log_energy_efficiency_net")
@@ -47,10 +47,10 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        self._logger.info("")
         diagnostics = self._find_observations_that_strongly_influence_model(three_way_model)
         self._print_observations_that_strongly_influence_model(diagnostics)
 
+        self._log_section("Calculate statistics")
         anova_hc3 = self._calculate_anova_hc3(three_way_model)
         self._print_anova_hc3("net", anova_hc3)
 

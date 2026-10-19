@@ -66,7 +66,7 @@ class ThroughputStatistics(BaseStatistics):
         return df
 
     def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> tuple[pd.DataFrame, dict]:
-        self._log_section("Calculate statistics")
+        self._log_section("Check models")
 
         compression_model = self._fit_two_way_model(comp,"log_throughput")
         three_way_model, full_model = self._fit_higher_order_models(comp, "log_throughput")
@@ -78,7 +78,6 @@ class ThroughputStatistics(BaseStatistics):
 
         self._print_residual_variance(comp, full_model)
 
-        self._logger.info("")
         diagnostics = self._find_observations_that_strongly_influence_model(full_model)
         self._print_observations_that_strongly_influence_model(diagnostics)
 
@@ -86,6 +85,7 @@ class ThroughputStatistics(BaseStatistics):
         extremes = self._get_diagnostics(full_model)
         self._print_diagnostics(extremes)
 
+        self._log_section("Calculate statistics")
         anova_hc3 = self._calculate_anova_hc3(full_model)
         self._print_anova_hc3("", anova_hc3)
 
