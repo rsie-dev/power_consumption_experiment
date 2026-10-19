@@ -34,6 +34,17 @@ class ThroughputStatistics(BaseStatistics):
 
     def _validate_data(self, df: pd.DataFrame):
         super()._validate_data(df)
+
+        throughput_bps = (
+            df["throughput"]
+            .pint.to("byte / second")
+            .pint.magnitude
+            .astype(float)
+        )
+        invalid = ~np.isfinite(throughput_bps) | (throughput_bps <= 0)
+        if invalid.any():
+            raise ValueError(f"Found {invalid.sum()} invalid throughput values")
+
         drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode)
         self._log_section("Validate temporal drift")
         drift_analyzer.validate_temporal_drift(df)
