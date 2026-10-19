@@ -93,7 +93,14 @@ class BaseStatistics(Processor):
 
     def _validate_data(self, df: pd.DataFrame):
         self._log_section("Validate data")
+        self._validate_factor_values(df)
         self._validate_data_quantity(df)
+
+    def _validate_factor_values(self, df: pd.DataFrame):
+        for factor in self.factors:
+            if df[factor].isna().any():
+                missing = df[factor].isna().sum()
+                raise ValueError(f"Factor {factor} has {missing} missing values")
 
     def _validate_data_quantity(self, df: pd.DataFrame):
         cell_counts = df.groupby(
