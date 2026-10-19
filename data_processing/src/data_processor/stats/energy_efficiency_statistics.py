@@ -21,9 +21,9 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         self._display_unit = "MiB/joule"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed)
 
-    def extra_log_name(self, input_file: Path) -> str:
+    def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("ee_")
-        return "ee_stat_%s_%s.log" % (self.effect_name, base)
+        return "ee_stat_%s_%s" % (self.effect_name, base)
 
     def _do_process(self, ee_file: Path):
         self._log_section("Process %s %s" % (self._threading, self._mode))

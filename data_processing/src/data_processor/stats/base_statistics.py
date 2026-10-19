@@ -28,16 +28,17 @@ class BaseStatistics(Processor):
 
     def process(self, used_power_file: Path):
         if self._logfile:
-            logfile_path = self._resources / self.extra_log_name(used_power_file)
+            base = self.extra_log_base(used_power_file)
+            logfile_path = self._resources / f"{base}_{self._threading}_{self._mode}.log"
             cm = self._add_logfile(logfile_path)
-            self._logger.info("create extra logfile: %s", self.extra_log_name(used_power_file))
+            self._logger.info("create extra logfile: %s", logfile_path)
         else:
             cm = nullcontext()
         with cm:
             self._do_process(used_power_file)
 
     @abstractmethod
-    def extra_log_name(self, input_file: Path) -> str:
+    def extra_log_base(self, input_file: Path) -> str:
         pass
 
     @contextmanager

@@ -24,9 +24,9 @@ class ThroughputStatistics(BaseStatistics):
         self._display_unit = "MiB/s"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed)
 
-    def extra_log_name(self, input_file: Path) -> str:
+    def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("tp_")
-        return "tp_stat_%s.log" % base
+        return "tp_stat_%s" % base
 
     def _do_process(self, tp_file: Path):
         self._log_section("Process %s %s " % (self._threading, self._mode))
