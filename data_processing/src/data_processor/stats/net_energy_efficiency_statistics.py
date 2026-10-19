@@ -36,11 +36,11 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         #df["log_ee_net"] = np.log(normalized_net).pint.magnitude
         return df
 
-    def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Check models")
 
-        two_way_model = self._fit_two_way_model(comp, "log_energy_efficiency_net")
-        three_way_model, full_model = self._fit_higher_order_models(comp, "log_energy_efficiency_net")
+        two_way_model = self._fit_two_way_model(df, "log_energy_efficiency_net")
+        three_way_model, full_model = self._fit_higher_order_models(df, "log_energy_efficiency_net")
 
         self._print_fitted_models("", two_way_model, three_way_model, full_model)
 
@@ -75,17 +75,17 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         self._log_section("Factor mean CIs")
         factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
         self._logger.info("Factor mean CI net")
-        means_ci = factor_means.show_factor_means_ci(comp, full_model,
+        means_ci = factor_means.show_factor_means_ci(df, full_model,
                                                      full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp,
+        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(df,
                                                                              full_model.model.formula,
                                                                              effects)
         self._logger.info("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
-        self._print_effect_ranking_table(self._threading, self._mode, effect_ranking)
+        self._print_effect_ranking_table(effect_ranking)
 
-        factor_means_values_df = self._create_factor_means_table(comp, full_model, full_model_hc3)
+        factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
         self._print_factor_table(factor_means_values_df)
         return effect_ranking, means_ci

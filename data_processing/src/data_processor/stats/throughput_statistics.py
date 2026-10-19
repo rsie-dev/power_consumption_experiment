@@ -28,33 +28,18 @@ class ThroughputStatistics(BaseStatistics):
         base = input_file.stem.removeprefix("tp_")
         return "tp_stat_%s" % base
 
-    def _do_process(self, input_file: Path):
-        self._log_section("Process %s %s " % (self._threading, self._mode))
+    @property
+    def base_column(self) -> str:
+        return "throughput"
 
-        df = self._frameio.load(input_file)
-        comp = self._extract_data(df)
-        comp = self._calculate_base(comp)
-
-        self._validate_data_quantity(comp, "log_throughput")
+    def _validate_data(self, df: pd.DataFrame):
+        super()._validate_data(df)
         drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode)
         self._log_section("Validate temporal drift")
-        drift_analyzer.validate_temporal_drift(comp)
+        drift_analyzer.validate_temporal_drift(df)
 
-        effect_ranking_df, means_ci = self._calculate_statistics(comp, self._threading, self._mode)
-        self._create_means_ci_files(means_ci, input_file)
-
-        if self._create_tex:
-            base = input_file.stem.removeprefix("tp_")
-            filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
-            self._create_effect_ranking_tex(effect_ranking_df, filename)
-            top_df = effect_ranking_df[
-                effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
-            ]
-            filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
-            self._create_effect_ranking_tex(top_df, filename)
-
-    def _create_means_ci_files(self, means_ci: dict, tp_file: Path):
-        base = tp_file.stem.removeprefix("tp_")
+    def _create_means_ci_files(self, means_ci: dict, input_file: Path):
+        base = input_file.stem.removeprefix("tp_")
         for effect, df in means_ci.items():
             filename = "tp_effect_%s_%s_%s_%s" % (self._threading, self._mode, effect, base) + ".csv"
             self._frameio.persist(df, self._resources / filename)
@@ -65,18 +50,18 @@ class ThroughputStatistics(BaseStatistics):
         df["log_throughput"] = np.log(normalized).pint.magnitude
         return df
 
-    def _calculate_statistics(self, comp: pd.DataFrame, threading: str, mode: str) -> tuple[pd.DataFrame, dict]:
+    def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Check models")
 
-        compression_model = self._fit_two_way_model(comp,"log_throughput")
-        three_way_model, full_model = self._fit_higher_order_models(comp, "log_throughput")
+        compression_model = self._fit_two_way_model(df, "log_throughput")
+        three_way_model, full_model = self._fit_higher_order_models(df, "log_throughput")
         self._print_fitted_models("", compression_model, three_way_model, full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        self._print_residual_variance(comp, full_model)
+        self._print_residual_variance(df, full_model)
 
         self._log_section("Diagnostic")
         diagnostic = Diagnostic(self.factors)
@@ -109,17 +94,17 @@ class ThroughputStatistics(BaseStatistics):
         #self._show_factor_means(comp, relevant_factors)
         self._log_section("Factor means CIs")
         factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
-        means_ci = factor_means.show_factor_means_ci(comp, full_model, full_model_hc3, relevant_factors)
+        means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(comp, full_model.model.formula, effects)
+        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(df, full_model.model.formula, effects)
 
         self._logger.info("")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
-        self._print_effect_ranking_table(threading, mode, effect_ranking)
+        self._print_effect_ranking_table(effect_ranking)
 
-        factor_means_values_df = self._create_factor_means_table(comp, full_model, full_model_hc3)
-        self._print_factor_table(threading, mode, factor_means_values_df)
+        factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
+        self._print_factor_table(factor_means_values_df)
         return effect_ranking, means_ci
 
     def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
@@ -151,7 +136,7 @@ class ThroughputStatistics(BaseStatistics):
             self._logger.info(zero_sd_configurations)
         self._logger.info("Largest / smallest residual SD ratio: %f", sd_ratio)
 
-    def _print_factor_table(self, threading: str, mode: str, throughput_values_df: pd.DataFrame):
+    def _print_factor_table(self, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         for column in ["mean_throughput", "ci_low", "ci_high"]:
@@ -175,7 +160,7 @@ class ThroughputStatistics(BaseStatistics):
             headers=headers,
             colalign=colalign,
         )
-        self._logger.info("Throughput values for: %s %s", threading, mode)
+        self._logger.info("Throughput values for: %s %s", self._threading, self._mode)
         self._logger.info(table_str)
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
@@ -283,3 +268,16 @@ class ThroughputStatistics(BaseStatistics):
             means[column] = means[column].astype(unit_ref)
 
         return means
+
+    def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
+        if not self._create_tex:
+            return
+
+        base = input_file.stem.removeprefix("tp_")
+        filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
+        self._create_effect_ranking_tex(effect_ranking_df, filename)
+        top_df = effect_ranking_df[
+            effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
+        ]
+        filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+        self._create_effect_ranking_tex(top_df, filename)

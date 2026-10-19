@@ -25,61 +25,26 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         base = input_file.stem.removeprefix("ee_")
         return "ee_stat_%s_%s" % (self.effect_name, base)
 
-    def _do_process(self, input_file: Path):
-        self._log_section("Process %s %s" % (self._threading, self._mode))
-
-        df = self._frameio.load(input_file)
-        comp = self._extract_data(df)
-        comp = self._calculate_base(comp)
-
-        self._validate_data(comp)
-        effect_ranking_df, means_ci = self._calculate_statistics(comp)
-
-        base = input_file.stem.removeprefix("ee_")
-        rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
-        self._create_csv(rank_filename, effect_ranking_df)
-        self._create_means_ci_files(means_ci, input_file)
-
-        if self._create_tex:
-            filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
-            self._create_effect_ranking_tex(effect_ranking_df, filename)
-            top_df = effect_ranking_df[
-                effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
-            ]
-            filename = "ee_%s_effect_ranking_%s_%s_%s.tex" % (self.effect_name, self._threading, self._mode, base)
-            self._create_effect_ranking_tex(top_df, filename)
-
-    @property
-    @abstractmethod
-    def base_column(self) -> str:
-        pass
-
-    @abstractmethod
-    def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
-        pass
-
-    def _validate_data(self, comp: pd.DataFrame):
-        self._validate_data_quantity(comp, self.base_column)
-
-    def _validate_data_quantity(self, comp: pd.DataFrame, base_column: str):
-        super()._validate_data_quantity(comp, base_column)
-        n_negative = (comp[base_column] < 0).sum()
-        self._logger.info("Negative energy count         %d", n_negative)
+    def _validate_data_quantity(self, df: pd.DataFrame):
+        super()._validate_data_quantity(df)
+        n_negative = (df[self.base_column] < 0).sum()
+        self._logger.info("Negative energy count:        %d", n_negative)
 
     @property
     @abstractmethod
     def effect_name(self) -> str:
         pass
 
+    def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
+        base = input_file.stem.removeprefix("ee_")
+        rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
+        self._create_csv(rank_filename, effect_ranking_df)
+
     def _create_means_ci_files(self, means_ci: dict, ee_file: Path):
         base = ee_file.stem.removeprefix("ee_")
         for effect, df in means_ci.items():
             filename = "ee_%s_effect_%s_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, effect, base)
             self._frameio.persist(df, self._resources / filename)
-
-    @abstractmethod
-    def _calculate_statistics(self, comp: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-        pass
 
     def _print_factor_table(self, factor_means_values_df: pd.DataFrame):
         display_df = factor_means_values_df.copy()
@@ -153,3 +118,16 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         )
 
         return throughput_values
+
+    def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
+        if not self._create_tex:
+            return
+
+        base = input_file.stem.removeprefix("ee_")
+        filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
+        self._create_effect_ranking_tex(effect_ranking_df, filename)
+        top_df = effect_ranking_df[
+            effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
+        ]
+        filename = "ee_%s_effect_ranking_%s_%s_%s.tex" % (self.effect_name, self._threading, self._mode, base)
+        self._create_effect_ranking_tex(top_df, filename)

@@ -41,6 +41,11 @@ class BaseStatistics(Processor):
     def extra_log_base(self, input_file: Path) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def base_column(self) -> str:
+        pass
+
     @contextmanager
     def _add_logfile(self, logfile: Path):
         handler = logging.FileHandler(logfile, mode="w")
@@ -59,10 +64,6 @@ class BaseStatistics(Processor):
             finally:
                 handler.close()
 
-    @abstractmethod
-    def _do_process(self, input_file: Path):
-        pass
-
     @property
     def factors(self):
         return ["host", "tool", "dataset", "strength"]
@@ -72,27 +73,63 @@ class BaseStatistics(Processor):
         self._logger.info("%s %s %s", "-" * 20, title, "-" * 20)
         self._logger.info("")
 
-    def _extract_data(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _do_process(self, input_file: Path):
+        df = self._frameio.load(input_file)
+        df = self._filter_data(df)
+        df = self._calculate_base(df)
+
+        self._validate_data(df)
+
+        effect_ranking_df, means_ci = self._calculate_statistics(df)
+        self._create_rank_file(effect_ranking_df, input_file)
+        self._create_means_ci_files(means_ci, input_file)
+
+        self._post_process(effect_ranking_df, input_file)
+
+    def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
         df = df[df["threading"] == self._threading]
         return df
 
-    def _validate_data_quantity(self, comp: pd.DataFrame, base_column: str):
-        cell_counts = comp.groupby(
+    def _validate_data(self, df: pd.DataFrame):
+        self._log_section("Validate data")
+        self._validate_data_quantity(df)
+
+    def _validate_data_quantity(self, df: pd.DataFrame):
+        cell_counts = df.groupby(
             self.factors,
             observed=True
         ).size()
 
         self._logger.info("Validate data quantity of:    %s %s", self._threading, self._mode)
-        self._logger.info("Observations:                 %d", len(comp))
+        self._logger.info("Observations:                 %d", len(df))
         self._logger.info("Configurations:               %d", len(cell_counts))
         self._logger.info("Min trials per configuration: %d", cell_counts.min())
         self._logger.info("Max trials per configuration: %d", cell_counts.max())
-        missing = comp[base_column].isna().sum()
+        missing = df[self.base_column].isna().sum()
         self._logger.info("Missing response values:      %d", missing)
         if missing:
-            raise ValueError("Missing response values: %d", missing)
-        self._logger.info("Tools:                        %s", ", ".join(comp["tool"].unique()))
+            raise ValueError("Missing response values: %d" % missing)
+        self._logger.info("Tools:                        %s", ", ".join(df["tool"].unique()))
+
+    @abstractmethod
+    def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
+        pass
+
+    @abstractmethod
+    def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+        pass
+
+    def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
+        pass
+
+    @abstractmethod
+    def _create_means_ci_files(self, means_ci: dict, input_file: Path) -> None:
+        pass
+
+    @abstractmethod
+    def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
+        pass
 
     def _print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
         # Check the fit has the expected dimensions.
@@ -116,12 +153,12 @@ class BaseStatistics(Processor):
         self._logger.info("Four-way R² gain:             %f", (full_model.rsquared - three_way_model.rsquared))
 
     def _build_interaction_formula(self, response: str, level: int, factors: list[str]):
-        return self._build_formula(response, level, factors, "+")
+        return self._build_formula(response, level, factors)
 
     def _build_full_formula(self, response: str, factors: list[str]):
-        return self._build_formula(response, None, factors, "*")
+        return self._build_formula(response, None, factors)
 
-    def _build_formula(self, response: str, level: int | None, factors: list[str], operator: str):
+    def _build_formula(self, response: str, level: int | None, factors: list[str]):
         opening = f"{response} ~ (" if level else f"{response} ~"
         closing = f"\n)**{level}" if level else ""
         terms = [f"C({name}, Sum)" for name in factors]
@@ -157,7 +194,6 @@ class BaseStatistics(Processor):
         ).fit()
 
         return three_way_model, full_model
-
 
     def _print_anova_hc3(self, kind: str, anova_hc3_df: pd.DataFrame):
         headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]
@@ -244,7 +280,7 @@ class BaseStatistics(Processor):
             return factors[0]
         return tuple(factors)
 
-    def _print_effect_ranking_table(self, threading: str, mode: str, table_df: pd.DataFrame):
+    def _print_effect_ranking_table(self, table_df: pd.DataFrame):
         table_df = table_df.drop(columns=["ci_low", "ci_high"])
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
@@ -256,7 +292,7 @@ class BaseStatistics(Processor):
                                       headers=headers,
                                       colalign=coalign
                                       )
-        self._logger.info("Effect ranking table for: %s %s", threading, mode)
+        self._logger.info("Effect ranking table for: %s %s", self._threading, self._mode)
         self._logger.info(table_str)
 
     def _create_effect_ranking_tex(self, df: pd.DataFrame, filename: str):

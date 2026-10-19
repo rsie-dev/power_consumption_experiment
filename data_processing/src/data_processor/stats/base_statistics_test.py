@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -11,7 +11,8 @@ from .base_statistics import BaseStatistics
 
 @pytest.fixture
 def calculator():
-    return BaseStatistics(Mock(spec=Path), "single", "compress", False)
+    with patch.object(BaseStatistics, "__abstractmethods__", set()):
+        yield BaseStatistics(Mock(spec=Path), False, "single", "compress", False)
 
 
 def test_build_interaction_formula(calculator):
