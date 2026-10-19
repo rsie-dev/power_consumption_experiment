@@ -82,7 +82,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(df,
                                                                              full_model.model.formula,
                                                                              effects)
-        self._logger.info("")
+        self._log_section("Ranking")
         effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(effect_ranking)
 
