@@ -15,6 +15,7 @@ from .factor_means import FactorMeans
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .drift_analyzer import DriftAnalyzer
 from .diagnostic import Diagnostic
+from .residual_variance import ResidualVariance
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -72,7 +73,10 @@ class ThroughputStatistics(BaseStatistics):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        self._print_residual_variance(df, full_model)
+        self._log_section("Residual variance")
+        residual_variance = ResidualVariance(self.factors)
+        zero_variance, configuration_details = residual_variance.calculate_residual_variance(df, full_model)
+        residual_variance.print_residual_variance(zero_variance, configuration_details)
 
         self._log_section("Diagnostic")
         diagnostic = Diagnostic(self.factors)
@@ -117,35 +121,6 @@ class ThroughputStatistics(BaseStatistics):
         factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
         self._print_factor_table(factor_means_values_df)
         return effect_ranking, means_ci
-
-    def _print_residual_variance(self, comp: pd.DataFrame, full_model: RegressionResultsWrapper):
-        diagnostics_comp_mt = comp.copy()
-        diagnostics_comp_mt["residual"] = full_model.resid
-
-        residual_sd_comp_mt = diagnostics_comp_mt.groupby(
-            self.factors
-        )["residual"].std()
-
-        self._logger.info(residual_sd_comp_mt.describe())
-        if residual_sd_comp_mt.min():
-            sd_ratio = residual_sd_comp_mt.max() / residual_sd_comp_mt.min()
-        else:
-            sd_ratio = np.inf
-            zero_mask = np.isclose(
-                residual_sd_comp_mt,
-                0.0,
-                atol=1e-12,
-                rtol=0
-            )
-            zero_sd_configurations = (
-                residual_sd_comp_mt[zero_mask]
-                .rename("residual_sd")
-                .reset_index()
-            )
-
-            self._logger.info("Note: no variation found for these configurations")
-            self._logger.info(zero_sd_configurations)
-        self._logger.info("Largest / smallest residual SD ratio: %f", sd_ratio)
 
     def _print_factor_table(self, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
