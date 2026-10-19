@@ -140,20 +140,20 @@ class BaseStatistics(Processor):
 
     def _print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
         # Check the fit has the expected dimensions.
-        self._logger.info("")
         extra = f" {kind}:" if kind else ":"
         self._logger.info("Two-way model%s", extra)
         self._logger.info("Observations:                 %d", int(two_way_model.nobs))
         self._logger.info("Model degrees of freedom:     %d", int(two_way_model.df_model))
         self._logger.info("Residual degrees of freedom:  %d", int(two_way_model.df_resid))
         # This means the model explains about R^2 * 100% of observed log-throughput variation.
-        self._logger.info("R-squared:                    %f", two_way_model.rsquared)
+        self._logger.info("R²:                           %f", two_way_model.rsquared)
+        self._logger.info("Adjusted R²:                  %f", two_way_model.rsquared_adj)
 
         ## Determine whether three-way interactions are sufficient
         ## or whether the four-way interaction is also needed.
         self._logger.info(anova_lm(two_way_model, full_model))
         self._logger.info("Full model:")
-        self._logger.info("R² increase:                  %f", (full_model.rsquared - two_way_model.rsquared))
+        self._logger.info("R² gain:                      %f", (full_model.rsquared - two_way_model.rsquared))
 
         self._logger.info(anova_lm(two_way_model, three_way_model, full_model))
         self._logger.info("Three-way R² gain:            %f", (three_way_model.rsquared - two_way_model.rsquared))
