@@ -13,6 +13,7 @@ import tabulate
 
 from data_processor.processor import Processor
 from data_processor.constants import ORDER_STRENGTH
+from data_processor.util import tabulate_pint
 from .effect_names import get_effect_name
 
 
@@ -236,14 +237,20 @@ class BaseStatistics(Processor):
 
         return three_way_model, full_model
 
-    def _print_anova_hc3(self, kind: str, anova_hc3_df: pd.DataFrame):
+    def _print_anova_hc3(self, anova_hc3_df: pd.DataFrame, std_error_description_df: pd.DataFrame):
+        self._logger.info("HC3/conventional standard-error ratios:")
+        headers = ["HC3 to conventional", "ratio"]
+        table_str = tabulate_pint(
+            std_error_description_df,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
         headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]
         table_str = tabulate.tabulate(anova_hc3_df,
                                       headers=headers,
                                       )
-        self._logger.info("")
-        extra = f" {kind}:" if kind else ":"
-        self._logger.info("ANOVA HC3%s", extra)
+        self._logger.info("ANOVA HC3")
         self._logger.info(table_str)
 
     def _calculate_anova_hc3(self, model: RegressionResultsWrapper):
@@ -256,7 +263,40 @@ class BaseStatistics(Processor):
             typ=3,
             robust="hc3"
         )
-        return anova_hc3
+        std_error_description_df = self._anova_hc3(model)
+        return anova_hc3, std_error_description_df
+
+    def _anova_hc3(self, model: RegressionResultsWrapper) -> pd.DataFrame:
+        # Create an HC3-robust results object
+        model_hc3 = (
+            model
+            .get_robustcov_results(cov_type="HC3")
+        )
+
+        # Compare conventional and HC3 standard errors
+        standard_error_comparison = pd.DataFrame(
+            {
+                "conventional_se": np.asarray(
+                    model.bse
+                ),
+                "hc3_se": np.asarray(
+                    model_hc3.bse
+                ),
+            },
+            index=model.params.index,
+        )
+
+        standard_error_comparison["hc3_to_conventional_ratio"] = (
+                standard_error_comparison["hc3_se"]
+                / standard_error_comparison["conventional_se"]
+        )
+
+        std_error_description = standard_error_comparison[
+            "hc3_to_conventional_ratio"
+        ].describe(
+            percentiles=[0.10, 0.25, 0.50, 0.75, 0.90]
+        )
+        return std_error_description.to_frame()
 
     def _print_anova_table(self, kind: str, ranked: pd.DataFrame):
         headers = ["Factor", "DF", "ω²", "ω² %"]

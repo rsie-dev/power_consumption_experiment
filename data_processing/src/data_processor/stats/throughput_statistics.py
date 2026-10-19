@@ -88,8 +88,8 @@ class ThroughputStatistics(BaseStatistics):
         diagnostic.print_diagnostics(extremes)
 
         self._log_section("Calculate ANOVA")
-        anova_hc3 = self._calculate_anova_hc3(full_model)
-        self._print_anova_hc3("", anova_hc3)
+        anova_hc3, std_error_description_df = self._calculate_anova_hc3(full_model)
+        self._print_anova_hc3(anova_hc3, std_error_description_df)
 
         effects, ranked = self._calculate_anova_table(full_model)
         self._print_anova_table("", ranked)
