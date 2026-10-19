@@ -60,7 +60,7 @@ class BaseStatistics(Processor):
                 handler.close()
 
     @abstractmethod
-    def _do_process(self, used_power_file: Path):
+    def _do_process(self, input_file: Path):
         pass
 
     @property

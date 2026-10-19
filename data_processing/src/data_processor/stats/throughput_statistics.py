@@ -28,10 +28,10 @@ class ThroughputStatistics(BaseStatistics):
         base = input_file.stem.removeprefix("tp_")
         return "tp_stat_%s" % base
 
-    def _do_process(self, tp_file: Path):
+    def _do_process(self, input_file: Path):
         self._log_section("Process %s %s " % (self._threading, self._mode))
 
-        df = self._frameio.load(tp_file)
+        df = self._frameio.load(input_file)
         comp = self._extract_data(df)
         comp = self._calculate_base(comp)
 
@@ -41,10 +41,10 @@ class ThroughputStatistics(BaseStatistics):
         drift_analyzer.validate_temporal_drift(comp)
 
         effect_ranking_df, means_ci = self._calculate_statistics(comp, self._threading, self._mode)
-        self._create_means_ci_files(means_ci, tp_file)
+        self._create_means_ci_files(means_ci, input_file)
 
         if self._create_tex:
-            base = tp_file.stem.removeprefix("tp_")
+            base = input_file.stem.removeprefix("tp_")
             filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
             self._create_effect_ranking_tex(effect_ranking_df, filename)
             top_df = effect_ranking_df[

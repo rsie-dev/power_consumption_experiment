@@ -25,20 +25,20 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         base = input_file.stem.removeprefix("ee_")
         return "ee_stat_%s_%s" % (self.effect_name, base)
 
-    def _do_process(self, ee_file: Path):
+    def _do_process(self, input_file: Path):
         self._log_section("Process %s %s" % (self._threading, self._mode))
 
-        df = self._frameio.load(ee_file)
+        df = self._frameio.load(input_file)
         comp = self._extract_data(df)
         comp = self._calculate_base(comp)
 
         self._validate_data(comp)
         effect_ranking_df, means_ci = self._calculate_statistics(comp)
 
-        base = ee_file.stem.removeprefix("ee_")
+        base = input_file.stem.removeprefix("ee_")
         rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
         self._create_csv(rank_filename, effect_ranking_df)
-        self._create_means_ci_files(means_ci, ee_file)
+        self._create_means_ci_files(means_ci, input_file)
 
         if self._create_tex:
             filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
