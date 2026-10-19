@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-import tabulate
 import pandas as pd
 import numpy as np
 from statsmodels.regression.linear_model import RegressionResultsWrapper
@@ -15,6 +14,7 @@ from .effect_names import get_effect_name
 from .factor_means import FactorMeans
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .drift_analyzer import DriftAnalyzer
+from .diagnostic import Diagnostic
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -78,14 +78,16 @@ class ThroughputStatistics(BaseStatistics):
 
         self._print_residual_variance(comp, full_model)
 
-        diagnostics = self._find_observations_that_strongly_influence_model(full_model)
-        self._print_observations_that_strongly_influence_model(diagnostics)
+        self._log_section("Diagnostic")
+        diagnostic = Diagnostic(self.factors)
+        diagnostics = diagnostic.find_observations_that_strongly_influence_model(full_model)
+        diagnostic.print_observations_that_strongly_influence_model(diagnostics)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        extremes = self._get_diagnostics(full_model)
-        self._print_diagnostics(extremes)
+        extremes = diagnostic.get_diagnostics(full_model)
+        diagnostic.print_diagnostics(extremes)
 
-        self._log_section("Calculate statistics")
+        self._log_section("Calculate ANOVA")
         anova_hc3 = self._calculate_anova_hc3(full_model)
         self._print_anova_hc3("", anova_hc3)
 
@@ -219,35 +221,6 @@ class ThroughputStatistics(BaseStatistics):
         )
 
         return throughput_values
-
-    def _print_diagnostics(self, extremes_df: pd.DataFrame):
-        total = extremes_df["count"].sum()
-
-        extremes_df = extremes_df.head(10)
-        headers = self.factors + ["count"]
-        table_str = tabulate.tabulate(extremes_df,
-                                      showindex=False,
-                                      headers=headers,
-                                      )
-        self._logger.info("")
-        self._logger.info("Extreme observations:         %d", total)
-        self._logger.info(table_str)
-
-    def _get_diagnostics(self, full_model: RegressionResultsWrapper) -> pd.DataFrame:
-        # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        run_factors = self.factors + ["run"]
-        diagnostics = full_model.model.data.frame[run_factors].copy()
-        diagnostics["studentized_residual"] = (
-            full_model.get_influence().resid_studentized_internal
-        )
-        extreme = diagnostics[
-            diagnostics["studentized_residual"].abs() > 3
-            ]
-        extremes = extreme.groupby(
-            self.factors
-        ).size().sort_values(ascending=False)
-        extremes_df = extremes.reset_index(name="count")
-        return extremes_df
 
     def _show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
         self._log_section("Factor means")

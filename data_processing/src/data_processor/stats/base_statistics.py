@@ -158,38 +158,6 @@ class BaseStatistics(Processor):
 
         return three_way_model, full_model
 
-    def _print_observations_that_strongly_influence_model(self, diagnostics: pd.DataFrame):
-        headers = self.factors + ["run", "cooks_d"]
-        table_str = tabulate.tabulate(diagnostics,
-                                      showindex=False,
-                                      headers=headers,
-                                      )
-        self._logger.info("Influence table")
-        self._logger.info(table_str)
-
-    def _find_observations_that_strongly_influence_model(self, model):
-        # Screen for observations that strongly influence the decompression model.
-        # Reason: A small number of influential trials could distort effect estimates.
-        influence = model.get_influence()
-        cooks_d = influence.cooks_distance[0]
-        threshold = 4 / model.nobs
-
-        self._logger.info("Cook's threshold:             %f", threshold)
-        self._logger.info("Maximum Cook's distance:      %f", cooks_d.max())
-        self._logger.info("Observations above threshold: %d", (cooks_d > threshold).sum())
-
-        run_factors = self.factors + ["run"]
-        diagnostics = model.model.data.frame[
-            run_factors
-        ].copy()
-        diagnostics["cooks_d"] = cooks_d
-
-        diagnostics = diagnostics.sort_values(
-            by=["cooks_d"],
-            ascending=False,
-        )
-        diagnostics = diagnostics.head(10)
-        return diagnostics
 
     def _print_anova_hc3(self, kind: str, anova_hc3_df: pd.DataFrame):
         headers = ["factor", "sum_sq", "df", "F", "PR(>F)"]

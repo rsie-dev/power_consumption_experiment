@@ -5,6 +5,7 @@ import numpy as np
 
 from .energy_efficiency_statistics import EnergyEfficiencyStatistics
 from .factor_means import FactorMeans
+from .diagnostic import Diagnostic
 
 
 class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
@@ -46,10 +47,15 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         # 1. residual variance across fitted values -> UI
         # 2. Check residual normality and extreme tails -> UI
 
-        diagnostics = self._find_observations_that_strongly_influence_model(full_model)
-        self._print_observations_that_strongly_influence_model(diagnostics)
+        self._log_section("Diagnostic")
+        diagnostic = Diagnostic(self.factors)
+        diagnostics = diagnostic.find_observations_that_strongly_influence_model(full_model)
+        diagnostic.print_observations_that_strongly_influence_model(diagnostics)
 
-        self._log_section("Calculate statistics")
+        extremes = diagnostic.get_diagnostics(full_model)
+        diagnostic.print_diagnostics(extremes)
+
+        self._log_section("Calculate ANOVA")
         anova_hc3 = self._calculate_anova_hc3(full_model)
         self._print_anova_hc3("total", anova_hc3)
 
