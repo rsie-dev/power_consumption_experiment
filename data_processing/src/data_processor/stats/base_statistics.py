@@ -12,6 +12,7 @@ from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
 from data_processor.processor import Processor
+from data_processor.constants import ORDER_STRENGTH
 from .effect_names import get_effect_name
 
 
@@ -94,6 +95,7 @@ class BaseStatistics(Processor):
     def _validate_data(self, df: pd.DataFrame):
         self._log_section("Validate data")
         self._validate_factor_values(df)
+        self._validate_tool_strength(df)
         self._validate_data_quantity(df)
 
     def _validate_factor_values(self, df: pd.DataFrame):
@@ -101,6 +103,38 @@ class BaseStatistics(Processor):
             if df[factor].isna().any():
                 missing = df[factor].isna().sum()
                 raise ValueError(f"Factor {factor} has {missing} missing values")
+
+    def _validate_tool_strength(self, df: pd.DataFrame):
+        df = df.copy()
+        observed_strengths = set(df["strength"].dropna().astype(str))
+
+        unexpected_strengths = observed_strengths - set(ORDER_STRENGTH)
+        if unexpected_strengths:
+            raise ValueError(
+                f"Unerwartete strength-Werte: {sorted(unexpected_strengths)}"
+            )
+
+        df["strength"] = pd.Categorical(
+            df["strength"],
+            categories=ORDER_STRENGTH,
+            ordered=True
+        )
+
+        strength_coverage = (
+            df.groupby(["tool", "strength"], observed=False)
+            .size()
+            .unstack(fill_value=0)
+            .reindex(columns=ORDER_STRENGTH)
+        )
+
+        if (strength_coverage == 0).any().any():
+            missing = (
+                strength_coverage
+                .eq(0)
+                .stack()
+            )
+            missing = missing[missing].index.tolist()
+            raise ValueError(f"Missing combinations from tool and strength: {missing}")
 
     def _validate_data_quantity(self, df: pd.DataFrame):
         cell_counts = df.groupby(
