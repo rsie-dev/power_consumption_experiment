@@ -1,10 +1,10 @@
 import logging
+import itertools
 
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-import statsmodels.formula.api as smf
-from statsmodels.stats.anova import anova_lm
+from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
 
@@ -17,59 +17,303 @@ class BootstrapCiCalculator:
             seed = 12345
         self._rng = np.random.default_rng(seed)
 
-    def print_ci(self, sorted_ci_values: pd.DataFrame):
-        headers = ["Factor", "ω²", "CI low", "CI high"]
-        table_str = tabulate.tabulate(sorted_ci_values,
+    def print_ci(self, bootstrap_results: pd.DataFrame):
+        headers = ["Factor", "Rank", "df", "eta²", "eta² low", "eta² high", "ω²", "ω² low", "ω² high"]
+        table_str = tabulate.tabulate(bootstrap_results,
                                       headers=headers,
                                       )
         self._logger.info("")
-        self._logger.info("95%% confidence interval table")
+        self._logger.info(r"95% confidence interval table")
         print(table_str)
 
-    def calculate_ci(self, df: pd.DataFrame, formula: str) -> pd.DataFrame:
-        # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
-        # Reason: This confirms whether the top-three ranking is stable.
-        boot_data = df.reset_index(drop=True)
-
-        groups = list(
-            boot_data.groupby(self._factors, observed=True).indices.values()
+    def calculate_ci_new(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        # Prepare the balanced response array
+        grouped = df.groupby(
+            self._factors,
+            observed=True,
+            sort=True,
         )
 
-        boot_results = []
+        group_sizes = grouped.size()
+        n_repeats = int(group_sizes.iloc[0])
+
+        level_counts = [
+            df[factor].nunique()
+            for factor in self._factors
+        ]
+
+        cell_values = np.stack(
+            [
+                group["log_throughput"].to_numpy(dtype=float)
+                for _, group in grouped
+            ]
+        )
+
+        response_array = cell_values.reshape(
+            *level_counts,
+            n_repeats,
+        )
+
+        factor_axes = range(len(self._factors))
+
+        effect_subsets = [
+            subset
+            for order in range(1, len(self._factors) + 1)
+            for subset in itertools.combinations(factor_axes, order)
+        ]
+
+        contrast_labels = {
+            factor: f"C({factor}, Sum)"
+            for factor in self._factors
+        }
+        effect_names = [
+            ":".join(
+                contrast_labels[self._factors[axis]]
+                for axis in subset
+            )
+            for subset in effect_subsets
+        ]
+
+        effect_degrees_of_freedom = np.array(
+            [
+                np.prod(
+                    [
+                        level_counts[axis] - 1
+                        for axis in subset
+                    ]
+                )
+                for subset in effect_subsets
+            ],
+            dtype=int,
+        )
+
+        point_eta, point_omega = self._calculate_effect_sizes(
+            response_array, effect_subsets, factor_axes, n_repeats, level_counts, effect_degrees_of_freedom
+        )
+
+        # Run the stratified bootstrap
+        bootstrap_eta = np.empty(
+            (self._n_boot, len(effect_names))
+        )
+        bootstrap_omega = np.empty(
+            (self._n_boot, len(effect_names))
+        )
+
         self._logger.info("Calculating confidence intervals...")
-        for _ in tqdm(range(self._n_boot), colour="green"):
-            sampled_positions = np.concatenate([
-                self._rng.choice(group, size=len(group), replace=True)
-                for group in groups
-            ])
-
-            sample = boot_data.iloc[sampled_positions]
-
-            model = smf.ols(formula, data=sample).fit()
-            table = anova_lm(model, typ=3)
-
-            mse_boot = (
-                    table.loc["Residual", "sum_sq"]
-                    / table.loc["Residual", "df"]
+        for bootstrap_index  in tqdm(range(self._n_boot), colour="green"):
+            sample_indices = self._rng.integers(
+                low=0,
+                high=n_repeats,
+                size=response_array.shape,
             )
 
-            y_boot = model.model.endog
-            ss_total_boot = np.sum((y_boot - y_boot.mean()) ** 2)
-
-            omega = (
-                    table["sum_sq"] - table["df"] * mse_boot
-                    ) / (ss_total_boot + mse_boot)
-
-            boot_results.append(
-                omega.drop(["Intercept", "Residual"]).clip(lower=0)
+            bootstrap_values = np.take_along_axis(
+                response_array,
+                sample_indices,
+                axis=-1,
             )
 
-        bootstrap_omega = pd.DataFrame(boot_results)
+            bootstrap_eta[bootstrap_index], bootstrap_omega[bootstrap_index] = (
+                self._calculate_effect_sizes(bootstrap_values, effect_subsets, factor_axes,
+                                             n_repeats, level_counts, effect_degrees_of_freedom)
+            )
 
-        confidence_intervals = bootstrap_omega.quantile(
-            [0.025, 0.975]
-        ).T # transpose, swap rows and columns
+        # Calculate percentile confidence intervals
+        eta_lower, eta_upper = np.quantile(
+            bootstrap_eta,
+            [0.025, 0.975],
+            axis=0,
+        )
 
-        confidence_intervals.columns = ["omega_ci_lower", "omega_ci_upper"]
+        omega_lower, omega_upper = np.quantile(
+            bootstrap_omega,
+            [0.025, 0.975],
+            axis=0,
+        )
 
-        return confidence_intervals
+        bootstrap_results = pd.DataFrame(
+            {
+                "df": effect_degrees_of_freedom,
+                "eta_squared": point_eta,
+                "eta_ci_lower": eta_lower,
+                "eta_ci_upper": eta_upper,
+                "omega_squared": point_omega,
+                "omega_ci_lower": omega_lower,
+                "omega_ci_upper": omega_upper,
+            },
+            index=pd.Index(
+                effect_names,
+                name="effect",
+            ),
+        )
+
+        bootstrap_results = bootstrap_results.sort_values(
+            "omega_squared",
+            ascending=False,
+        )
+
+        bootstrap_results.insert(
+            0,
+            "rank",
+            np.arange(1, len(bootstrap_results) + 1),
+        )
+
+        confidence_intervals = bootstrap_results[[
+            "eta_ci_lower", "eta_ci_upper",
+            "omega_ci_lower", "omega_ci_upper",
+        ]]
+        return confidence_intervals, bootstrap_results
+
+    def validate_data(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> None:
+        # Prepare the balanced response array
+        grouped = df.groupby(
+            self._factors,
+            observed=True,
+            sort=True,
+        )
+
+        group_sizes = grouped.size()
+
+        if group_sizes.nunique() != 1:
+            raise ValueError("All configurations must contain the same number of observations")
+
+        n_repeats = int(group_sizes.iloc[0])
+
+        level_counts = [
+            df[factor].nunique()
+            for factor in self._factors
+        ]
+
+        expected_cells = int(np.prod(level_counts))
+
+        if len(group_sizes) != expected_cells:
+            raise ValueError(f"Expected {expected_cells} configurations, but found {len(group_sizes)}")
+
+        cell_values = np.stack(
+            [
+                group["log_throughput"].to_numpy(dtype=float)
+                for _, group in grouped
+            ]
+        )
+
+        response_array = cell_values.reshape(
+            *level_counts,
+            n_repeats,
+        )
+
+        factor_axes = range(len(self._factors))
+
+        effect_subsets = [
+            subset
+            for order in range(1, len(self._factors) + 1)
+            for subset in itertools.combinations(factor_axes, order)
+        ]
+
+        effect_degrees_of_freedom = np.array(
+            [
+                np.prod(
+                    [
+                        level_counts[axis] - 1
+                        for axis in subset
+                    ]
+                )
+                for subset in effect_subsets
+            ],
+            dtype=int,
+        )
+
+
+        # Verify the direct calculation against the original model
+        point_eta, _ = self._calculate_effect_sizes(
+            response_array, effect_subsets, factor_axes, n_repeats, level_counts, effect_degrees_of_freedom
+        )
+
+        self._logger.info("")
+        self._logger.info("Sum of point eta²: %.8f", point_eta.sum())
+        self._logger.info("Model R²:          %.8f", model.rsquared)
+
+        if not np.isclose(
+                point_eta.sum(),
+                model.rsquared,
+                rtol=1e-8,
+                atol=1e-10,
+        ):
+            raise RuntimeError("The direct factorial decomposition does not match the model")
+
+    def _calculate_effect_sizes(self, values: np.ndarray, effect_subsets: list, factor_axes: range,
+                                n_repeats: int, level_counts: list, effect_degrees_of_freedom: np.ndarray):
+        cell_means = values.mean(axis=-1)
+        grand_mean = values.mean()
+
+        ss_total = np.sum(
+            np.square(values - grand_mean)
+        )
+
+        ss_residual = np.sum(
+            np.square(
+                values - cell_means[..., np.newaxis]
+            )
+        )
+
+        residual_df = (
+                values.size - cell_means.size
+        )
+
+        mse_residual = ss_residual / residual_df
+
+        effect_sums_of_squares = []
+
+        for subset in effect_subsets:
+            component = cell_means.copy()
+
+            for axis in factor_axes:
+                if axis in subset:
+                    component = (
+                            component
+                            - component.mean(
+                        axis=axis,
+                        keepdims=True,
+                    )
+                    )
+                else:
+                    component = component.mean(
+                        axis=axis,
+                        keepdims=True,
+                    )
+
+            replication_multiplier = (
+                    n_repeats
+                    * np.prod(
+                [
+                    level_counts[axis]
+                    for axis in factor_axes
+                    if axis not in subset
+                ]
+            )
+            )
+
+            effect_ss = (
+                    replication_multiplier
+                    * np.sum(np.square(component))
+            )
+
+            effect_sums_of_squares.append(effect_ss)
+
+        effect_sums_of_squares = np.asarray(
+            effect_sums_of_squares
+        )
+
+        eta_squared = (
+                effect_sums_of_squares / ss_total
+        )
+
+        omega_squared = (
+                (
+                        effect_sums_of_squares
+                        - effect_degrees_of_freedom
+                        * mse_residual
+                )
+                / (ss_total + mse_residual)
+        )
+
+        return eta_squared, omega_squared

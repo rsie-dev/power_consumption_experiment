@@ -76,7 +76,7 @@ class Processor:
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
                                                        parents=[common_parser, factor_parser, tex_parser, log_parser])
-        parser_stats_tp.add_argument('--boot', default=1000, type=int, help="bootstrap count")
+        parser_stats_tp.add_argument('--boot', default=10000, type=int, help="bootstrap count")
         parser_stats_tp.add_argument('--seed', type=int, help="RNG seed value")
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
