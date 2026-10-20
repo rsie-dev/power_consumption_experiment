@@ -65,9 +65,9 @@ class ThroughputStatistics(BaseStatistics):
     def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Check models")
 
-        compression_model = self._fit_two_way_model(df, "log_throughput")
+        two_way_model = self._fit_two_way_model(df, "log_throughput")
         three_way_model, full_model = self._fit_higher_order_models(df, "log_throughput")
-        self._print_fitted_models("", compression_model, three_way_model, full_model)
+        self._print_fitted_models("", two_way_model, three_way_model, full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI
