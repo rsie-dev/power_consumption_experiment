@@ -487,6 +487,11 @@ class BaseStatistics(Processor):
                 100 * order_summary["eta_squared"]
         )
 
+        order_summary = order_summary.sort_values(
+            "omega_squared",
+            ascending=False,
+        )
+
         return order_summary
 
     def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
