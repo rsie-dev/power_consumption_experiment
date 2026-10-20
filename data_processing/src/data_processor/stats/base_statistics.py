@@ -20,6 +20,13 @@ from .effect_names import get_effect_name
 class BaseStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
+    EFFECT_NAMES = {
+        1: "Main effect",
+        2: "Two-way interaction",
+        3: "Three-way interaction",
+        4: "Four-way interaction"
+    }
+
     def __init__(self, resources: Path, logfile: bool, threading: str, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -298,14 +305,13 @@ class BaseStatistics(Processor):
         )
         return std_error_description.to_frame()
 
-    def _print_anova_table(self, kind: str, ranked: pd.DataFrame):
-        headers = ["Factor", "DF", "ω²", "ω² %"]
+    def _print_anova_table(self, ranked: pd.DataFrame):
+        headers = ["Factor", "df", "ω²", "ω² %"]
         table_str = tabulate.tabulate(ranked,
                                       headers=headers,
                                       )
         self._logger.info("")
-        extra = f" {kind}:" if kind else ":"
-        self._logger.info("ANOVA rank table%s", extra)
+        self._logger.info("ANOVA rank table")
         self._logger.info(table_str)
 
     def _calculate_anova_table(self, model: RegressionResultsWrapper):
@@ -329,6 +335,188 @@ class BaseStatistics(Processor):
         ranked["omega_squared_percent"] = ranked["omega_squared"] * 100
         return effects, ranked
 
+    def _print_anova_effect_rankings(self, effect_table: pd.DataFrame):
+        headers = ["Rank", "Effect", "effect type", "df", "sum²", "eta²", "ω²", "total variation (%)", "explained variation (%)"]
+        colalign = ["global"] * len(headers)
+        colalign[2] = "right"
+        table_str = tabulate_pint(
+            effect_table,
+            showindex=False,
+            headers=headers,
+            colalign=colalign,
+            floatfmt=["", "", "", "",  ".8f", ".8f", ".8f", ".2f", ".2f"]
+        )
+        self._logger.info("")
+        self._logger.info("Effect-size ranking:")
+        self._logger.info(table_str)
+
+    def _print_anova_effect_decompositions(self, decompositions: pd.DataFrame):
+        self._logger.info("")
+        self._logger.info("Decomposition checks:")
+        headers = ["Entry", "value"]
+        table_str = tabulate_pint(
+            decompositions,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _calculate_anova_effect_rankings(self, model: RegressionResultsWrapper):
+        # Calculate conventional Type III sums of squares
+        # The F-tests and p-values from this table are not used
+        anova_ss = anova_lm(
+            model,
+            typ=3,
+        )
+
+        effect_table = (
+            anova_ss
+            .drop(index=["Intercept", "Residual"], errors="ignore")
+            [["sum_sq", "df"]]
+            .copy()
+        )
+
+        # Calculate corrected total, model, and residual sums of squares
+        response = np.asarray(
+            model.model.endog,
+            dtype=float,
+        )
+
+        ss_total = np.sum(
+            np.square(response - response.mean())
+        )
+
+        ss_residual = np.sum(
+            np.square(model.resid)
+        )
+
+        ss_model = ss_total - ss_residual
+        mse_residual = model.mse_resid
+
+        # Calculate additive and bias-adjusted effect sizes
+        effect_table["eta_squared"] = (
+                effect_table["sum_sq"] / ss_total
+        )
+
+        effect_table["omega_squared"] = (
+                (
+                        effect_table["sum_sq"]
+                        - effect_table["df"] * mse_residual
+                )
+                / (ss_total + mse_residual)
+        )
+
+        effect_table["percent_total_variation"] = (
+                100 * effect_table["eta_squared"]
+        )
+
+        effect_table["percent_explained_variation"] = (
+                100 * effect_table["sum_sq"] / ss_model
+        )
+
+        effect_table["effect"] = [
+            name
+            for name in effect_table.index
+        ]
+
+        effect_table.index.name = "effect"
+
+        # Determine interaction order
+        effect_table["effect_order"] = [
+            name.count(":") + 1
+            for name in effect_table.index
+        ]
+        effect_table["effect_type"] = effect_table["effect_order"].map(lambda e: self.EFFECT_NAMES[e])
+
+        # Rank effects using omega squared
+        effect_table["rank"] = (
+            effect_table["omega_squared"]
+            .rank(method="min", ascending=False)
+            .astype(int)
+        )
+
+        effect_table = effect_table.sort_values(
+            "omega_squared",
+            ascending=False,
+        )
+
+        effect_table_df = effect_table[
+            [
+                "rank",
+                "effect",
+                "effect_type",
+                "df",
+                "sum_sq",
+                "eta_squared",
+                "omega_squared",
+                "percent_total_variation",
+                "percent_explained_variation",
+            ]
+        ]
+        effect_table_df['df'] = effect_table_df['df'].astype(int)
+
+        # Verify that the effect sums of squares form an additive decomposition
+        effect_ss_sum = effect_table["sum_sq"].sum()
+        decomposition_error = (
+                ss_total - effect_ss_sum - ss_residual
+        )
+
+        decompositions = pd.DataFrame(
+            {
+                "entry": [
+                    "Corrected total sum of squares",
+                    "Model sum of squares",
+                    "Effect sum of squares",
+                    "Residual sum of squares",
+                    "Decomposition error",
+                    "Sum of effect eta squared",
+                    "Model R²",
+                    "Residual variation",
+                ],
+                "value": [
+                    ss_total,
+                    ss_model,
+                    effect_ss_sum,
+                    ss_residual,
+                    decomposition_error,
+                    effect_table["eta_squared"].sum(),
+                    model.rsquared,
+                    ss_residual / ss_total,
+                ],
+            }
+        )
+
+        return effect_table_df, decompositions
+
+    def _print_order_summary(self, order_summary: pd.DataFrame):
+        self._logger.info("")
+        self._logger.info("Variation by effect order:")
+        headers = ["Type", "sum²", "eta²", "ω²", "total variation (%)"]
+        table_str = tabulate_pint(
+            order_summary,
+            headers=headers,
+            floatfmt=["", ".8f", ".8f", ".8f", ".2f"]
+        )
+        self._logger.info(table_str)
+
+    def _calculate_order_summary(self, effect_table_df: pd.DataFrame) -> pd.DataFrame:
+        # Summarize effects by interaction order
+        order_summary = (
+            effect_table_df
+            .groupby("effect_type", observed=True)
+            .agg(
+                sum_sq=("sum_sq", "sum"),
+                eta_squared=("eta_squared", "sum"),
+                omega_squared=("omega_squared", "sum"),
+            )
+        )
+
+        order_summary["percent_total_variation"] = (
+                100 * order_summary["eta_squared"]
+        )
+
+        return order_summary
+
     def _extract_relevant_factors(self, ranked: pd.DataFrame, target: int) -> list:
         relevant = []
 
@@ -339,7 +527,7 @@ class BaseStatistics(Processor):
                 first_interaction = factors
                 break
 
-        n = (ranked["omega_squared_percent"].cumsum() < target).sum() + 1
+        n = (ranked["omega_squared"].cumsum() < (target / 100)).sum() + 1
         relevant_rows = ranked.iloc[:n]
         for idx, _ in relevant_rows.iterrows():
             factors = self._extract_factors(str(idx))
@@ -453,19 +641,12 @@ class BaseStatistics(Processor):
                 term = term.replace(f"C({factor}, Sum)", factor)
             return term.replace(":", " × ")
 
-        type_names = {
-            1: "Main effect",
-            2: "Two-way interaction",
-            3: "Three-way interaction",
-            4: "Four-way interaction"
-        }
-
         effect_ranking["Effect"] = [
             clean_effect(term) for term in effect_ranking.index
         ]
 
         effect_ranking["Effect type"] = [
-            type_names[term.count(":") + 1]
+            self.EFFECT_NAMES[term.count(":") + 1]
             for term in effect_ranking.index
         ]
 
