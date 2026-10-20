@@ -305,36 +305,6 @@ class BaseStatistics(Processor):
         )
         return std_error_description.to_frame()
 
-    def _print_anova_table(self, ranked: pd.DataFrame):
-        headers = ["Factor", "df", "ω²", "ω² %"]
-        table_str = tabulate.tabulate(ranked,
-                                      headers=headers,
-                                      )
-        self._logger.info("")
-        self._logger.info("ANOVA rank table")
-        self._logger.info(table_str)
-
-    def _calculate_anova_table(self, model: RegressionResultsWrapper):
-        # Rank factors and interactions by explained variation by omega^2.
-        # Reason: RQ asks which effects explain the most variation, which \(p\)-values cannot determine.
-        anova_ss = anova_lm(model, typ=3)
-        mse = (
-                anova_ss.loc["Residual", "sum_sq"]
-                / anova_ss.loc["Residual", "df"]
-        )
-        y = model.model.endog
-        ss_total = np.sum((y - y.mean()) ** 2)
-        effects = anova_ss.drop(
-            index=["Intercept", "Residual"]
-        ).copy()
-        effects["omega_squared"] = (
-                                           effects["sum_sq"] - effects["df"] * mse
-                                   ) / (ss_total + mse)
-        effects["omega_squared"] = effects["omega_squared"].clip(lower=0)
-        ranked = effects[["df", "omega_squared"]].sort_values("omega_squared", ascending=False)
-        ranked["omega_squared_percent"] = ranked["omega_squared"] * 100
-        return effects, ranked
-
     def _print_anova_effect_rankings(self, effect_table: pd.DataFrame):
         headers = ["Rank", "Effect", "effect type", "df", "sum²", "eta²", "ω²", "total variation (%)", "explained variation (%)"]
         colalign = ["global"] * len(headers)
@@ -362,6 +332,8 @@ class BaseStatistics(Processor):
         self._logger.info(table_str)
 
     def _calculate_anova_effect_rankings(self, model: RegressionResultsWrapper):
+        # Rank factors and interactions by explained variation by omega^2.
+        # Reason: RQ asks which effects explain the most variation, which \(p\)-values cannot determine.
         # Calculate conventional Type III sums of squares
         # The F-tests and p-values from this table are not used
         anova_ss = anova_lm(
@@ -440,7 +412,7 @@ class BaseStatistics(Processor):
             ascending=False,
         )
 
-        effect_table_df = effect_table[
+        ranked_effects_df = effect_table[
             [
                 "rank",
                 "effect",
@@ -453,7 +425,7 @@ class BaseStatistics(Processor):
                 "percent_explained_variation",
             ]
         ]
-        effect_table_df['df'] = effect_table_df['df'].astype(int)
+        ranked_effects_df['df'] = ranked_effects_df['df'].astype(int)
 
         # Verify that the effect sums of squares form an additive decomposition
         effect_ss_sum = effect_table["sum_sq"].sum()
@@ -486,7 +458,7 @@ class BaseStatistics(Processor):
             }
         )
 
-        return effect_table_df, decompositions
+        return ranked_effects_df, decompositions
 
     def _print_order_summary(self, order_summary: pd.DataFrame):
         self._logger.info("")
@@ -628,10 +600,10 @@ class BaseStatistics(Processor):
 
         return latex
 
-    def _create_effect_ranking_table(self, effects: pd.DataFrame, confidence_intervals: pd.Series,
+    def _create_effect_ranking_table(self, ranked: pd.DataFrame, confidence_intervals: pd.Series,
                                      anova_hc3: pd.DataFrame):
         effect_ranking = (
-            effects[["df", "omega_squared"]]
+            ranked[["df", "omega_squared"]]
             .join(confidence_intervals)
             .join(anova_hc3[["F", "PR(>F)"]])
         )

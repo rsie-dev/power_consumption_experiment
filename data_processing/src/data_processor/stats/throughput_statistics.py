@@ -90,21 +90,15 @@ class ThroughputStatistics(BaseStatistics):
         self._log_section("Calculate ANOVA")
         anova_hc3, std_error_description_df = self._calculate_anova_hc3(full_model)
         self._print_anova_hc3(anova_hc3, std_error_description_df)
-        effects, ranked = self._calculate_anova_table(full_model)
 
-        effect_table, decompositions = self._calculate_anova_effect_rankings(full_model)
-        self._print_anova_effect_rankings(effect_table)
-        order_summary = self._calculate_order_summary(effect_table)
+        ranked_effects_df, decompositions = self._calculate_anova_effect_rankings(full_model)
+        self._print_anova_effect_rankings(ranked_effects_df)
+        order_summary = self._calculate_order_summary(ranked_effects_df)
         self._print_order_summary(order_summary)
         self._print_anova_effect_decompositions(decompositions)
 
-        self._print_anova_table(ranked)
         relevant_percent = 95
-        #relevant_factors = self._extract_relevant_factors(ranked, relevant_percent)
-        #self._logger.info("")
-        #self._logger.info("Relevant %d%% factors: %s", relevant_percent, " > ".join([str(f) for f in relevant_factors]))
-
-        relevant_factors = self._extract_relevant_factors(effect_table, relevant_percent)
+        relevant_factors = self._extract_relevant_factors(ranked_effects_df, relevant_percent)
         self._logger.info("")
         self._logger.info("Relevant %d%% factors: %s", relevant_percent, " > ".join([str(f) for f in relevant_factors]))
 
@@ -122,10 +116,10 @@ class ThroughputStatistics(BaseStatistics):
         means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
         # Check that the top confidence intervals do not overlap
-        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(df, full_model.model.formula, effects)
+        _, confidence_intervals = self._bootstrap_ci_calculator.calculate_ci(df, full_model.model.formula, ranked_effects_df)
 
         self._log_section("Ranking")
-        effect_ranking = self._create_effect_ranking_table(ranked, confidence_intervals, anova_hc3)
+        effect_ranking = self._create_effect_ranking_table(ranked_effects_df, confidence_intervals, anova_hc3)
         self._print_effect_ranking_table(effect_ranking)
 
         factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
