@@ -605,7 +605,7 @@ class BaseStatistics(Processor):
 
         return latex
 
-    def _create_effect_ranking_table(self, ranked: pd.DataFrame, confidence_intervals: pd.Series,
+    def _create_effect_ranking_table(self, ranked: pd.DataFrame, confidence_intervals: pd.DataFrame,
                                      anova_hc3: pd.DataFrame):
         effect_ranking = (
             ranked[["df", "omega_squared"]]
