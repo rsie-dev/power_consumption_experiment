@@ -9,13 +9,14 @@ import tabulate
 
 
 class BootstrapCiCalculator:
-    def __init__(self, factors: list[str], n_boot: int, seed: int | None):
+    def __init__(self, factors: list[str], n_boot: int, seed: int | None, base_column: str):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
         self._n_boot = n_boot
         if seed is None:
             seed = 12345
         self._rng = np.random.default_rng(seed)
+        self._base_column = base_column
 
     def print_ci(self, bootstrap_results: pd.DataFrame):
         headers = ["Factor", "Rank", "df", "eta²", "eta² low", "eta² high", "ω²", "ω² low", "ω² high"]
@@ -44,7 +45,7 @@ class BootstrapCiCalculator:
 
         cell_values = np.stack(
             [
-                group["log_throughput"].to_numpy(dtype=float)
+                group["log_%s" % self._base_column].to_numpy(dtype=float)
                 for _, group in grouped
             ]
         )
@@ -191,7 +192,7 @@ class BootstrapCiCalculator:
 
         cell_values = np.stack(
             [
-                group["log_throughput"].to_numpy(dtype=float)
+                group["log_%s" % self._base_column].to_numpy(dtype=float)
                 for _, group in grouped
             ]
         )
