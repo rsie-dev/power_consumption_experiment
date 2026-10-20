@@ -19,7 +19,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         super().__init__(resources, logfile, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/joule"
-        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed)
+        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
 
     def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("ee_")
