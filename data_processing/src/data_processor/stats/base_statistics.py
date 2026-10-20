@@ -527,7 +527,7 @@ class BaseStatistics(Processor):
         return tuple(factors)
 
     def _print_effect_ranking_table(self, table_df: pd.DataFrame):
-        table_df = table_df.drop(columns=["ci_low", "ci_high"])
+        table_df = table_df.drop(columns=["omega_ci_lower", "omega_ci_upper"])
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
                    "95% bootstrap CI", "HC3 F", "HC3 p"]
@@ -552,13 +552,13 @@ class BaseStatistics(Processor):
     def _build_effect_ranking_lines(self, df: pd.DataFrame) -> str:
         df = df.copy()
         df['df'] = df['df'].astype(int)
-        for column in ["omega_squared", "ci_low", "ci_high"]:
+        for column in ["omega_squared", "omega_ci_lower", "omega_ci_upper"]:
             df["%s_percent" % column] = df[column] * 100
 
         df["Effect"] = df["Effect"].map(get_effect_name)
 
         tex_df = df[["Rank", "Effect", "df",
-                     "omega_squared_percent", "ci_low_percent", "ci_high_percent",
+                     "omega_squared_percent", "omega_ci_lower_percent", "omega_ci_upper_percent",
                      "cumulative_omega_squared_percent"]]
 
         tex_df.columns = pd.MultiIndex.from_tuples([
@@ -634,9 +634,9 @@ class BaseStatistics(Processor):
         )
 
         effect_ranking["95% bootstrap CI"] = (
-                effect_ranking["ci_low"].map(lambda x: f"{x:.6f}")
+                effect_ranking["omega_ci_lower"].map(lambda x: f"{x:.6f}")
                 + "–"
-                + effect_ranking["ci_high"].map(lambda x: f"{x:.6f}")
+                + effect_ranking["omega_ci_upper"].map(lambda x: f"{x:.6f}")
         )
 
         effect_ranking["HC3 p"] = effect_ranking["PR(>F)"].map(
@@ -655,8 +655,8 @@ class BaseStatistics(Processor):
                 "df",
                 "omega_squared",
                 "95% bootstrap CI",
-                "ci_low",
-                "ci_high",
+                "omega_ci_lower",
+                "omega_ci_upper",
                 "HC3 F",
                 "HC3 p"
             ]

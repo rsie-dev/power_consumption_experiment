@@ -70,6 +70,6 @@ class BootstrapCiCalculator:
             [0.025, 0.975]
         ).T # transpose, swap rows and columns
 
-        confidence_intervals.columns = ["ci_low", "ci_high"]
+        confidence_intervals.columns = ["omega_ci_lower", "omega_ci_upper"]
 
         return confidence_intervals
