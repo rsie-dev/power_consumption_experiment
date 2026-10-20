@@ -13,24 +13,24 @@ class ResidualVariance:
         self._factors = factors
 
     def print_residual_variance(self, zero_variance: pd.DataFrame, configuration_details: pd.DataFrame):
-        self._logger.info("Zero-variance configurations: %s", len(zero_variance))
-        headers = ["host", "tool", "dataset", "strength", "n", "residual_sd", "unique_duration_values",
-                   "duration_min", "duration_max", "minimum_duration_step"]
+        headers = ["host", "tool", "dataset", "strength", "n", "residual_sd",
+                   "unique_duration_values", "duration_min", "duration_max", "minimum_duration_step"]
         table_str = tabulate_pint(
             zero_variance,
             showindex=False,
             headers=headers,
         )
+        self._logger.info("Zero-variance configurations: %s", len(zero_variance))
         self._logger.info(table_str)
 
-        self._logger.info("")
-        self._logger.info("Configurations with the highest residual dispersion:")
         largest = configuration_details.nlargest(15, "residual_sd")
         table_str = tabulate_pint(
             largest,
             showindex=False,
             headers=headers,
         )
+        self._logger.info("")
+        self._logger.info("Configurations with the highest residual dispersion:")
         self._logger.info(table_str)
 
     def calculate_residual_variance(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[
