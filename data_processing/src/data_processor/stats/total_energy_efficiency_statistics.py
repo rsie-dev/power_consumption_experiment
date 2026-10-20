@@ -95,9 +95,10 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         self._bootstrap_ci_calculator.print_ci(bootstrap_results)
 
         self._log_section("Ranking")
-        effect_ranking = self._create_effect_ranking_table(ranked_effects_df, confidence_intervals, anova_hc3)
-        self._print_effect_ranking_table(effect_ranking)
+        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df,
+                                                                           confidence_intervals, anova_hc3)
+        self._effect_ranking.print_effect_ranking_table(effect_rankings)
 
         factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
         self._print_factor_table(factor_means_values_df)
-        return effect_ranking, means_ci
+        return effect_rankings, means_ci

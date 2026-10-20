@@ -11,6 +11,7 @@ from .base_statistics import BaseStatistics
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .factor_means import FactorMeans
 from .effect_names import get_effect_name
+from .effect_ranking import EffectRanking
 
 
 class EnergyEfficiencyStatistics(BaseStatistics):
@@ -20,6 +21,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/joule"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
+        self._effect_ranking = EffectRanking(self.factors)
 
     def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("ee_")
@@ -125,9 +127,9 @@ class EnergyEfficiencyStatistics(BaseStatistics):
 
         base = input_file.stem.removeprefix("ee_")
         filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
-        self._create_effect_ranking_tex(effect_ranking_df, filename)
+        self._effect_ranking.create_effect_ranking_tex(effect_ranking_df, self._resources / filename)
         top_df = effect_ranking_df[
             effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
         ]
         filename = "ee_%s_effect_ranking_%s_%s_%s.tex" % (self.effect_name, self._threading, self._mode, base)
-        self._create_effect_ranking_tex(top_df, filename)
+        self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)

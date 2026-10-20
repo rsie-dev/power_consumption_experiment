@@ -16,6 +16,7 @@ from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .drift_analyzer import DriftAnalyzer
 from .diagnostic import Diagnostic
 from .residual_variance import ResidualVariance
+from .effect_ranking import EffectRanking
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -24,6 +25,7 @@ class ThroughputStatistics(BaseStatistics):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._display_unit = "MiB/s"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
+        self._effect_ranking = EffectRanking(self.factors)
 
     def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("tp_")
@@ -121,12 +123,12 @@ class ThroughputStatistics(BaseStatistics):
         self._bootstrap_ci_calculator.print_ci(bootstrap_results)
 
         self._log_section("Ranking")
-        effect_ranking = self._create_effect_ranking_table(ranked_effects_df, confidence_intervals, anova_hc3)
-        self._print_effect_ranking_table(effect_ranking)
+        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df, confidence_intervals, anova_hc3)
+        self._effect_ranking.print_effect_ranking_table(effect_rankings)
 
         factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
         self._print_factor_table(factor_means_values_df)
-        return effect_ranking, means_ci
+        return effect_rankings, means_ci
 
     def _print_factor_table(self, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
@@ -267,9 +269,9 @@ class ThroughputStatistics(BaseStatistics):
 
         base = input_file.stem.removeprefix("tp_")
         filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
-        self._create_effect_ranking_tex(effect_ranking_df, filename)
+        self._effect_ranking.create_effect_ranking_tex(effect_ranking_df, self._resources / filename)
         top_df = effect_ranking_df[
             effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
         ]
         filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
-        self._create_effect_ranking_tex(top_df, filename)
+        self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)
