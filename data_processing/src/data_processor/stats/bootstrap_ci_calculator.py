@@ -26,8 +26,7 @@ class BootstrapCiCalculator:
         self._logger.info("95%% confidence interval table")
         print(table_str)
 
-    def calculate_ci(self, df: pd.DataFrame, formula: str, effects: pd.DataFrame) \
-            -> tuple[pd.DataFrame, pd.Series]:
+    def calculate_ci(self, df: pd.DataFrame, formula: str) -> pd.Series:
         # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
         # Reason: This confirms whether the top-three ranking is stable.
         boot_data = df.reset_index(drop=True)
@@ -72,9 +71,5 @@ class BootstrapCiCalculator:
         ).T # transpose, swap rows and columns
 
         confidence_intervals.columns = ["ci_low", "ci_high"]
-
-        results_with_ci = effects[["omega_squared"]].join(
-            confidence_intervals
-        )
 
         return confidence_intervals
