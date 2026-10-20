@@ -4,15 +4,15 @@ import tabulate
 
 
 def tabulate_pint(
-               df: pd.DataFrame,
-               headers: list[str],
-               tablefmt="simple",
-               showindex="default",
-               colalign=None,
-               ):
+        df: pd.DataFrame,
+        headers: list[str],
+        tablefmt="simple",
+        showindex="default",
+        colalign=None,
+        floatfmt="g",
+):
     display_df = df.copy()
     header_names = []
-
 
     o = 0
     if showindex == "default" or showindex is True:
@@ -32,6 +32,7 @@ def tabulate_pint(
     table_str = tabulate.tabulate(display_df,
                                   headers=header_names,
                                   tablefmt=tablefmt,
+                                  floatfmt=floatfmt,
                                   showindex=showindex,
                                   colalign=colalign,
                                   )
