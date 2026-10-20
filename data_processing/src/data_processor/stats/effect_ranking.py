@@ -2,9 +2,11 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import tabulate
 
-from .effect_names import get_effect_name, EFFECT_NAMES
+from data_processor.util import tabulate_pint
+from .effect_names import get_effect_name, build_effect_names, EFFECT_NAMES
 
 
 class EffectRanking:
@@ -90,7 +92,6 @@ class EffectRanking:
 
         return latex
 
-
     def create_effect_ranking_table(self, ranked: pd.DataFrame, confidence_intervals: pd.DataFrame,
                                      anova_hc3: pd.DataFrame) -> pd.DataFrame:
         effect_ranking = (
@@ -155,3 +156,145 @@ class EffectRanking:
                               effect_ranking.pop("cumulative_omega_squared_percent"))
 
         return effect_ranking
+
+    def print_effect_rank_stability_table(self, rank_stability: pd.DataFrame):
+        headers = ["Effect", "Point rank", "Modal rank", "Median rank", "Rank 95 low", "Rank 95 high",
+                   "Probability same rank", "Probability top 4", "Probability top 5"]
+        table_str = tabulate_pint(
+            rank_stability,
+            headers=headers,
+        )
+        self._logger.info("Bootstrap rank stability:")
+        self._logger.info(table_str)
+
+    def print_effect_adjacent_rank_comparisons_table(self, adjacent_comparisons: pd.DataFrame):
+        headers = ["Higher effect", "Lower effect", "Probability higher"]
+        table_str = tabulate_pint(
+            adjacent_comparisons,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info("")
+        self._logger.info("Adjacent-rank comparisons:")
+        self._logger.info(table_str)
+
+    def create_effect_ranking_table_new(self, bootstrap_omega,
+                                        point_omega) -> tuple[pd.DataFrame, pd.DataFrame]:
+        factor_axes = range(len(self._factors))
+        effect_names, _ = build_effect_names(self._factors, factor_axes)
+
+        n_bootstrap, n_effects = bootstrap_omega.shape
+        if n_effects != len(effect_names):
+            raise ValueError("The number of effects does not match the bootstrap results")
+
+        # Calculate the point-estimate ranks
+        point_order = np.argsort(
+            -point_omega,
+            kind="stable",
+        )
+
+        point_ranks = np.empty(
+            n_effects,
+            dtype=int,
+        )
+
+        point_ranks[point_order] = np.arange(
+            1,
+            n_effects + 1,
+        )
+
+        # Calculate ranks for every bootstrap sample
+        bootstrap_order = np.argsort(
+            -bootstrap_omega,
+            axis=1,
+            kind="stable",
+        )
+
+        bootstrap_ranks = np.empty_like(
+            bootstrap_order,
+            dtype=int,
+        )
+
+        bootstrap_ranks[
+            np.arange(n_bootstrap)[:, np.newaxis],
+            bootstrap_order
+        ] = np.arange(1, n_effects + 1)
+
+        # Calculate modal ranks
+        modal_ranks = np.array(
+            [
+                np.bincount(
+                    bootstrap_ranks[:, effect_index],
+                    minlength=n_effects + 1,
+                )[1:].argmax() + 1
+                for effect_index in range(n_effects)
+            ]
+        )
+
+        # Calculate central 95% bootstrap rank ranges
+        rank_lower, rank_upper = np.quantile(
+            bootstrap_ranks,
+            [0.025, 0.975],
+            axis=0,
+            method="nearest",
+        )
+
+        # Create the rank-stability summary
+        rank_stability = pd.DataFrame(
+            {
+                "point_rank": point_ranks,
+                "modal_rank": modal_ranks,
+                "median_rank": np.median(
+                    bootstrap_ranks,
+                    axis=0,
+                ),
+                "rank_95_low": rank_lower.astype(int),
+                "rank_95_high": rank_upper.astype(int),
+                "probability_same_rank": np.mean(
+                    bootstrap_ranks
+                    == point_ranks[np.newaxis, :],
+                    axis=0,
+                ),
+                "probability_top_4": np.mean(
+                    bootstrap_ranks <= 4,
+                    axis=0,
+                ),
+                "probability_top_5": np.mean(
+                    bootstrap_ranks <= 5,
+                    axis=0,
+                ),
+            },
+            index=pd.Index(
+                effect_names,
+                name="effect",
+            ),
+        )
+
+        rank_stability = rank_stability.sort_values(
+            "point_rank"
+        )
+
+        # Compare adjacent effects in the point-estimate ranking
+        adjacent_comparisons = []
+        for position in range(n_effects - 1):
+            higher_index = point_order[position]
+            lower_index = point_order[position + 1]
+
+            probability_higher = np.mean(
+                bootstrap_omega[:, higher_index]
+                > bootstrap_omega[:, lower_index]
+            )
+
+            adjacent_comparisons.append(
+                {
+                    "higher_effect": effect_names[higher_index],
+                    "lower_effect": effect_names[lower_index],
+                    "probability_higher": probability_higher,
+                }
+            )
+
+        adjacent_comparisons = pd.DataFrame(
+            adjacent_comparisons
+        )
+
+        return rank_stability, adjacent_comparisons

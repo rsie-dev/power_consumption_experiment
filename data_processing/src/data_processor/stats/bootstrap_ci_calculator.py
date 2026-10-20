@@ -7,6 +7,8 @@ from tqdm import tqdm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
+from .effect_names import build_effect_names
+
 
 class BootstrapCiCalculator:
     def __init__(self, factors: list[str], n_boot: int, seed: int | None, base_column: str):
@@ -27,7 +29,7 @@ class BootstrapCiCalculator:
         self._logger.info(r"95% confidence interval table")
         print(table_str)
 
-    def calculate_ci_new(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def calculate_ci_new(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, float]:
         # Prepare the balanced response array
         grouped = df.groupby(
             self._factors,
@@ -56,24 +58,7 @@ class BootstrapCiCalculator:
         )
 
         factor_axes = range(len(self._factors))
-
-        effect_subsets = [
-            subset
-            for order in range(1, len(self._factors) + 1)
-            for subset in itertools.combinations(factor_axes, order)
-        ]
-
-        contrast_labels = {
-            factor: f"C({factor}, Sum)"
-            for factor in self._factors
-        }
-        effect_names = [
-            ":".join(
-                contrast_labels[self._factors[axis]]
-                for axis in subset
-            )
-            for subset in effect_subsets
-        ]
+        effect_names, effect_subsets = build_effect_names(self._factors, factor_axes)
 
         effect_degrees_of_freedom = np.array(
             [
@@ -163,7 +148,7 @@ class BootstrapCiCalculator:
             "eta_ci_lower", "eta_ci_upper",
             "omega_ci_lower", "omega_ci_upper",
         ]]
-        return confidence_intervals, bootstrap_results
+        return confidence_intervals, bootstrap_results, bootstrap_omega, point_omega
 
     def validate_data(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> None:
         # Prepare the balanced response array

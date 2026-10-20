@@ -119,15 +119,20 @@ class ThroughputStatistics(BaseStatistics):
 
         # Check that the top confidence intervals do not overlap
         self._bootstrap_ci_calculator.validate_data(df, full_model)
-        confidence_intervals, bootstrap_results = self._bootstrap_ci_calculator.calculate_ci_new(df)
+        confidence_intervals, bootstrap_results, bootstrap_omega, point_omega = self._bootstrap_ci_calculator.calculate_ci_new(df)
         self._bootstrap_ci_calculator.print_ci(bootstrap_results)
 
         self._log_section("Ranking")
-        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df, confidence_intervals, anova_hc3)
+        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df,
+                                                                           confidence_intervals, anova_hc3)
         self._effect_ranking.print_effect_ranking_table(effect_rankings)
 
-        factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
-        self._print_factor_table(factor_means_values_df)
+        rank_stability, adjacent_comparisons = self._effect_ranking.create_effect_ranking_table_new(bootstrap_omega, point_omega)
+        self._effect_ranking.print_effect_rank_stability_table(rank_stability)
+        self._effect_ranking.print_effect_adjacent_rank_comparisons_table(adjacent_comparisons)
+
+        #factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
+        #self._print_factor_table(factor_means_values_df)
         return effect_rankings, means_ci
 
     def _print_factor_table(self, throughput_values_df: pd.DataFrame):
