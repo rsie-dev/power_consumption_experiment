@@ -26,11 +26,11 @@ class BootstrapCiCalculator:
         self._logger.info("95%% confidence interval table")
         print(table_str)
 
-    def calculate_ci(self, comp: pd.DataFrame, full_formula: str, effects: pd.DataFrame) \
+    def calculate_ci(self, df: pd.DataFrame, formula: str, effects: pd.DataFrame) \
             -> tuple[pd.DataFrame, pd.Series]:
         # Calculate bootstrap confidence intervals for the decompression \(\omega^2\) values.
         # Reason: This confirms whether the top-three ranking is stable.
-        boot_data = comp.reset_index(drop=True)
+        boot_data = df.reset_index(drop=True)
 
         groups = list(
             boot_data.groupby(self._factors, observed=True).indices.values()
@@ -46,7 +46,7 @@ class BootstrapCiCalculator:
 
             sample = boot_data.iloc[sampled_positions]
 
-            model = smf.ols(full_formula, data=sample).fit()
+            model = smf.ols(formula, data=sample).fit()
             table = anova_lm(model, typ=3)
 
             mse_boot = (
@@ -58,7 +58,7 @@ class BootstrapCiCalculator:
             ss_total_boot = np.sum((y_boot - y_boot.mean()) ** 2)
 
             omega = (
-                            table["sum_sq"] - table["df"] * mse_boot
+                    table["sum_sq"] - table["df"] * mse_boot
                     ) / (ss_total_boot + mse_boot)
 
             boot_results.append(
@@ -77,5 +77,4 @@ class BootstrapCiCalculator:
             confidence_intervals
         )
 
-        sorted_values = results_with_ci.sort_values("omega_squared", ascending=False)
-        return sorted_values, confidence_intervals
+        return confidence_intervals
