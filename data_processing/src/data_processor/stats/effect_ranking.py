@@ -136,9 +136,9 @@ class EffectRanking:
         for column in ["omega_squared", "omega_ci_lower", "omega_ci_upper"]:
             df["%s_percent" % column] = df[column] * 100
 
-        df["Effect"] = df["Effect"].map(get_effect_name)
+        df["effect"] = df["effect"].map(get_effect_name)
 
-        tex_df = df[["Rank", "Effect", "df",
+        tex_df = df[["rank", "effect", "df",
                      "omega_squared_percent", "omega_ci_lower_percent", "omega_ci_upper_percent",
                      "cumulative_omega_squared_percent"]]
 
