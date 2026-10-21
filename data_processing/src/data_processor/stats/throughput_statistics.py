@@ -284,8 +284,8 @@ class ThroughputStatistics(BaseStatistics):
         base = input_file.stem.removeprefix("tp_")
         filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
         self._effect_ranking.create_effect_rank_stability_tex(effect_ranking_df, self._resources / filename)
-        #top_df = effect_ranking_df[
-        #    effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
-        #]
-        #filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
-        #self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)
+        top_df = effect_ranking_df[
+            effect_ranking_df["eta_squared"].cumsum().shift(fill_value=0).lt(0.95)
+        ]
+        filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+        self._effect_ranking.create_effect_rank_stability_tex(top_df, self._resources / filename)
