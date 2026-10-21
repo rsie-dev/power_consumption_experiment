@@ -15,18 +15,23 @@ class EffectRanking:
         self._factors = factors
 
     def print_effect_ranking_table(self, table_df: pd.DataFrame):
+        table_df["bootstrap_ci_omega"] = (
+                table_df["omega_ci_lower"].map(lambda x: f"{x:.6f}")
+                + "–"
+                + table_df["omega_ci_upper"].map(lambda x: f"{x:.6f}")
+        )
+
         table_df = table_df[[
-                "Rank",
-                "Effect",
-                "Effect type",
-                "df",
-                "omega_squared",
-                "cumulative_omega_squared",
-                "bootstrap_ci_omega",
-                "HC3 F",
-                "HC3 p"
-            ]
-        ]
+            "Rank",
+            "Effect",
+            "Effect type",
+            "df",
+            "omega_squared",
+            "cumulative_omega_squared",
+            "bootstrap_ci_omega",
+            "HC3 F",
+            "HC3 p"
+        ]]
 
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df",
@@ -133,12 +138,6 @@ class EffectRanking:
             .astype(int)
         )
 
-        effect_ranking["bootstrap_ci_omega"] = (
-                effect_ranking["omega_ci_lower"].map(lambda x: f"{x:.6f}")
-                + "–"
-                + effect_ranking["omega_ci_upper"].map(lambda x: f"{x:.6f}")
-        )
-
         effect_ranking["HC3 p"] = effect_ranking["PR(>F)"].map(
             lambda p: "<0.001" if p < 0.001 else f"{p:.3f}"
         )
@@ -156,7 +155,6 @@ class EffectRanking:
                 "omega_squared",
                 "omega_ci_lower",
                 "omega_ci_upper",
-                "bootstrap_ci_omega",
                 "HC3 F",
                 "HC3 p"
             ]
