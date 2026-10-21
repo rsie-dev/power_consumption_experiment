@@ -21,7 +21,7 @@ class EffectRanking:
                 "Effect type",
                 "df",
                 "omega_squared",
-                "cumulative_omega_squared_percent",
+                "cumulative_omega_squared",
                 "bootstrap_ci_omega",
                 "HC3 F",
                 "HC3 p"
@@ -30,7 +30,7 @@ class EffectRanking:
 
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df",
-                   "ω²", "Cumulative ω² (%)", "95% bootstrap CI ω²",
+                   "ω²", "Cumulative ω²", "95% bootstrap CI ω²",
                    "HC3 F", "HC3 p"]
         coalign = ["global"] * len(headers)
         coalign[2] = "right"
@@ -162,8 +162,8 @@ class EffectRanking:
             ]
         ].sort_values("Rank")
 
-        effect_ranking["cumulative_omega_squared_percent"] = (
-                effect_ranking["omega_squared"].cumsum() * 100
+        effect_ranking["cumulative_omega_squared"] = (
+                effect_ranking["omega_squared"].cumsum()
         )
 
         return effect_ranking
