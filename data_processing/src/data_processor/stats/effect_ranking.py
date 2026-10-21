@@ -41,7 +41,7 @@ class EffectRanking:
             "HC3 p"
         ]]
 
-        #table_df["effect"] = table_df["effect"].map(get_effect_name)
+        table_df["effect"] = table_df["effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df",
                    "eta²", "95% bootstrap CI eta²",
                    "ω²", "Cumulative ω²", "95% bootstrap CI ω²",
@@ -68,7 +68,7 @@ class EffectRanking:
         for column in ["eta_squared", "cumulative_eta_squared", "eta_ci_lower", "eta_ci_upper", "omega_squared"]:
             df["%s_percent" % column] = df[column] * 100
 
-        #df["effect"] = df["effect"].map(get_effect_name)
+        df["effect"] = df["effect"].map(get_effect_name)
 
         tex_df = df[["rank",
                      "effect",
