@@ -15,6 +15,11 @@ class EffectRanking:
         self._factors = factors
 
     def print_effect_ranking_table(self, table_df: pd.DataFrame):
+        table_df["bootstrap_ci_eta"] = (
+                table_df["eta_ci_lower"].map(lambda x: f"{x:.6f}")
+                + "–"
+                + table_df["eta_ci_upper"].map(lambda x: f"{x:.6f}")
+        )
         table_df["bootstrap_ci_omega"] = (
                 table_df["omega_ci_lower"].map(lambda x: f"{x:.6f}")
                 + "–"
@@ -26,6 +31,8 @@ class EffectRanking:
             "Effect",
             "Effect type",
             "df",
+            "eta_squared",
+            "bootstrap_ci_eta",
             "omega_squared",
             "cumulative_omega_squared",
             "bootstrap_ci_omega",
@@ -35,6 +42,7 @@ class EffectRanking:
 
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df",
+                   "eta²", "95% bootstrap CI eta²",
                    "ω²", "Cumulative ω²", "95% bootstrap CI ω²",
                    "HC3 F", "HC3 p"]
         coalign = ["global"] * len(headers)
@@ -113,7 +121,7 @@ class EffectRanking:
     def create_effect_ranking_table(self, ranked: pd.DataFrame, confidence_intervals: pd.DataFrame,
                                      anova_hc3: pd.DataFrame) -> pd.DataFrame:
         effect_ranking = (
-            ranked[["df", "omega_squared"]]
+            ranked[["df", "eta_squared", "omega_squared"]]
             .join(confidence_intervals)
             .join(anova_hc3[["F", "PR(>F)"]])
         )
@@ -152,6 +160,9 @@ class EffectRanking:
                 "Effect",
                 "Effect type",
                 "df",
+                "eta_squared",
+                "eta_ci_lower",
+                "eta_ci_upper",
                 "omega_squared",
                 "omega_ci_lower",
                 "omega_ci_upper",
