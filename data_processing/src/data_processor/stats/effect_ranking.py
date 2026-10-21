@@ -65,30 +65,16 @@ class EffectRanking:
 
     def _build_effect_rank_stability_lines(self, df: pd.DataFrame) -> str:
         df = df.copy()
-        for column in ["eta_squared", "cumulative_eta_squared",
-                       "omega_squared", "omega_ci_lower", "omega_ci_upper",
-                       "probability_same_rank",
-                       ]:
+        for column in ["eta_squared", "cumulative_eta_squared", "omega_squared"]:
             df["%s_percent" % column] = df[column] * 100
 
         #df["effect"] = df["effect"].map(get_effect_name)
-        df["rank_95_range"] = (
-                r"\numrange{"
-                #+ df["rank_95_low"].map(lambda x: f"{x}")
-                + df["rank_95_low"].map(lambda x: f"{x}")
-                + "}{"
-                + df["rank_95_high"].map(lambda x: f"{x}")
-                + "}"
-        )
 
         tex_df = df[["rank",
                      "effect",
-                     #"df",
                      "eta_squared", "eta_ci_lower", "eta_ci_upper",
                      "omega_squared",
                      "cumulative_eta_squared_percent",
-                     "rank_95_range",
-                     "probability_same_rank_percent",
         ]]
 
         tex_df.columns = pd.MultiIndex.from_tuples([
@@ -99,8 +85,6 @@ class EffectRanking:
             (r"\SI{95}{\percent} bootstrap CI", "High"),
             (r"$\omega^2$", ""),
             ("Cumulative", r"$\eta^2$ (\%)"),
-            (r"\SI{95}{\percent} bootstrap", "rank range"),
-            ("Same-rank", r"frequency (\%)"),
         ])
 
         int_format = "S[table-format=2]"
@@ -115,8 +99,6 @@ class EffectRanking:
             float_format,
             float_format,
             float_format,
-            percent_format,
-            "c",
             percent_format,
         ]
         latex = (
