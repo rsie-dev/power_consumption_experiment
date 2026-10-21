@@ -65,40 +65,40 @@ class EffectRanking:
 
     def _build_effect_rank_stability_lines(self, df: pd.DataFrame) -> str:
         df = df.copy()
-        for column in ["eta_squared", "cumulative_eta_squared", "omega_squared"]:
+        for column in ["eta_squared", "cumulative_eta_squared", "eta_ci_lower", "eta_ci_upper", "omega_squared"]:
             df["%s_percent" % column] = df[column] * 100
 
         #df["effect"] = df["effect"].map(get_effect_name)
 
         tex_df = df[["rank",
                      "effect",
-                     "eta_squared", "eta_ci_lower", "eta_ci_upper",
-                     "omega_squared",
+                     "eta_squared_percent", "eta_ci_lower_percent", "eta_ci_upper_percent",
+                     "omega_squared_percent",
                      "cumulative_eta_squared_percent",
         ]]
 
         tex_df.columns = pd.MultiIndex.from_tuples([
-            (r"Rank ($\omega^2$)", ""),
+            ("Rank", ""),
             ("Effect", ""),
-            (r"$\eta^2$", ""),
+            (r"$\eta^2$ (\%)", ""),
             (r"\SI{95}{\percent} bootstrap CI", "Low"),
             (r"\SI{95}{\percent} bootstrap CI", "High"),
-            (r"$\omega^2$", ""),
+            (r"$\omega^2$ (\%)", ""),
             ("Cumulative", r"$\eta^2$ (\%)"),
         ])
 
         int_format = "S[table-format=2]"
-        float_format = "S[round-mode=places, round-precision=5, table-format=1.5, group-digits=false]"
+        #float_format = "S[round-mode=places, round-precision=5, table-format=1.5, group-digits=false]"
         percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
-        #ci_format = ("S[round-mode=places, round-precision=2, table-format=2.2, "
-        #             "table-fixed-width=true, table-column-width=0.9cm, table-text-alignment=center]")
+        ci_format = ("S[round-mode=places, round-precision=2, table-format=2.2, "
+                     "table-fixed-width=true, table-column-width=0.9cm, table-text-alignment=center]")
         column_formats = [
             int_format,
             "l",
-            float_format,
-            float_format,
-            float_format,
-            float_format,
+            percent_format,
+            ci_format,
+            ci_format,
+            percent_format,
             percent_format,
         ]
         latex = (
