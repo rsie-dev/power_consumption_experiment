@@ -136,7 +136,13 @@ class ThroughputStatistics(BaseStatistics):
 
         #factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
         #self._print_factor_table(factor_means_values_df)
-        return effect_rankings, means_ci
+
+        effect_rankings_stability = (
+            effect_rankings
+            .join(rank_stability[["rank_95_low", "rank_95_high", "probability_same_rank"]])
+        )
+
+        return effect_rankings_stability, means_ci
 
     def _print_factor_table(self, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
@@ -277,9 +283,9 @@ class ThroughputStatistics(BaseStatistics):
 
         base = input_file.stem.removeprefix("tp_")
         filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
-        self._effect_ranking.create_effect_ranking_tex(effect_ranking_df, self._resources / filename)
-        top_df = effect_ranking_df[
-            effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
-        ]
-        filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
-        self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)
+        self._effect_ranking.create_effect_rank_stability_tex(effect_ranking_df, self._resources / filename)
+        #top_df = effect_ranking_df[
+        #    effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
+        #]
+        #filename = "tp_effect_ranking_%s_%s_%s" % (self._threading, self._mode, base) + ".tex"
+        #self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)

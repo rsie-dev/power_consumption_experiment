@@ -14,7 +14,8 @@ class EffectRanking:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
 
-    def print_effect_ranking_table(self, table_df: pd.DataFrame):
+    def print_effect_ranking_table(self, df: pd.DataFrame):
+        table_df = df.copy()
         table_df["bootstrap_ci_eta"] = (
                 table_df["eta_ci_lower"].map(lambda x: f"{x:.6f}")
                 + "–"
@@ -27,9 +28,9 @@ class EffectRanking:
         )
 
         table_df = table_df[[
-            "Rank",
-            "Effect",
-            "Effect type",
+            "rank",
+            "effect",
+            "effect_type",
             "df",
             "eta_squared",
             "bootstrap_ci_eta",
@@ -40,7 +41,7 @@ class EffectRanking:
             "HC3 p"
         ]]
 
-        table_df["Effect"] = table_df["Effect"].map(get_effect_name)
+        #table_df["effect"] = table_df["effect"].map(get_effect_name)
         headers = ["Rank", "Effect", "Effect type", "df",
                    "eta²", "95% bootstrap CI eta²",
                    "ω²", "Cumulative ω²", "95% bootstrap CI ω²",
@@ -54,6 +55,91 @@ class EffectRanking:
                                       )
         self._logger.info("Effect ranking table:")
         self._logger.info(table_str)
+
+    def create_effect_rank_stability_tex(self, df: pd.DataFrame, filename: Path):
+        self._logger.info("Generate: %s", filename)
+
+        latex = self._build_effect_rank_stability_lines(df)
+        with filename.open(mode="w", encoding="UTF_8") as f:
+            f.write(latex)
+
+    def _build_effect_rank_stability_lines(self, df: pd.DataFrame) -> str:
+        df = df.copy()
+        for column in ["eta_squared", "cumulative_eta_squared",
+                       "omega_squared", "omega_ci_lower", "omega_ci_upper",
+                       "probability_same_rank",
+                       ]:
+            df["%s_percent" % column] = df[column] * 100
+
+        #df["effect"] = df["effect"].map(get_effect_name)
+        df["rank_95_range"] = (
+                r"\numrange{"
+                #+ df["rank_95_low"].map(lambda x: f"{x}")
+                + df["rank_95_low"].map(lambda x: f"{x}")
+                + "}{"
+                + df["rank_95_high"].map(lambda x: f"{x}")
+                + "}"
+        )
+
+        tex_df = df[["rank",
+                     "effect",
+                     #"df",
+                     "eta_squared", "eta_ci_lower", "eta_ci_upper",
+                     "omega_squared",
+                     "cumulative_eta_squared_percent",
+                     "rank_95_range",
+                     "probability_same_rank_percent",
+        ]]
+
+        tex_df.columns = pd.MultiIndex.from_tuples([
+            (r"Rank ($\omega^2$)", ""),
+            ("Effect", ""),
+            (r"$\eta^2$", ""),
+            (r"\SI{95}{\percent} bootstrap CI", "Low"),
+            (r"\SI{95}{\percent} bootstrap CI", "High"),
+            (r"$\omega^2$", ""),
+            ("Cumulative", r"$\eta^2$ (\%)"),
+            (r"\SI{95}{\percent} bootstrap", "rank range"),
+            ("Same-rank", r"frequency (\%)"),
+        ])
+
+        int_format = "S[table-format=2]"
+        float_format = "S[round-mode=places, round-precision=5, table-format=1.5, group-digits=false]"
+        percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
+        #ci_format = ("S[round-mode=places, round-precision=2, table-format=2.2, "
+        #             "table-fixed-width=true, table-column-width=0.9cm, table-text-alignment=center]")
+        column_formats = [
+            int_format,
+            "l",
+            float_format,
+            float_format,
+            float_format,
+            float_format,
+            percent_format,
+            "c",
+            percent_format,
+        ]
+        latex = (
+            tex_df.style
+            .hide(axis="index")
+            .format_index(escape=None, axis=1)
+            .to_latex(
+                siunitx=True,
+                hrules=True,
+                multicol_align="c",
+                column_format="".join(column_formats),
+            )
+        )
+
+        lines = latex.splitlines()
+        toprule_index = next(
+            i for i, line in enumerate(lines)
+            if line.strip() == r"\toprule"
+        )
+        lines.insert(toprule_index + 2, r"\cmidrule(lr){4-5}")
+        latex = "\n".join(lines)
+
+        return latex
 
     def create_effect_ranking_tex(self, df: pd.DataFrame, filename: Path):
         self._logger.info("Generate: %s", filename)
@@ -126,21 +212,22 @@ class EffectRanking:
             .join(anova_hc3[["F", "PR(>F)"]])
         )
 
+        # ToDo:
         def clean_effect(term):
             for factor in self._factors:
                 term = term.replace(f"C({factor}, Sum)", factor)
             return term.replace(":", " × ")
 
-        effect_ranking["Effect"] = [
+        effect_ranking["effect"] = [
             clean_effect(term) for term in effect_ranking.index
         ]
 
-        effect_ranking["Effect type"] = [
+        effect_ranking["effect_type"] = [
             EFFECT_NAMES[term.count(":") + 1]
             for term in effect_ranking.index
         ]
 
-        effect_ranking["Rank"] = (
+        effect_ranking["rank"] = (
             effect_ranking["omega_squared"]
             .rank(ascending=False, method="min")
             .astype(int)
@@ -156,9 +243,9 @@ class EffectRanking:
 
         effect_ranking = effect_ranking[
             [
-                "Rank",
-                "Effect",
-                "Effect type",
+                "rank",
+                "effect",
+                "effect_type",
                 "df",
                 "eta_squared",
                 "eta_ci_lower",
@@ -169,11 +256,10 @@ class EffectRanking:
                 "HC3 F",
                 "HC3 p"
             ]
-        ].sort_values("Rank")
+        ].sort_values("rank")
 
-        effect_ranking["cumulative_omega_squared"] = (
-                effect_ranking["omega_squared"].cumsum()
-        )
+        effect_ranking["cumulative_eta_squared"] = effect_ranking["eta_squared"].cumsum()
+        effect_ranking["cumulative_omega_squared"] = effect_ranking["omega_squared"].cumsum()
 
         return effect_ranking
 
