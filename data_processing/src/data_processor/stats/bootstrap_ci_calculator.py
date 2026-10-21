@@ -29,7 +29,7 @@ class BootstrapCiCalculator:
         self._logger.info(r"95% confidence interval table")
         print(table_str)
 
-    def calculate_ci_new(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, float]:
+    def calculate_ci(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, float]:
         # Prepare the balanced response array
         grouped = df.groupby(
             self._factors,

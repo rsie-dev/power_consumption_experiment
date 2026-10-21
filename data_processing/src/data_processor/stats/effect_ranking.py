@@ -198,8 +198,8 @@ class EffectRanking:
         self._logger.info("Adjacent-rank comparisons:")
         self._logger.info(table_str)
 
-    def create_effect_ranking_table_new(self, bootstrap_omega,
-                                        point_omega) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def create_rank_stability_tables(self, bootstrap_omega,
+                                     point_omega) -> tuple[pd.DataFrame, pd.DataFrame]:
         factor_axes = range(len(self._factors))
         effect_names, _ = build_effect_names(self._factors, factor_axes)
 

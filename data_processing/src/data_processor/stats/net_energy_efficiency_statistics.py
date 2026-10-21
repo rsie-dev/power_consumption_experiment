@@ -94,7 +94,9 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
 
         # Check that the top confidence intervals do not overlap
         self._bootstrap_ci_calculator.validate_data(df, full_model)
-        confidence_intervals, bootstrap_results = self._bootstrap_ci_calculator.calculate_ci_new(df)
+        confidence_intervals, bootstrap_results, bootstrap_omega, point_omega = (
+            self._bootstrap_ci_calculator.calculate_ci(df)
+        )
         self._bootstrap_ci_calculator.print_ci(bootstrap_results)
 
         self._log_section("Ranking")
