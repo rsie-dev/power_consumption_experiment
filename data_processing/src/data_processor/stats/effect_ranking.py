@@ -15,10 +15,23 @@ class EffectRanking:
         self._factors = factors
 
     def print_effect_ranking_table(self, table_df: pd.DataFrame):
-        table_df = table_df.drop(columns=["omega_ci_lower", "omega_ci_upper"])
+        table_df = table_df[[
+                "Rank",
+                "Effect",
+                "Effect type",
+                "df",
+                "omega_squared",
+                "cumulative_omega_squared_percent",
+                "bootstrap_ci_omega",
+                "HC3 F",
+                "HC3 p"
+            ]
+        ]
+
         table_df["Effect"] = table_df["Effect"].map(get_effect_name)
-        headers = ["Rank", "Effect", "Effect type", "df", "ω²", "Cumulative ω² (%)",
-                   "95% bootstrap CI", "HC3 F", "HC3 p"]
+        headers = ["Rank", "Effect", "Effect type", "df",
+                   "ω²", "Cumulative ω² (%)", "95% bootstrap CI ω²",
+                   "HC3 F", "HC3 p"]
         coalign = ["global"] * len(headers)
         coalign[2] = "right"
         table_str = tabulate.tabulate(table_df,
@@ -120,7 +133,7 @@ class EffectRanking:
             .astype(int)
         )
 
-        effect_ranking["95% bootstrap CI"] = (
+        effect_ranking["bootstrap_ci_omega"] = (
                 effect_ranking["omega_ci_lower"].map(lambda x: f"{x:.6f}")
                 + "–"
                 + effect_ranking["omega_ci_upper"].map(lambda x: f"{x:.6f}")
@@ -141,9 +154,9 @@ class EffectRanking:
                 "Effect type",
                 "df",
                 "omega_squared",
-                "95% bootstrap CI",
                 "omega_ci_lower",
                 "omega_ci_upper",
+                "bootstrap_ci_omega",
                 "HC3 F",
                 "HC3 p"
             ]
@@ -152,8 +165,6 @@ class EffectRanking:
         effect_ranking["cumulative_omega_squared_percent"] = (
                 effect_ranking["omega_squared"].cumsum() * 100
         )
-        effect_ranking.insert(5, "cumulative_omega_squared_percent",
-                              effect_ranking.pop("cumulative_omega_squared_percent"))
 
         return effect_ranking
 
