@@ -112,7 +112,7 @@ class BaseStatistics(Processor):
         unexpected_strengths = observed_strengths - set(ORDER_STRENGTH)
         if unexpected_strengths:
             raise ValueError(
-                f"Unerwartete strength-Werte: {sorted(unexpected_strengths)}"
+                f"Unexpected strength values: {sorted(unexpected_strengths)}"
             )
 
         df["strength"] = pd.Categorical(
