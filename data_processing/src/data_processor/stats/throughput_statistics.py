@@ -69,9 +69,8 @@ class ThroughputStatistics(BaseStatistics):
         self._log_section("Check models")
 
         stat_model = StatModel()
-        two_way_model = stat_model.fit_two_way_model(df, "log_throughput", self.factors)
-        three_way_model, full_model = stat_model.fit_higher_order_models(df, "log_throughput", self.factors)
-        stat_model.print_fitted_models("", two_way_model, three_way_model, full_model)
+        full_model = stat_model.fit_full_model(df, "log_throughput", self.factors)
+        stat_model.print_fitted_model("full", full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI

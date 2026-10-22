@@ -9,6 +9,16 @@ class StatModel:
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    def print_fitted_model(self, kind: str, model):
+        # Check the fit has the expected dimensions.
+        self._logger.info("%s model", kind)
+        self._logger.info("Observations:                 %d", int(model.nobs))
+        self._logger.info("Model degrees of freedom:     %d", int(model.df_model))
+        self._logger.info("Residual degrees of freedom:  %d", int(model.df_resid))
+        # This means the model explains about R^2 * 100% of observed log-throughput variation.
+        self._logger.info("R²:                           %f", model.rsquared)
+        self._logger.info("Adjusted R²:                  %f", model.rsquared_adj)
+
     def print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
         # Check the fit has the expected dimensions.
         extra = f" {kind}:" if kind else ":"
@@ -65,10 +75,14 @@ class StatModel:
             data=data
         ).fit()
 
+        full_model = self.fit_full_model(data, response, factors)
+        return three_way_model, full_model
+
+    def fit_full_model(self, data: pd.DataFrame, response: str, factors: list[str]):
         full_formula = self._build_full_formula(response, factors)
         full_model = smf.ols(
             formula=full_formula,
             data=data
         ).fit()
 
-        return three_way_model, full_model
+        return full_model
