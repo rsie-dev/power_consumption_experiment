@@ -6,7 +6,6 @@ from abc import abstractmethod
 
 import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
@@ -14,7 +13,7 @@ import tabulate
 from data_processor.processor import Processor
 from data_processor.constants import ORDER_STRENGTH
 from data_processor.util import tabulate_pint
-from .effect_names import get_effect_name, EFFECT_NAMES
+from .effect_names import EFFECT_NAMES
 
 
 class BaseStatistics(Processor):
@@ -172,70 +171,6 @@ class BaseStatistics(Processor):
     @abstractmethod
     def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         pass
-
-    def _print_fitted_models(self, kind: str, two_way_model, three_way_model, full_model):
-        # Check the fit has the expected dimensions.
-        extra = f" {kind}:" if kind else ":"
-        self._logger.info("Two-way model%s", extra)
-        self._logger.info("Observations:                 %d", int(two_way_model.nobs))
-        self._logger.info("Model degrees of freedom:     %d", int(two_way_model.df_model))
-        self._logger.info("Residual degrees of freedom:  %d", int(two_way_model.df_resid))
-        # This means the model explains about R^2 * 100% of observed log-throughput variation.
-        self._logger.info("R²:                           %f", two_way_model.rsquared)
-        self._logger.info("Adjusted R²:                  %f", two_way_model.rsquared_adj)
-
-        ## Determine whether three-way interactions are sufficient
-        ## or whether the four-way interaction is also needed.
-        self._logger.info(anova_lm(two_way_model, full_model))
-        self._logger.info("Full model:")
-        self._logger.info("R² gain:                      %f", (full_model.rsquared - two_way_model.rsquared))
-
-        self._logger.info(anova_lm(two_way_model, three_way_model, full_model))
-        self._logger.info("Three-way R² gain:            %f", (three_way_model.rsquared - two_way_model.rsquared))
-        self._logger.info("Four-way R² gain:             %f", (full_model.rsquared - three_way_model.rsquared))
-
-    def _build_interaction_formula(self, response: str, level: int, factors: list[str]):
-        return self._build_formula(response, level, factors)
-
-    def _build_full_formula(self, response: str, factors: list[str]):
-        return self._build_formula(response, None, factors)
-
-    def _build_formula(self, response: str, level: int | None, factors: list[str]):
-        opening = f"{response} ~ (" if level else f"{response} ~"
-        closing = f"\n)**{level}" if level else ""
-        terms = [f"C({name}, Sum)" for name in factors]
-        if level:
-            terms = "\n    + ".join(terms)
-        else:
-            terms = " *\n    ".join(terms)
-        formula = f"""
-{opening}
-    {terms}{closing}
-"""
-        return formula
-
-    def _fit_two_way_model(self, data: pd.DataFrame, response: str):
-        formula = self._build_interaction_formula(response, 2, self.factors)
-
-        return smf.ols(
-            formula=formula,
-            data=data
-        ).fit()
-
-    def _fit_higher_order_models(self, data: pd.DataFrame, response: str):
-        three_way_formula = self._build_interaction_formula(response, 3, self.factors)
-        three_way_model = smf.ols(
-            formula=three_way_formula,
-            data=data
-        ).fit()
-
-        full_formula = self._build_full_formula(response, self.factors)
-        full_model = smf.ols(
-            formula=full_formula,
-            data=data
-        ).fit()
-
-        return three_way_model, full_model
 
     def _print_anova_hc3(self, anova_hc3_df: pd.DataFrame, std_error_description_df: pd.DataFrame):
         self._logger.info("HC3/conventional standard-error ratios:")

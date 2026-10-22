@@ -6,6 +6,7 @@ import numpy as np
 from .energy_efficiency_statistics import EnergyEfficiencyStatistics
 from .factor_means import FactorMeans
 from .diagnostic import Diagnostic
+from .stat_model import StatModel
 
 
 class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
@@ -38,9 +39,10 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
     def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Check models")
 
-        two_way_model = self._fit_two_way_model(df, "log_energy_efficiency_total")
-        three_way_model, full_model = self._fit_higher_order_models(df, "log_energy_efficiency_total")
-        self._print_fitted_models("", two_way_model, three_way_model, full_model)
+        stat_model = StatModel()
+        two_way_model = stat_model .fit_two_way_model(df, "log_energy_efficiency_total", self.factors)
+        three_way_model, full_model = stat_model .fit_higher_order_models(df, "log_energy_efficiency_total", self.factors)
+        stat_model .print_fitted_models("", two_way_model, three_way_model, full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI

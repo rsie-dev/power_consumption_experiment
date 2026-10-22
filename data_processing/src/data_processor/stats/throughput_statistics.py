@@ -17,6 +17,7 @@ from .drift_analyzer import DriftAnalyzer
 from .diagnostic import Diagnostic
 from .residual_variance import ResidualVariance
 from .effect_ranking import EffectRanking
+from .stat_model import StatModel
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -67,9 +68,10 @@ class ThroughputStatistics(BaseStatistics):
     def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         self._log_section("Check models")
 
-        two_way_model = self._fit_two_way_model(df, "log_throughput")
-        three_way_model, full_model = self._fit_higher_order_models(df, "log_throughput")
-        self._print_fitted_models("", two_way_model, three_way_model, full_model)
+        stat_model = StatModel()
+        two_way_model = stat_model.fit_two_way_model(df, "log_throughput", self.factors)
+        three_way_model, full_model = stat_model.fit_higher_order_models(df, "log_throughput", self.factors)
+        stat_model.print_fitted_models("", two_way_model, three_way_model, full_model)
 
         # Now check:
         # 1. residual variance across fitted values -> UI
