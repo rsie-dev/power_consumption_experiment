@@ -24,6 +24,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         return "net"
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
+        self._logger.info("Log-transform energy efficiency net")
         df["ee_net_bpj"] = (
             df["energy_efficiency_net"]
             .pint.to("byte/joule")
@@ -61,8 +62,8 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         diagnostic.print_observations_that_strongly_influence_model(diagnostics)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        extremes = diagnostic.get_diagnostics(full_model)
-        diagnostic.print_diagnostics(extremes)
+        extremes = diagnostic.find_extremes(full_model)
+        diagnostic.print_extremes(extremes)
 
         self._log_section("Calculate ANOVA")
         anova_hc3, std_error_description_df = self._calculate_anova_hc3(full_model)

@@ -17,8 +17,13 @@ class BootstrapCiCalculator:
         self._n_boot = n_boot
         if seed is None:
             seed = 12345
+        self._seed = seed
         self._rng = np.random.default_rng(seed)
         self._base_column = base_column
+
+    def print_bootstrap_infos(self):
+        self._logger.info("Bootstrap iterations: %s", self._n_boot)
+        self._logger.info("Bootstrap seed:       %s", self._seed)
 
     def print_ci(self, bootstrap_results: pd.DataFrame):
         headers = ["Factor", "Rank", "df", "eta²", "eta² low", "eta² high", "ω²", "ω² low", "ω² high"]
@@ -26,8 +31,12 @@ class BootstrapCiCalculator:
                                       headers=headers,
                                       )
         self._logger.info("")
-        self._logger.info(r"95% confidence interval table")
-        print(table_str)
+        self._logger.info(r"95% confidence interval table, ordered by ω²")
+        self._logger.info(table_str)
+        self._logger.info("The bootstrap CIs were defined by the 2.5th and 97.5th"
+                          "percentiles of the bootstrap distribution.")
+        self._logger.info("A stratified nonparametric bootstrap was used.")
+        self._logger.info("Trials were sampled with replacement within each configuration.")
 
     def calculate_ci(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, float]:
         # Prepare the balanced response array

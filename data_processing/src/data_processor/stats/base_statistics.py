@@ -14,6 +14,8 @@ from data_processor.processor import Processor
 from data_processor.constants import ORDER_STRENGTH
 from data_processor.util import tabulate_pint
 from .effect_names import EFFECT_NAMES
+from .drift_analyzer import DriftAnalyzer
+from .model_compare import ModelCompare
 
 
 class BaseStatistics(Processor):
@@ -75,11 +77,22 @@ class BaseStatistics(Processor):
         self._logger.info("")
 
     def _do_process(self, input_file: Path):
+        self._log_section("1. Preparation")
+        self._logger.info("load data")
         df = self._frameio.load(input_file)
+
+        self._log_section("1.1 Define subset")
+        self._logger.info("Evaluate: %s %s", self._threading, self._mode)
         df = self._filter_data(df)
+
+        self._log_section("1.2 Validate data")
+        self._validate_data(df)
+
+        self._log_section("1.3 Calculate log target")
         df = self._calculate_base(df)
 
-        self._validate_data(df)
+        self._log_section("1.4 Check temporal drift")
+        self._check_temporal_drift(df)
 
         effect_ranking_df, means_ci = self._calculate_statistics(df)
         self._create_rank_file(effect_ranking_df, input_file)
@@ -87,22 +100,46 @@ class BaseStatistics(Processor):
 
         self._post_process(effect_ranking_df, input_file)
 
+    def _check_temporal_drift(self, df: pd.DataFrame):
+        drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode)
+        inconclusive_hosts = drift_analyzer.validate_temporal_drift(df)
+        for host in inconclusive_hosts:
+            sensitivity_model = drift_analyzer.calculate_run_order_effect(host, df)
+            full_model = self.create_full_model(df)
+            model_compare = ModelCompare()
+            comparison = model_compare.compare(sensitivity_model, full_model)
+            model_compare.print_high_impact_terms(host, sensitivity_model, full_model, comparison)
+
+    @abstractmethod
+    def create_full_model(self, df: pd.DataFrame) -> RegressionResultsWrapper:
+        pass
+
     def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
         df = df[df["threading"] == self._threading]
         return df
 
     def _validate_data(self, df: pd.DataFrame):
-        self._log_section("Validate data")
+        df = df.copy()
         self._validate_factor_values(df)
         self._validate_tool_strength(df)
         self._validate_data_quantity(df)
 
     def _validate_factor_values(self, df: pd.DataFrame):
-        for factor in self.factors:
-            if df[factor].isna().any():
-                missing = df[factor].isna().sum()
-                raise ValueError(f"Factor {factor} has {missing} missing values")
+        trial_key = self.factors + ["run"]
+        targets = [self.base_column]
+
+        # Count duplicate rows after the first occurrence of each trial key.
+        self._logger.info("Duplicate trial keys: %s", df.duplicated(subset=trial_key).sum())
+
+        # Count missing factor cells, including blank strings.
+        factor_values = df[self.factors].replace(r"^\s*$", pd.NA, regex=True)
+        self._logger.info("Missing factor values: %s", factor_values.isna().sum().sum())
+
+        # Check numeric magnitudes of the unit-aware target columns.
+        for target in targets:
+            values = df[target].pint.magnitude
+            self._logger.info("Nonpositive %s: %s", target, (values <= 0).sum())
 
     def _validate_tool_strength(self, df: pd.DataFrame):
         df = df.copy()
@@ -142,7 +179,6 @@ class BaseStatistics(Processor):
             observed=True
         ).size()
 
-        self._logger.info("Validate data quantity of:    %s %s", self._threading, self._mode)
         self._logger.info("Observations:                 %d", len(df))
         self._logger.info("Configurations:               %d", len(cell_counts))
         self._logger.info("Min trials per configuration: %d", cell_counts.min())
@@ -152,6 +188,38 @@ class BaseStatistics(Processor):
         if missing:
             raise ValueError("Missing response values: %d" % missing)
         self._logger.info("Tools:                        %s", ", ".join(df["tool"].unique()))
+
+    def _check_factorial_completeness(self, df: pd.DataFrame) -> None:
+        df = df.copy()
+        factor_values = df[self.factors].replace(r"^\s*$", pd.NA, regex=True)
+
+        # Infer each factor's levels from the available data.
+        levels = [factor_values[col].dropna().unique() for col in self.factors]
+
+        # All possible combinations of factor levels.
+        expected = pd.MultiIndex.from_product(levels, names=self.factors)
+
+        # Unique combinations actually present; exclude incomplete factor rows.
+        observed = pd.MultiIndex.from_frame(
+            factor_values.dropna().drop_duplicates()
+        )
+
+        missing = expected.difference(observed)
+
+        self._logger.info("Expected cells:               %d", len(expected))
+        self._logger.info("Observed cells:               %d", len(observed))
+        self._logger.info("Missing cells:                %d", len(missing))
+
+        if len(missing):
+            self._logger.info("")
+            self._logger.info("Missing combinations:")
+            missing_df = missing.to_frame()
+            table_str = tabulate_pint(
+                missing_df,
+                showindex=False,
+                headers=self.factors,
+            )
+            self._logger.info(table_str)
 
     @abstractmethod
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:

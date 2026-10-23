@@ -252,7 +252,8 @@ class EffectRanking:
             rank_stability,
             headers=headers,
         )
-        self._logger.info("Bootstrap rank stability:")
+        self._logger.info("")
+        self._logger.info("Bootstrap ω² rank stability, ordered by point ω² rank:")
         self._logger.info(table_str)
 
     def print_effect_adjacent_rank_comparisons_table(self, adjacent_comparisons: pd.DataFrame):
@@ -263,7 +264,7 @@ class EffectRanking:
             headers=headers,
         )
         self._logger.info("")
-        self._logger.info("Adjacent-rank comparisons:")
+        self._logger.info("Adjacent ω²-rank comparisons:")
         self._logger.info(table_str)
 
     def create_rank_stability_tables(self, bootstrap_omega,

@@ -3,6 +3,8 @@ import logging
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
+from patsy.build import build_design_matrices
+from scipy.stats import t
 import tabulate
 
 
@@ -18,13 +20,17 @@ class DriftAnalyzer:
     def factors(self):
         return self._factors
 
-    def validate_temporal_drift(self, comp: pd.DataFrame):
-        self._check_temporal_drift(comp, self._threading, self._mode, self._drift_threshold)
-
-    def _check_temporal_drift(self, comp: pd.DataFrame, threading: str, mode: str, threshold: float):
-        drift_results = self._calculate_temporal_drift(comp, threshold)
-        self._show_drift_analysis(threading, mode, threshold, drift_results)
+    def validate_temporal_drift(self, comp: pd.DataFrame) -> list[str]:
+        drift_results = self._calculate_temporal_drift(comp, self._drift_threshold)
+        self._show_drift_analysis(self._threading, self._mode, self._drift_threshold, drift_results)
         self._verify_temporal_drift(drift_results)
+
+        hosts = (
+            drift_results.loc[drift_results["drift_conclusion"] == "inconclusive", "host"]
+            .drop_duplicates()
+            .tolist()
+        )
+        return hosts
 
     def _verify_temporal_drift(self, df: pd.DataFrame):
         matches = df["drift_conclusion"].str.startswith("material", na=False)
@@ -41,14 +47,16 @@ class DriftAnalyzer:
             "drift_conclusion",
         ]
 
-        headers = ["host", "change %", "CI low %", "CI high %", "drift conclusion"]
         table_df = drift_results[columns]
-        table_str = tabulate.tabulate(table_df,
-                                      showindex=False,
-                                      headers=headers,
-                                      floatfmt=".3f",
-                                      )
-        self._logger.info("Drift analysis for %s %s (threshold: %s%%)", threading, mode, threshold)
+        headers = ["Host", "Change (%)", "CI low %", "CI high (%)", "Drift conclusion"]
+        table_str = tabulate.tabulate(
+            table_df,
+            showindex=False,
+            headers=headers,
+            floatfmt=".3f",
+        )
+        self._logger.info("Run-order screening model (cell fixed effects; 95% cell-clustered CRV1 Wald confidence intervals):")
+        self._logger.info("Drift analysis for %s %s (materiality threshold: %s%%)", threading, mode, threshold)
         self._logger.info(table_str)
 
     def _calculate_temporal_drift(self, comp: pd.DataFrame, threshold: float) -> pd.DataFrame:
@@ -103,7 +111,9 @@ class DriftAnalyzer:
     def _classify_drift(self, row, threshold: float):
         low = row["ci_low_run1_to_run30_percent"]
         high = row["ci_high_run1_to_run30_percent"]
+        return self._classify_drift_values(low, high, threshold)
 
+    def _classify_drift_values(self, low: float, high: float, threshold: float):
         if low >= -threshold and high <= threshold:
             return "no material drift"
         if low > threshold:
@@ -111,3 +121,95 @@ class DriftAnalyzer:
         if high < -threshold:
             return "material decrease"
         return "inconclusive"
+
+    def calculate_run_order_effect(self, host: str, df: pd.DataFrame):
+        data = df.copy()
+
+        # Ensure numeric run order.
+        data["run"] = data["run"].astype(int)
+
+        run_first = data["run"].min()
+        run_last = data["run"].max()
+        run_midpoint = (run_first + run_last) / 2
+
+        data["run_centered"] = data["run"] - run_midpoint
+
+        sensitivity_formula = """
+        log_throughput ~
+            C(host, Sum) *
+            C(tool, Sum) *
+            C(dataset, Sum) *
+            C(strength, Sum)
+            + run_centered
+            + C(host, Sum):run_centered
+        """
+        sensitivity_model = smf.ols(
+            sensitivity_formula,
+            data=data,
+        ).fit()
+
+        sensitivity_hc3 = sensitivity_model.get_robustcov_results(
+            cov_type="HC3",
+            use_t=True,
+        )
+
+        # All utility × dataset × strength configurations.
+        configurations = (
+            data[["tool", "dataset", "strength"]]
+            .drop_duplicates()
+            .reset_index(drop=True)
+        )
+
+        first_run_data = configurations.assign(
+            host=host,
+            run_centered=run_first - run_midpoint,
+        )
+
+        last_run_data = configurations.assign(
+            host=host,
+            run_centered=run_last - run_midpoint,
+        )
+
+        design_info = sensitivity_model.model.data.design_info
+
+        x_first = np.asarray(
+            build_design_matrices([design_info], first_run_data)[0]
+        )
+
+        x_last = np.asarray(
+            build_design_matrices([design_info], last_run_data)[0]
+        )
+
+        # Adjusted run-first to run-last contrast.
+        contrast = x_last.mean(axis=0) - x_first.mean(axis=0)
+
+        log_change = float(contrast @ sensitivity_hc3.params)
+
+        log_change_se = np.sqrt(
+            float(
+                contrast
+                @ sensitivity_hc3.cov_params()
+                @ contrast
+            )
+        )
+
+        critical_value = t.ppf(
+            0.975,
+            sensitivity_hc3.df_resid,
+        )
+
+        log_ci_low = log_change - critical_value * log_change_se
+        log_ci_high = log_change + critical_value * log_change_se
+
+        change_pct = 100 * np.expm1(log_change)
+        ci_low_pct = 100 * np.expm1(log_ci_low)
+        ci_high_pct = 100 * np.expm1(log_ci_high)
+
+        conclusion = self._classify_drift_values(ci_low_pct, ci_high_pct, self._drift_threshold)
+
+        self._logger.info("")
+        self._logger.info("Full-factorial run-order sensitivity model (HC3 confidence interval):")
+        self._logger.info("%s run %d-%d change: %.3f%%", host, run_first, run_last, change_pct)
+        self._logger.info("(95%% HC3 CI: %.3f%% to %.3f%%): %s", ci_low_pct, ci_high_pct, conclusion)
+
+        return sensitivity_model

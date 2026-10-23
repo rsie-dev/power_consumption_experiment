@@ -63,7 +63,7 @@ class FactorMeans:
             showindex=False,
             headers=headers,
         )
-        self._logger.info("95%% confidence interval of means for: %s" % list(factor))
+        self._logger.info("95%% confidence interval of geometric mean for: %s", list(factor))
         self._logger.info(table_str)
 
     def _print_throughput_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
