@@ -3,6 +3,7 @@ import itertools
 
 import pandas as pd
 import numpy as np
+from data_processor.util import tabulate_pint
 from tqdm import tqdm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
@@ -22,6 +23,7 @@ class BootstrapCiCalculator:
         self._base_column = base_column
 
     def print_bootstrap_infos(self):
+        self._logger.info("")
         self._logger.info("Bootstrap iterations: %s", self._n_boot)
         self._logger.info("Bootstrap seed:       %s", self._seed)
 
@@ -94,6 +96,7 @@ class BootstrapCiCalculator:
             (self._n_boot, len(effect_names))
         )
 
+        self._logger.info("")
         self._logger.info("Calculating confidence intervals...")
         for bootstrap_index  in tqdm(range(self._n_boot), colour="green"):
             sample_indices = self._rng.integers(
@@ -159,7 +162,17 @@ class BootstrapCiCalculator:
         ]]
         return confidence_intervals, bootstrap_results, bootstrap_omega, point_omega
 
-    def validate_data(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> None:
+    def print_validation_results(self, validation_results: pd.DataFrame):
+        headers = ["", "Value"]
+        table_str = tabulate_pint(
+            validation_results,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info("Validation infos:")
+        self._logger.info(table_str)
+
+    def validate_data(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> pd.DataFrame:
         # Prepare the balanced response array
         grouped = df.groupby(
             self._factors,
@@ -217,15 +230,10 @@ class BootstrapCiCalculator:
             dtype=int,
         )
 
-
         # Verify the direct calculation against the original model
         point_eta, _ = self._calculate_effect_sizes(
             response_array, effect_subsets, factor_axes, n_repeats, level_counts, effect_degrees_of_freedom
         )
-
-        self._logger.info("")
-        self._logger.info("Sum of point eta²: %.8f", point_eta.sum())
-        self._logger.info("Model R²:          %.8f", model.rsquared)
 
         if not np.isclose(
                 point_eta.sum(),
@@ -234,6 +242,13 @@ class BootstrapCiCalculator:
                 atol=1e-10,
         ):
             raise RuntimeError("The direct factorial decomposition does not match the model")
+
+        validation_results = pd.DataFrame({
+            "name": ["Sum of point eta²", "Model R²"],
+            "value": [float(point_eta.sum()), float(model.rsquared)],
+        })
+
+        return validation_results
 
     def _calculate_effect_sizes(self, values: np.ndarray, effect_subsets: list, factor_axes: range,
                                 n_repeats: int, level_counts: list, effect_degrees_of_freedom: np.ndarray):

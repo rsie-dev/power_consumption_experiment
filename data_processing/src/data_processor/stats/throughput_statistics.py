@@ -132,7 +132,8 @@ class ThroughputStatistics(BaseStatistics):
 
         # Check that the top confidence intervals do not overlap
         self._log_section("3.4 Bootstrap importance")
-        self._bootstrap_ci_calculator.validate_data(df, full_model)
+        validation_results = self._bootstrap_ci_calculator.validate_data(df, full_model)
+        self._bootstrap_ci_calculator.print_validation_results(validation_results )
         confidence_intervals, bootstrap_results, bootstrap_omega, point_omega = (
             self._bootstrap_ci_calculator.calculate_ci(df)
         )
