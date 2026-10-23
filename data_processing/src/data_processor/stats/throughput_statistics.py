@@ -95,7 +95,7 @@ class ThroughputStatistics(BaseStatistics):
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
         extreme_finder = StudentizedResidualExtremeFinder(self.factors)
-        extremes, criterion = extreme_finder.find_extremes(full_model)
+        extremes, criterion = extreme_finder.find_extremes(df, full_model)
         extreme_finder.print_extremes(extremes, criterion)
 
         self._log_section("3. Inference")

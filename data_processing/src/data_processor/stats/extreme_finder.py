@@ -27,17 +27,17 @@ class ExtremeFinder(ABC):
         self._logger.info(table_str)
 
     @abstractmethod
-    def find_extremes(self, full_model: RegressionResultsWrapper) -> tuple[pd.DataFrame, str]:
+    def find_extremes(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[pd.DataFrame, str]:
         pass
 
 
 class StudentizedResidualExtremeFinder(ExtremeFinder):
-    def find_extremes(self, full_model: RegressionResultsWrapper) -> tuple[pd.DataFrame, str]:
+    def find_extremes(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[pd.DataFrame, str]:
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
         run_factors = self._factors + ["run"]
-        diagnostics = full_model.model.data.frame[run_factors].copy()
+        diagnostics = model.model.data.frame[run_factors].copy()
         diagnostics["studentized_residual"] = (
-            full_model.get_influence().resid_studentized_internal
+            model.get_influence().resid_studentized_internal
         )
         extreme = diagnostics[
             diagnostics["studentized_residual"].abs() > 3
