@@ -14,6 +14,7 @@ from .effect_names import get_effect_name
 from .factor_means import FactorMeans
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .diagnostic import Diagnostic
+from .extreme_finder import StudentizedResidualExtremeFinder
 from .residual_variance import ResidualVariance
 from .effect_ranking import EffectRanking
 from .stat_model import StatModel
@@ -93,8 +94,9 @@ class ThroughputStatistics(BaseStatistics):
         diagnostic.print_observations_that_strongly_influence_model(diagnostics)
 
         # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        extremes, criterion = diagnostic.find_extremes(full_model)
-        diagnostic.print_extremes(extremes, criterion)
+        extreme_finder = StudentizedResidualExtremeFinder(self.factors)
+        extremes, criterion = extreme_finder.find_extremes(full_model)
+        extreme_finder.print_extremes(extremes, criterion)
 
         self._log_section("3. Inference")
         self._log_section("3.1 Calculate robust ANOVA")
