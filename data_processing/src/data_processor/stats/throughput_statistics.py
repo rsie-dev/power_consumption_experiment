@@ -14,14 +14,12 @@ from .factor_means import FactorMeans
 from .diagnostic import Diagnostic
 from .extreme_finder import StudentizedResidualExtremeFinder
 from .residual_variance import ResidualVariance
-from .stat_model import StatModel
 
 
 class ThroughputStatistics(BaseStatistics):
     def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._stat_model = StatModel()
 
     def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("tp_")

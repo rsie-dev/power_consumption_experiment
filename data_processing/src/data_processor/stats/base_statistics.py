@@ -18,6 +18,7 @@ from .drift_analyzer import DriftAnalyzer
 from .model_compare import ModelCompare
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .effect_ranking import EffectRanking
+from .stat_model import StatModel
 
 
 class BaseStatistics(Processor):
@@ -32,6 +33,7 @@ class BaseStatistics(Processor):
         self._create_tex = create_tex
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
         self._effect_ranking = EffectRanking(self.factors)
+        self._stat_model = StatModel()
 
     def process(self, used_power_file: Path):
         if self._logfile:
