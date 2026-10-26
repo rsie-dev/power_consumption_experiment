@@ -43,6 +43,7 @@ class ThroughputStatistics(BaseStatistics):
         invalid = ~np.isfinite(throughput_bps) | (throughput_bps <= 0)
         if invalid.any():
             raise ValueError(f"Found {invalid.sum()} invalid throughput values")
+        self._logger.info("Invalid throughput values:    %d", invalid.sum())
 
     def _create_means_ci_files(self, means_ci: dict, input_file: Path):
         base = input_file.stem.removeprefix("tp_")
