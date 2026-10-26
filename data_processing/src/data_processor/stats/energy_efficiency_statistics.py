@@ -91,13 +91,13 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             table.insert(0, "Factor", factor)
             tables.append(table)
 
-        throughput_values = pd.concat(
+        mean_values = pd.concat(
             tables,
             ignore_index=True
         )
 
         mean_column = "mean_%s" % self.base_column
-        throughput_values = throughput_values[
+        mean_values = mean_values[
             [
                 "Factor",
                 "Level",
@@ -107,19 +107,19 @@ class EnergyEfficiencyStatistics(BaseStatistics):
             ]
         ]
 
-        throughput_values["Factor"] = pd.Categorical(
-            throughput_values["Factor"],
+        mean_values["Factor"] = pd.Categorical(
+            mean_values["Factor"],
             categories=self.factors,
             ordered=True
         )
-        throughput_values = throughput_values.sort_values(
+        mean_values = mean_values.sort_values(
             ["Factor",
              mean_column,
              ],
             ascending=[True, False]
         )
 
-        return throughput_values
+        return mean_values
 
     def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         if not self._create_tex:
