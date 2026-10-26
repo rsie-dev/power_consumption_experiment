@@ -72,13 +72,14 @@ class FactorMeans:
     def _print_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
         self._print_ratios_of_factor_levels("within", factor_combination, str(factor_combination), factor_ratios)
 
-    def _print_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str, factor_ratios: pd.DataFrame):
+    def _print_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str,
+                                       factor_ratios: pd.DataFrame):
         headers = header + ["Ratio", "CI low", "CI high"]
         table_str = tabulate.tabulate(factor_ratios,
                                       showindex=False,
                                       headers=headers,
                                       )
-        self._logger.info(f"{self.base_upper} ratios {kind} factor levels of: {factor_combination}")
+        self._logger.info("%s ratios %s factor levels of: %s", self.base_upper, kind, factor_combination)
         self._logger.info(table_str)
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, model: RegressionResultsWrapper, model_hc3: OLSResults,
@@ -230,7 +231,8 @@ class FactorMeans:
             marginal_means_df[column] = marginal_means_df[column].astype(unit_ref)
         return marginal_means_df
 
-    def calculate_x_grid(self, comp: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[dict, pd.DataFrame, np.ndarray]:
+    def calculate_x_grid(self, comp: pd.DataFrame, model: RegressionResultsWrapper) \
+            -> tuple[dict, pd.DataFrame, np.ndarray]:
         levels = {
             factor: comp[factor].unique().tolist()
             for factor in self._factors
