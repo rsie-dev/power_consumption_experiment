@@ -11,9 +11,6 @@ from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
 from .effect_names import get_effect_name
 from .factor_means import FactorMeans
-from .diagnostic import Diagnostic
-from .extreme_finder import StudentizedResidualExtremeFinder
-from .residual_variance import ResidualVariance
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -62,101 +59,6 @@ class ThroughputStatistics(BaseStatistics):
     def create_full_model(self, df: pd.DataFrame) -> RegressionResultsWrapper:
         full_model = self._stat_model.fit_full_model(df, "log_throughput", self.factors)
         return full_model
-
-    def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-        self._log_section("2. Modeling")
-
-        self._log_section("2.1 Check factorial completeness")
-        self._check_factorial_completeness(df)
-
-        self._log_section("2.2 Fit full factorial model")
-        full_model = self.create_full_model(df)
-        self._stat_model.print_fitted_model("full", full_model)
-
-        # Now check:
-        # 1. residual variance across fitted values -> UI
-        # 2. Check residual normality and extreme tails -> UI
-
-        self._log_section("2.3 Check residuals")
-        residual_variance = ResidualVariance(self.factors)
-        residual_variance.calculate_residual_variance(df, full_model)
-        zero_variance, configuration_details = residual_variance.calculate_zero_variance(df,
-                                                                                         full_model, self.base_column)
-        residual_variance.print_residual_variance(zero_variance, configuration_details, self.base_column)
-
-        self._log_section("2.4 Investigate extreme observations")
-        diagnostic = Diagnostic(self.factors)
-        diagnostics = diagnostic.find_observations_that_strongly_influence_model(full_model)
-        diagnostic.print_observations_that_strongly_influence_model(diagnostics)
-
-        # Determine whether extreme residuals are isolated or concentrated in particular configurations.
-        extreme_finder = StudentizedResidualExtremeFinder(self.factors)
-        extremes, criterion = extreme_finder.find_extremes(df, full_model)
-        extreme_finder.print_extremes(extremes, criterion)
-
-        self._log_section("3. Inference")
-        self._log_section("3.1 Calculate robust ANOVA")
-        anova_hc3, std_error_description_df = self._calculate_anova_hc3(full_model)
-        self._print_anova_hc3(anova_hc3, std_error_description_df)
-
-        ranked_effects_df, decompositions = self._calculate_anova_effect_rankings(full_model)
-        self._print_anova_effect_rankings(ranked_effects_df)
-        self._print_anova_effect_decompositions(decompositions)
-
-        relevant_percent = 95
-        relevant_factors = self._extract_relevant_factors(ranked_effects_df, relevant_percent)
-        self._logger.info("")
-        self._logger.info("Terms cumulatively explaining at least %d%% of variation: %s",
-                          relevant_percent, " > ".join([str(f) for f in relevant_factors]))
-
-        # Make later statistical inference robust to unequal residual variance.
-        # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
-        # variability and keeps the method consistent with compression.
-        # -> use HC3 version for confidence intervals and significance tests.
-        full_model_hc3 = full_model.get_robustcov_results(
-            cov_type="HC3"
-        )
-
-        self._log_section("3.2 Estimate effects")
-        factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
-        #factor_means.show_factor_means(df, relevant_factors)
-        means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
-
-        self._log_section("3.3 Quantify importance")
-        order_summary = self._calculate_order_summary(ranked_effects_df)
-        self._print_order_summary(order_summary)
-
-        # Check that the top confidence intervals do not overlap
-        self._log_section("3.4 Bootstrap importance")
-        validation_results = self._bootstrap_ci_calculator.validate_data(df, full_model)
-        self._bootstrap_ci_calculator.print_validation_results(validation_results )
-        confidence_intervals, bootstrap_results, bootstrap_omega, point_omega = (
-            self._bootstrap_ci_calculator.calculate_ci(df)
-        )
-        self._bootstrap_ci_calculator.print_bootstrap_infos()
-        self._bootstrap_ci_calculator.print_ci(bootstrap_results)
-
-        rank_stability, adjacent_comparisons = self._effect_ranking.create_rank_stability_tables(bootstrap_omega,
-                                                                                                 point_omega)
-        self._effect_ranking.print_effect_rank_stability_table(rank_stability)
-        self._effect_ranking.print_effect_adjacent_rank_comparisons_table(adjacent_comparisons)
-
-        self._log_section("4. Results")
-        self._log_section("4.1 Rank terms")
-        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df,
-                                                                           confidence_intervals, anova_hc3)
-        self._effect_ranking.print_effect_ranking_table(effect_rankings)
-
-
-        #factor_means_values_df = self._create_factor_means_table(df, full_model, full_model_hc3)
-        #self._print_factor_table(factor_means_values_df)
-
-        effect_rankings_stability = (
-            effect_rankings
-            .join(rank_stability[["rank_95_low", "rank_95_high", "probability_same_rank"]])
-        )
-
-        return effect_rankings_stability, means_ci
 
     def _print_factor_table(self, throughput_values_df: pd.DataFrame):
         display_df = throughput_values_df.copy()
