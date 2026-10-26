@@ -3,11 +3,11 @@ import itertools
 
 import pandas as pd
 import numpy as np
-from data_processor.util import tabulate_pint
 from tqdm import tqdm
-from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
+from statsmodels.regression.linear_model import RegressionResultsWrapper
+from data_processor.util import tabulate_pint
 from .effect_names import build_effect_names
 
 
