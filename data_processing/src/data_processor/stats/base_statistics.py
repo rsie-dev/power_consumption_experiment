@@ -146,11 +146,11 @@ class BaseStatistics(Processor):
         targets = [self.base_column]
 
         # Count duplicate rows after the first occurrence of each trial key.
-        self._logger.info("Duplicate trial keys: %s", df.duplicated(subset=trial_key).sum())
+        self._logger.info("Duplicate trial keys:         %s", df.duplicated(subset=trial_key).sum())
 
         # Count missing factor cells, including blank strings.
         factor_values = df[self.factors].replace(r"^\s*$", pd.NA, regex=True)
-        self._logger.info("Missing factor values: %s", factor_values.isna().sum().sum())
+        self._logger.info("Missing factor values:        %s", factor_values.isna().sum().sum())
 
         # Check numeric magnitudes of the unit-aware target columns.
         for target in targets:
