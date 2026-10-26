@@ -297,7 +297,7 @@ class BaseStatistics(Processor):
 
         self._log_section("3.2 Estimate effects")
         factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
-        #factor_means.show_factor_means(df, relevant_factors)
+        factor_means.show_factor_means(df, relevant_factors)
         means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
         self._log_section("3.3 Quantify importance")

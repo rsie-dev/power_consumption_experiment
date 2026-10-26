@@ -26,6 +26,8 @@ class FactorMeans:
     def show_factor_means_ci(self, comp: pd.DataFrame,
                              model: RegressionResultsWrapper, model_hc3: OLSResults,
                              relevant_factors: list) -> dict:
+        self._logger.info("")
+        self._logger.info("Factor means CI")
         result = {}
         for relevant_factor in relevant_factors:
             self._logger.info("")
@@ -257,6 +259,8 @@ class FactorMeans:
         return beta, cov
 
     def show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
+        self._logger.info("")
+        self._logger.info("Factor means")
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
                 means_df = self._calculate_mean(comp, relevant_factor)
