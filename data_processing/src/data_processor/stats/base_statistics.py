@@ -256,11 +256,10 @@ class BaseStatistics(Processor):
         # 2. Check residual normality and extreme tails -> UI
 
         self._log_section("2.3 Check residuals")
-        residual_variance = ResidualVariance(self.factors)
+        residual_variance = ResidualVariance(self.factors, self.base_column)
         residual_variance.calculate_residual_variance(df, full_model)
-        zero_variance, configuration_details = residual_variance.calculate_zero_variance(df,
-                                                                                         full_model, self.base_column)
-        residual_variance.print_residual_variance(zero_variance, configuration_details, self.base_column)
+        zero_variance, configuration_details = residual_variance.calculate_zero_variance(df, full_model)
+        residual_variance.print_residual_variance(zero_variance, configuration_details)
 
         self._log_section("2.4 Investigate extreme observations")
         diagnostic = Diagnostic(self.factors)

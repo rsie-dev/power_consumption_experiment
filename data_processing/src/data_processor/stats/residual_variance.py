@@ -10,12 +10,12 @@ from data_processor.util import tabulate_pint
 
 
 class ResidualVariance:
-    def __init__(self, factors: list[str]):
+    def __init__(self, factors: list[str], base_column: str):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
+        self._base_column = base_column
 
-    def print_residual_variance(self, zero_variance: pd.DataFrame, configuration_details: pd.DataFrame,
-                                base_column: str) -> None:
+    def print_residual_variance(self, zero_variance: pd.DataFrame, configuration_details: pd.DataFrame) -> None:
         headers = ["host", "tool", "dataset", "strength", "n", "residual_sd",
                    "unique values", "min", "max", "minimum step"]
         table_str = tabulate_pint(
@@ -24,7 +24,7 @@ class ResidualVariance:
             headers=headers,
         )
         self._logger.info("")
-        log_column = "log_%s" % base_column
+        log_column = "log_%s" % self._base_column
         self._logger.info("Zero-variance configurations for %s: %s", log_column, len(zero_variance))
         self._logger.info(table_str)
 
@@ -111,8 +111,8 @@ class ResidualVariance:
             cell_variance["residual_sd"]
         )
         self._logger.info("")
-        self._logger.info("Spearman’s rank correlation between fitted log %s and"
-                          "within-configuration residual standard deviation:", "throughput")
+        self._logger.info("Spearman’s rank correlation between fitted log %s and "
+                          "within-configuration residual standard deviation:", self._base_column)
         self._logger.info("rho:                          %.6f", rho)
         self._logger.info("p-value:                      %.6g", rho_pvalue)
 
@@ -135,7 +135,7 @@ class ResidualVariance:
 
         return None, None
 
-    def calculate_zero_variance(self, df: pd.DataFrame, model: RegressionResultsWrapper, base_column: str) -> tuple[
+    def calculate_zero_variance(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> tuple[
         pd.DataFrame, pd.DataFrame]:
         def minimum_positive_step(values):
             unique_values = np.sort(
@@ -161,7 +161,7 @@ class ResidualVariance:
         diagnostics["fitted"] = np.asarray(model.fittedvalues)
         diagnostics["residual"] = np.asarray(model.resid)
 
-        log_column = "log_%s" % base_column
+        log_column = "log_%s" % self._base_column
         num_column = "%s_r" % log_column
         diagnostics[num_column] = (
             df.loc[model_rows, log_column]
