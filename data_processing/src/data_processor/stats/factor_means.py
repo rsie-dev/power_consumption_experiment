@@ -34,10 +34,10 @@ class FactorMeans:
                 self._print_mean_cis(relevant_factor, mean_cis)
                 result[relevant_factor] = mean_cis
 
-                factor_ratios = self._calculate_throughput_ratios_between_factor_levels(comp,
-                                                                                        model, model_hc3,
-                                                                                        relevant_factor)
-                self._print_throughput_ratios_between_factor_levels(relevant_factor, factor_ratios)
+                factor_ratios = self._calculate_ratios_between_factor_levels(comp,
+                                                                             model, model_hc3,
+                                                                             relevant_factor)
+                self._print_ratios_between_factor_levels(relevant_factor, factor_ratios)
             else:
                 factor2_levels = get_factor_levels(relevant_factor[1], comp)
                 combination_ci = self._calculate_factor_combination_ci(comp, model, model_hc3,
@@ -45,11 +45,11 @@ class FactorMeans:
                 self._print_mean_cis(relevant_factor, combination_ci)
                 result["_".join(relevant_factor)] = combination_ci
 
-                combination_ratios = self._calculate_throughput_ratios_within_factor_levels(comp,
-                                                                                            model, model_hc3,
-                                                                                            relevant_factor,
-                                                                                            factor2_levels)
-                self._print_throughput_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
+                combination_ratios = self._calculate_ratios_within_factor_levels(comp,
+                                                                                 model, model_hc3,
+                                                                                 relevant_factor,
+                                                                                 factor2_levels)
+                self._print_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
         return result
 
     def _print_mean_cis(self, factor: str | list[str], mean_cis: pd.DataFrame):
@@ -66,13 +66,13 @@ class FactorMeans:
         self._logger.info("95%% confidence interval of geometric mean for: %s", list(factor))
         self._logger.info(table_str)
 
-    def _print_throughput_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
-        self._print_throughput_ratios_of_factor_levels("between ", ["Comparison"], factor, factor_ratios)
+    def _print_ratios_between_factor_levels(self, factor: str, factor_ratios: pd.DataFrame):
+        self._print_ratios_of_factor_levels("between ", ["Comparison"], factor, factor_ratios)
 
-    def _print_throughput_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
-        self._print_throughput_ratios_of_factor_levels("within", factor_combination, str(factor_combination), factor_ratios)
+    def _print_ratios_within_factor_levels(self, factor_combination: list[str], factor_ratios: pd.DataFrame):
+        self._print_ratios_of_factor_levels("within", factor_combination, str(factor_combination), factor_ratios)
 
-    def _print_throughput_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str, factor_ratios: pd.DataFrame):
+    def _print_ratios_of_factor_levels(self, kind: str, header: list[str], factor_combination: str, factor_ratios: pd.DataFrame):
         headers = header + ["Ratio", "CI low", "CI high"]
         table_str = tabulate.tabulate(factor_ratios,
                                       showindex=False,
@@ -135,10 +135,10 @@ class FactorMeans:
 
         return combination_ci
 
-    def _calculate_throughput_ratios_between_factor_levels(self, comp: pd.DataFrame,
-                                                           model: RegressionResultsWrapper,
-                                                           model_hc3: OLSResults,
-                                                           factor: str):
+    def _calculate_ratios_between_factor_levels(self, comp: pd.DataFrame,
+                                                model: RegressionResultsWrapper,
+                                                model_hc3: OLSResults,
+                                                factor: str):
         levels, grid, x_grid = self.calculate_x_grid(comp, model)
         beta, cov = self.get_beta_cov(model, model_hc3)
 
@@ -166,11 +166,11 @@ class FactorMeans:
         )
         return dataset_ratios
 
-    def _calculate_throughput_ratios_within_factor_levels(self, comp: pd.DataFrame,
-                                                          model: RegressionResultsWrapper,
-                                                          model_hc3: OLSResults,
-                                                          factor_combination: list[str],
-                                                          factor2_levels: list[str]):
+    def _calculate_ratios_within_factor_levels(self, comp: pd.DataFrame,
+                                               model: RegressionResultsWrapper,
+                                               model_hc3: OLSResults,
+                                               factor_combination: list[str],
+                                               factor2_levels: list[str]):
         levels, grid, x_grid = self.calculate_x_grid(comp, model)
         beta, cov = self.get_beta_cov(model, model_hc3)
 
