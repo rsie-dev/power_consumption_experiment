@@ -10,7 +10,6 @@ from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
 from .factor_means import FactorMeans
 from .effect_names import get_effect_name
-from .effect_ranking import EffectRanking
 
 
 class EnergyEfficiencyStatistics(BaseStatistics):
@@ -18,7 +17,6 @@ class EnergyEfficiencyStatistics(BaseStatistics):
                  threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._effect_ranking = EffectRanking(self.factors)
 
     def extra_log_base(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("ee_")
