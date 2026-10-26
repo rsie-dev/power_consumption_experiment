@@ -82,7 +82,7 @@ class Processor:
                                                              description='valid subcommands')
 
         ee_parser = argparse.ArgumentParser(add_help=False)
-        ee_parser.add_argument('--boot', default=1000, type=int, help="bootstrap count")
+        ee_parser.add_argument('--boot', default=10000, type=int, help="bootstrap count")
         ee_parser.add_argument('--seed', type=int, help="RNG seed value")
         ee_parser.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
 
