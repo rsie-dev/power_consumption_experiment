@@ -55,7 +55,8 @@ class DriftAnalyzer:
             headers=headers,
             floatfmt=".3f",
         )
-        self._logger.info("Run-order screening model (cell fixed effects; 95% cell-clustered CRV1 Wald confidence intervals):")
+        ci_method = "cell fixed effects; 95% cell-clustered CRV1 Wald confidence intervals"
+        self._logger.info("Run-order screening model (%s):", ci_method)
         self._logger.info("Drift analysis for %s %s (materiality threshold: %s%%)", threading, mode, threshold)
         self._logger.info(table_str)
 
