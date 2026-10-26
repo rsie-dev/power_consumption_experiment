@@ -123,7 +123,7 @@ class ThroughputStatistics(BaseStatistics):
 
         #self._show_factor_means(comp, relevant_factors)
         self._log_section("3.2 Estimate effects")
-        factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
         means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
         self._log_section("3.3 Quantify importance")
@@ -191,7 +191,7 @@ class ThroughputStatistics(BaseStatistics):
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
                                    full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
-        factor_means = FactorMeans(self.factors, "throughput", self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, full_model)
         beta, cov = factor_means.get_beta_cov(full_model, full_model_hc3)
 
@@ -262,27 +262,27 @@ class ThroughputStatistics(BaseStatistics):
         self._logger.info(table_str)
 
     def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
-        unit_ref = comp["throughput"].dtype
+        unit_ref = comp[self.base_column].dtype
         means = (
-            comp.groupby(factor, observed=True)["log_throughput"]
+            comp.groupby(factor, observed=True)["log_%s" % self.base_column]
             .mean()
             .pipe(np.exp)
             .sort_values(ascending=False)
         )
         if order:
             means = means.reindex(order)
-        mean_column = "geometric_mean_throughput"
+        mean_column = "geometric_mean_%s" % self.base_column
         means = means.rename(mean_column).to_frame()
         means[mean_column] = means[mean_column].astype(unit_ref)
         return means
 
     def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list):
-        unit_ref = comp["throughput"].dtype
+        unit_ref = comp[self.base_column].dtype
         means = (
             comp.groupby(
                 list(factor),
                 observed=True
-            )["log_throughput"]
+            )["log_%s" % self.base_column]
             .mean()
             .pipe(np.exp)
         )
