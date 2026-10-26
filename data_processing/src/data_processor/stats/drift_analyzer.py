@@ -9,12 +9,13 @@ import tabulate
 
 
 class DriftAnalyzer:
-    def __init__(self, factors: list[str], drift_threshold: float, threading: str, mode: str):
+    def __init__(self, factors: list[str], drift_threshold: float, threading: str, mode: str, base_column: str):
         self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
         self._drift_threshold = drift_threshold
         self._threading = threading
         self._mode = mode
+        self._base_column = base_column
 
     @property
     def factors(self):
@@ -67,9 +68,10 @@ class DriftAnalyzer:
         comp["cell"] = comp[self.factors].astype(str).agg("|".join, axis=1)
 
         # Remove each configuration's average throughput
-        comp["centered_log_throughput"] = (
-                comp["log_throughput"]
-                - comp.groupby("cell")["log_throughput"].transform("mean")
+        log_column = "log_%s" % self._base_column
+        comp["centered_%s" % log_column] = (
+                comp[log_column]
+                - comp.groupby("cell")[log_column].transform("mean")
         )
 
         # Flatten the DataFrame
@@ -84,7 +86,7 @@ class DriftAnalyzer:
             )
 
             model = smf.ols(
-                "log_throughput ~ C(cell) + run_centered",
+                "%s ~ C(cell) + run_centered" % log_column,
                 data=host_data
             ).fit(
                 cov_type="cluster",
@@ -135,8 +137,8 @@ class DriftAnalyzer:
 
         data["run_centered"] = data["run"] - run_midpoint
 
-        sensitivity_formula = """
-        log_throughput ~
+        sensitivity_formula = f"""
+        log_{self._base_column} ~
             C(host, Sum) *
             C(tool, Sum) *
             C(dataset, Sum) *

@@ -126,9 +126,9 @@ class EnergyEfficiencyStatistics(BaseStatistics):
 
         base = input_file.stem.removeprefix("ee_")
         filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
-        self._effect_ranking.create_effect_ranking_tex(effect_ranking_df, self._resources / filename)
+        self._effect_ranking.create_effect_rank_stability_tex(effect_ranking_df, self._resources / filename)
         top_df = effect_ranking_df[
             effect_ranking_df["omega_squared"].cumsum().shift(fill_value=0).lt(0.95)
         ]
         filename = "ee_%s_effect_ranking_%s_%s_%s.tex" % (self.effect_name, self._threading, self._mode, base)
-        self._effect_ranking.create_effect_ranking_tex(top_df, self._resources / filename)
+        self._effect_ranking.create_effect_rank_stability_tex(top_df, self._resources / filename)

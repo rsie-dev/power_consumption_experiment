@@ -117,7 +117,7 @@ class BaseStatistics(Processor):
         self._post_process(effect_ranking_df, input_file)
 
     def _check_temporal_drift(self, df: pd.DataFrame):
-        drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode)
+        drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode, self.base_column)
         inconclusive_hosts = drift_analyzer.validate_temporal_drift(df)
         for host in inconclusive_hosts:
             sensitivity_model = drift_analyzer.calculate_run_order_effect(host, df)
