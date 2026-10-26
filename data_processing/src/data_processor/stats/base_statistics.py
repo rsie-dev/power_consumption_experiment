@@ -16,18 +16,20 @@ from data_processor.util import tabulate_pint
 from .effect_names import EFFECT_NAMES
 from .drift_analyzer import DriftAnalyzer
 from .model_compare import ModelCompare
+from .bootstrap_ci_calculator import BootstrapCiCalculator
 
 
 class BaseStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, logfile: bool, threading: str, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._logfile = logfile
         self._threading = threading
         self._mode = mode
         self._create_tex = create_tex
+        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
 
     def process(self, used_power_file: Path):
         if self._logfile:

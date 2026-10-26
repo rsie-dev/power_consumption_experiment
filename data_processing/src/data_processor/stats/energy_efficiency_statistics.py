@@ -8,7 +8,6 @@ from statsmodels.regression.linear_model import OLSResults
 
 from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
-from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .factor_means import FactorMeans
 from .effect_names import get_effect_name
 from .effect_ranking import EffectRanking
@@ -17,9 +16,8 @@ from .effect_ranking import EffectRanking
 class EnergyEfficiencyStatistics(BaseStatistics):
     def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
                  threading: str, mode: str, create_tex: bool):
-        super().__init__(resources, logfile, threading, mode, create_tex)
+        super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
         self._effect_ranking = EffectRanking(self.factors)
 
     def extra_log_base(self, input_file: Path) -> str:
