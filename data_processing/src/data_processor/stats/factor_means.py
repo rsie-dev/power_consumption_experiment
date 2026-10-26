@@ -253,3 +253,64 @@ class FactorMeans:
         beta = np.asarray(model.params)
         cov = np.asarray(model_hc3.cov_params())
         return beta, cov
+
+    def show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
+        for relevant_factor in relevant_factors:
+            if isinstance(relevant_factor, str):
+                means_df = self._calculate_mean(comp, relevant_factor)
+                self._print_means(relevant_factor, means_df)
+            else:
+                factor2_levels = get_factor_levels(relevant_factor[1], comp)
+                means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
+                self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
+
+    def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
+        headers = [factor]
+        if extra_columns:
+            headers += extra_columns
+            for column in extra_columns:
+                means[column] = means[column].pint.to(self._display_unit)
+        else:
+            headers += ["Mean %s" % self._base_column]
+            mean_column = "geometric_mean_%s" % self._base_column
+            means[mean_column] = means[mean_column].pint.to(self._display_unit)
+        table_str = tabulate_pint(
+            means,
+            headers=headers,
+        )
+        self._logger.info("%s geometric means for: %s", self._base_column.capitalize(), factor)
+        self._logger.info(table_str)
+
+    def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
+        unit_ref = comp[self._base_column].dtype
+        means = (
+            comp.groupby(factor, observed=True)["log_%s" % self._base_column]
+            .mean()
+            .pipe(np.exp)
+            .sort_values(ascending=False)
+        )
+        if order:
+            means = means.reindex(order)
+        mean_column = "geometric_mean_%s" % self._base_column
+        means = means.rename(mean_column).to_frame()
+        means[mean_column] = means[mean_column].astype(unit_ref)
+        return means
+
+    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list):
+        unit_ref = comp[self._base_column].dtype
+        means = (
+            comp.groupby(
+                list(factor),
+                observed=True
+            )["log_%s" % self._base_column]
+            .mean()
+            .pipe(np.exp)
+        )
+        means = means.unstack(factor[-1])
+        means = means.rename_axis(columns=factor[0])
+
+        means = means[order]
+        for column in order:
+            means[column] = means[column].astype(unit_ref)
+
+        return means

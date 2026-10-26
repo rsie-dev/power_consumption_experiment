@@ -7,7 +7,6 @@ from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.regression.linear_model import OLSResults
 
 from data_processor import ureg
-from data_processor.constants import get_factor_levels
 from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
 from .effect_names import get_effect_name
@@ -121,9 +120,9 @@ class ThroughputStatistics(BaseStatistics):
             cov_type="HC3"
         )
 
-        #self._show_factor_means(comp, relevant_factors)
         self._log_section("3.2 Estimate effects")
         factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
+        #factor_means.show_factor_means(df, relevant_factors)
         means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
         self._log_section("3.3 Quantify importance")
@@ -232,68 +231,6 @@ class ThroughputStatistics(BaseStatistics):
         )
 
         return mean_values
-
-    def _show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
-        self._log_section("Factor means")
-
-        for relevant_factor in relevant_factors:
-            if isinstance(relevant_factor, str):
-                means_df = self._calculate_mean(comp, relevant_factor)
-                self._print_means(relevant_factor, means_df)
-            else:
-                factor2_levels = get_factor_levels(relevant_factor[1], comp)
-                means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
-                self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
-
-    def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
-        headers = [factor]
-        if extra_columns:
-            headers += extra_columns
-            for column in extra_columns:
-                means[column] = means[column].pint.to(self._display_unit)
-        else:
-            headers += ["Mean throughput"]
-            means["geometric_mean_throughput"] = means["geometric_mean_throughput"].pint.to(self._display_unit)
-        table_str = tabulate_pint(
-            means,
-            headers=headers,
-        )
-        self._logger.info("Throughput means for: %s", factor)
-        self._logger.info(table_str)
-
-    def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
-        unit_ref = comp[self.base_column].dtype
-        means = (
-            comp.groupby(factor, observed=True)["log_%s" % self.base_column]
-            .mean()
-            .pipe(np.exp)
-            .sort_values(ascending=False)
-        )
-        if order:
-            means = means.reindex(order)
-        mean_column = "geometric_mean_%s" % self.base_column
-        means = means.rename(mean_column).to_frame()
-        means[mean_column] = means[mean_column].astype(unit_ref)
-        return means
-
-    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list):
-        unit_ref = comp[self.base_column].dtype
-        means = (
-            comp.groupby(
-                list(factor),
-                observed=True
-            )["log_%s" % self.base_column]
-            .mean()
-            .pipe(np.exp)
-        )
-        means = means.unstack(factor[-1])
-        means = means.rename_axis(columns=factor[0])
-
-        means = means[order]
-        for column in order:
-            means[column] = means[column].astype(unit_ref)
-
-        return means
 
     def _post_process(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         if not self._create_tex:
