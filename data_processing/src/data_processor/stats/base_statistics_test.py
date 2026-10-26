@@ -12,7 +12,8 @@ from .base_statistics import BaseStatistics
 @pytest.fixture
 def calculator():
     with patch.object(BaseStatistics, "__abstractmethods__", set()):
-        yield BaseStatistics(Mock(spec=Path), False, "single", "compress", False)
+        # pylint: disable=abstract-class-instantiated
+        yield BaseStatistics(Mock(spec=Path), False, 1, None, "single", "compress", False)
 
 
 def test_extract_factors_one(calculator):

@@ -626,4 +626,3 @@ class BaseStatistics(Processor):
         if len(factors) == 1:
             return factors[0]
         return tuple(factors)
-
