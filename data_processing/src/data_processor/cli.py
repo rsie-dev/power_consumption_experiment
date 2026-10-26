@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .stats import Statistics, ThroughputStatistics
+from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
@@ -69,10 +69,6 @@ class Processor:
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
-
-        parser_stats_raw = subparsers_stats.add_parser('raw', help="calculate raw statistics",
-                                                       parents=[common_parser, energy_parser])
-        parser_stats_raw.set_defaults(func=self._stats_raw)
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
                                                        parents=[common_parser, factor_parser, tex_parser, log_parser])
@@ -168,11 +164,6 @@ class Processor:
     def _multimeter_validate(self, _):
         validate = MultimeterValidate()
         validate.validate()
-
-    def _stats_raw(self, args):
-        resources_folder = self._prepare_resource_folder(args.resources)
-        statistics = Statistics(resources_folder, args.reslog)
-        statistics.process(args.used_energy_file)
 
     def _stats_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
