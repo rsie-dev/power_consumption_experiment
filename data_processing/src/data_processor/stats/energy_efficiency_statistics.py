@@ -41,8 +41,8 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
         self._create_csv(rank_filename, effect_ranking_df)
 
-    def _create_means_ci_files(self, means_ci: dict, ee_file: Path):
-        base = ee_file.stem.removeprefix("ee_")
+    def _create_means_ci_files(self, means_ci: dict, input_file: Path):
+        base = input_file.stem.removeprefix("ee_")
         for effect, df in means_ci.items():
             filename = "ee_%s_effect_%s_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, effect, base)
             self._frameio.persist(df, self._resources / filename)
