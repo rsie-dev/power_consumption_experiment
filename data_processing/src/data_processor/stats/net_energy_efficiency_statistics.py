@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 
+from data_processor import ureg
 from .energy_efficiency_statistics import EnergyEfficiencyStatistics
 
 
@@ -24,18 +25,9 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
 
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         self._logger.info("Log-transform energy efficiency net")
-        df["ee_net_bpj"] = (
-            df["energy_efficiency_net"]
-            .pint.to("byte/joule")
-            .pint.magnitude
-        )
-
-        # Dimensionless logarithms relative to 1 B/J
-        df["log_energy_efficiency_net"] = np.log(df["ee_net_bpj"])
-
-        #reference = 1 * ureg.byte / ureg.joule
-        #normalized_net = df["energy_efficiency_net"] / reference
-        #df["log_ee_net"] = np.log(normalized_net).pint.magnitude
+        reference = 1 * ureg.byte / ureg.joule
+        normalized_net = df["energy_efficiency_net"] / reference
+        df["log_energy_efficiency_net"] = np.log(normalized_net).pint.magnitude
         return df
 
     def create_full_model(self, df: pd.DataFrame) -> RegressionResultsWrapper:
