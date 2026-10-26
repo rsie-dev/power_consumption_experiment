@@ -14,7 +14,8 @@ from .factor_means import FactorMeans
 
 
 class ThroughputStatistics(BaseStatistics):
-    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
+                 threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
 

@@ -28,7 +28,8 @@ from .residual_variance import ResidualVariance
 class BaseStatistics(Processor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
-    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
+                 threading: str, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._logfile = logfile
@@ -407,7 +408,8 @@ class BaseStatistics(Processor):
         return std_error_description.to_frame()
 
     def _print_anova_effect_rankings(self, effect_table: pd.DataFrame):
-        headers = ["Rank", "Effect", "effect type", "df", "sum²", "eta²", "ω²", "total variation (%)", "explained variation (%)"]
+        headers = ["Rank", "Effect", "effect type", "df", "sum²", "eta²", "ω²",
+                   "total variation (%)", "explained variation (%)"]
         colalign = ["global"] * len(headers)
         colalign[2] = "right"
         table_str = tabulate_pint(

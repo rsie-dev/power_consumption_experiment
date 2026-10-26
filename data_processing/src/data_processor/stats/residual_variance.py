@@ -14,7 +14,8 @@ class ResidualVariance:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._factors = factors
 
-    def print_residual_variance(self, zero_variance: pd.DataFrame, configuration_details: pd.DataFrame, base_column: str):
+    def print_residual_variance(self, zero_variance: pd.DataFrame, configuration_details: pd.DataFrame,
+                                base_column: str) -> None:
         headers = ["host", "tool", "dataset", "strength", "n", "residual_sd",
                    "unique values", "min", "max", "minimum step"]
         table_str = tabulate_pint(
