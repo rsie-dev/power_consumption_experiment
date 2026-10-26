@@ -19,7 +19,6 @@ class EnergyEfficiencyStatistics(BaseStatistics):
                  threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._display_unit = "MiB/joule"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
         self._effect_ranking = EffectRanking(self.factors)
 
@@ -37,6 +36,10 @@ class EnergyEfficiencyStatistics(BaseStatistics):
     def effect_name(self) -> str:
         pass
 
+    @property
+    def display_unit (self) -> str:
+        return "MiB/joule"
+
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         base = input_file.stem.removeprefix("ee_")
         rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
@@ -53,7 +56,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         mean_column = "mean_%s" % self.base_column
         for column in [mean_column, "ci_low", "ci_high"]:
-            display_df[column] = display_df[column].pint.to(self._display_unit)
+            display_df[column] = display_df[column].pint.to(self.display_unit)
 
         unit = display_df["ci_low"].pint.units
 
@@ -78,7 +81,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
                                    model: RegressionResultsWrapper, model_hc3: OLSResults):
-        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, model)
         beta, cov = factor_means.get_beta_cov(model, model_hc3)
 

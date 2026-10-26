@@ -90,7 +90,7 @@ class NetEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         )
 
         self._log_section("Factor mean CIs")
-        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         self._logger.info("Factor mean CI net")
         means_ci = factor_means.show_factor_means_ci(df, full_model,
                                                      full_model_hc3, relevant_factors)

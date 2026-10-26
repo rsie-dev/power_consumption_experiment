@@ -23,7 +23,6 @@ class ThroughputStatistics(BaseStatistics):
     def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._display_unit = "MiB/s"
         self._bootstrap_ci_calculator = BootstrapCiCalculator(self.factors, n_boot, seed, self.base_column)
         self._effect_ranking = EffectRanking(self.factors)
         self._stat_model = StatModel()
@@ -35,6 +34,10 @@ class ThroughputStatistics(BaseStatistics):
     @property
     def base_column(self) -> str:
         return "throughput"
+
+    @property
+    def display_unit (self) -> str:
+        return "MiB/s"
 
     def _validate_data(self, df: pd.DataFrame):
         super()._validate_data(df)
@@ -121,7 +124,7 @@ class ThroughputStatistics(BaseStatistics):
         )
 
         self._log_section("3.2 Estimate effects")
-        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         #factor_means.show_factor_means(df, relevant_factors)
         means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
 
@@ -165,7 +168,7 @@ class ThroughputStatistics(BaseStatistics):
         display_df = throughput_values_df.copy()
         display_df["Factor"] = display_df["Factor"].map(get_effect_name)
         for column in ["mean_throughput", "ci_low", "ci_high"]:
-            display_df[column] = display_df[column].pint.to(self._display_unit)
+            display_df[column] = display_df[column].pint.to(self.display_unit)
 
         unit = display_df["ci_low"].pint.units
 
@@ -190,7 +193,7 @@ class ThroughputStatistics(BaseStatistics):
 
     def _create_factor_means_table(self, comp: pd.DataFrame,
                                    full_model: RegressionResultsWrapper, full_model_hc3: OLSResults):
-        factor_means = FactorMeans(self.factors, self.base_column, self._display_unit)
+        factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         levels, grid, x_grid = factor_means.calculate_x_grid(comp, full_model)
         beta, cov = factor_means.get_beta_cov(full_model, full_model_hc3)
 

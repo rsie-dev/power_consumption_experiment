@@ -49,6 +49,11 @@ class BaseStatistics(Processor):
     def base_column(self) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def display_unit (self) -> str:
+        pass
+
     @contextmanager
     def _add_logfile(self, logfile: Path):
         handler = logging.FileHandler(logfile, mode="w")
