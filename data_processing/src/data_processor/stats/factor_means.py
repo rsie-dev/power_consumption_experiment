@@ -12,6 +12,16 @@ import tabulate
 from data_processor.constants import get_factor_levels
 from data_processor.util import tabulate_pint
 
+@dataclass(frozen=True)
+class FactorMeansEntry:
+    factor: str | list
+    means: pd.DataFrame
+
+
+@dataclass(frozen=True)
+class FactorMeansResult:
+    means: list[FactorMeansEntry]
+
 
 @dataclass(frozen=True)
 class FactorMeansCIResult:
@@ -268,17 +278,32 @@ class FactorMeans:
         cov = np.asarray(model_hc3.cov_params())
         return beta, cov
 
-    def show_factor_means(self, df: pd.DataFrame, relevant_factors: list):
+    def show_factor_means(self, df: pd.DataFrame, relevant_factors: list) -> FactorMeansResult:
         self._logger.info("")
         self._logger.info("Factor means")
+        means:list[FactorMeansEntry] = []
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
                 means_df = self._calculate_mean(df, relevant_factor)
                 self._print_means(relevant_factor, means_df)
+                entry = FactorMeansEntry(
+                    factor=relevant_factor,
+                    means=means_df,
+                )
+                means.append(entry)
             else:
                 factor2_levels = get_factor_levels(relevant_factor[1], df)
                 means_df = self._calculate_mean_combined(df, relevant_factor, factor2_levels)
                 self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
+                entry = FactorMeansEntry(
+                    factor=relevant_factor,
+                    means=means_df,
+                )
+                means.append(entry)
+        factor_means = FactorMeansResult(
+            means=means
+        )
+        return factor_means
 
     def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):
         headers = [factor]
@@ -297,7 +322,7 @@ class FactorMeans:
         self._logger.info("%s geometric means for: %s", self._base_column.capitalize(), factor)
         self._logger.info(table_str)
 
-    def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None):
+    def _calculate_mean(self, comp: pd.DataFrame, factor: str, order: list | None = None) -> pd.DataFrame:
         unit_ref = comp[self._base_column].dtype
         means = (
             comp.groupby(factor, observed=True)["log_%s" % self._base_column]
@@ -312,7 +337,7 @@ class FactorMeans:
         means[mean_column] = means[mean_column].astype(unit_ref)
         return means
 
-    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list):
+    def _calculate_mean_combined(self, comp: pd.DataFrame, factor: str | list[str], order: list) -> pd.DataFrame:
         unit_ref = comp[self._base_column].dtype
         means = (
             comp.groupby(
