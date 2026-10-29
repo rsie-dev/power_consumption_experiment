@@ -8,6 +8,8 @@ ORDER_STRENGTH = ["min", "default", "max"]
 
 ORDER_THREADING = ["single", "multi"]
 
+ORDER_HOST = ["raspi5", "visionfive2", "radxax4"]
+
 ORDER_DATASET = ["textlarge", "webster", "imagelarge", "sensor"]
 
 

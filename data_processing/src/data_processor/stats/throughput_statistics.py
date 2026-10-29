@@ -20,8 +20,17 @@ class ThroughputStatistics(BaseStatistics):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def extra_log_base(self, input_file: Path) -> str:
-        base = input_file.stem.removeprefix("tp_")
+        base = self._get_base_from_input_file(input_file)
         return "tp_stat_%s" % base
+
+    def _get_base_from_input_file(self, input_file: Path) -> str:
+        base = input_file.stem.removeprefix("tp_")
+        return base
+
+    def _build_output_base_from_input_file(self, input_file: Path, output_kind: str) -> str:
+        base = self._get_base_from_input_file(input_file)
+        base_filename = f"tp_{output_kind}_{self._threading}_{self._mode}_{base}"
+        return base_filename
 
     @property
     def base_column(self) -> str:
@@ -46,7 +55,7 @@ class ThroughputStatistics(BaseStatistics):
         self._logger.info("Invalid throughput values:    %d", invalid.sum())
 
     def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path):
-        base = input_file.stem.removeprefix("tp_")
+        base = self._get_base_from_input_file(input_file)
         for effect, df in factor_means.means.items():
             filename = "tp_effect_%s_%s_%s_%s" % (self._threading, self._mode, effect, base) + ".csv"
             self._frameio.persist(df, self._resources / filename)
@@ -137,7 +146,7 @@ class ThroughputStatistics(BaseStatistics):
         if not self._create_tex:
             return
 
-        base = input_file.stem.removeprefix("tp_")
+        base = self._get_base_from_input_file(input_file)
         filename = "tp_effect_ranking_%s_%s_%s_full" % (self._threading, self._mode, base) + ".tex"
         self._effect_ranking.create_effect_rank_stability_tex(effect_ranking_df, self._resources / filename)
         top_df = effect_ranking_df[

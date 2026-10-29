@@ -19,8 +19,17 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     def extra_log_base(self, input_file: Path) -> str:
-        base = input_file.stem.removeprefix("ee_")
+        base = self._get_base_from_input_file(input_file)
         return "ee_stat_%s_%s" % (self.effect_name, base)
+
+    def _get_base_from_input_file(self, input_file: Path) -> str:
+        base = input_file.stem.removeprefix("ee_")
+        return base
+
+    def _build_output_base_from_input_file(self, input_file: Path, output_kind: str) -> str:
+        base = self._get_base_from_input_file(input_file)
+        base_filename = f"ee_{output_kind}_{self._threading}_{self._mode}_{base}"
+        return base_filename
 
     def _validate_data_quantity(self, df: pd.DataFrame):
         super()._validate_data_quantity(df)
@@ -37,12 +46,12 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         return "MiB/joule"
 
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
-        base = input_file.stem.removeprefix("ee_")
+        base = self._get_base_from_input_file(input_file)
         rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
         self._create_csv(rank_filename, effect_ranking_df)
 
     def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path):
-        base = input_file.stem.removeprefix("ee_")
+        base = self._get_base_from_input_file(input_file)
         for effect, df in factor_means.means.items():
             filename = "ee_%s_effect_%s_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, effect, base)
             self._frameio.persist(df, self._resources / filename)
@@ -124,7 +133,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         if not self._create_tex:
             return
 
-        base = input_file.stem.removeprefix("ee_")
+        base = self._get_base_from_input_file(input_file)
         filename = "ee_%s_effect_ranking_%s_%s_%s_full.tex" % (self.effect_name, self._threading, self._mode, base)
         self._effect_ranking.create_effect_rank_stability_tex(effect_ranking_df, self._resources / filename)
         top_df = effect_ranking_df[

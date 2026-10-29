@@ -7,12 +7,13 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from pandas.core.interchange import column
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
 from data_processor.processor import Processor
-from data_processor.constants import ORDER_STRENGTH
+from data_processor.constants import ORDER_STRENGTH, ORDER_HOST
 from data_processor.util import tabulate_pint
 from .effect_names import EFFECT_NAMES
 from .drift_analyzer import DriftAnalyzer
@@ -20,7 +21,7 @@ from .model_compare import ModelCompare
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .effect_ranking import EffectRanking
 from .stat_model import StatModel
-from .factor_means import FactorMeans, FactorMeansCIResult, FactorMeansResult
+from .factor_means import FactorMeans, FactorMeansCIResult, FactorMeansResult, FactorMeansEntry
 from .diagnostic import Diagnostic
 from .extreme_finder import StudentizedResidualExtremeFinder
 from .residual_variance import ResidualVariance
@@ -69,6 +70,8 @@ class BaseStatistics(Processor):
         effect_ranking_df = self._results(inference_result)
 
         self._create_rank_file(effect_ranking_df, input_file)
+        if self._create_tex:
+            self._create_host_tool_order_files(inference_result.factor_means, input_file)
         self._create_means_ci_files(inference_result.factor_means_ci, input_file)
         self._post_process(effect_ranking_df, input_file)
 
@@ -371,6 +374,93 @@ class BaseStatistics(Processor):
 
     @abstractmethod
     def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path) -> None:
+        pass
+
+    def _create_host_tool_order_files(self, factor_means: FactorMeansResult, input_file: Path) -> None:
+        for factor_mean in factor_means.means:
+            if isinstance(factor_mean.factor, str):
+                continue
+            if factor_mean.factor[0] != "host" or factor_mean.factor[1] != "tool":
+                continue
+            self._create_host_tool_order_file(factor_mean, input_file)
+
+    def _create_host_tool_order_file(self, factor_mean: FactorMeansEntry, input_file: Path) -> None:
+        output_base = self._build_output_base_from_input_file(input_file, "host_tool")
+        filename = f"{output_base}.tex"
+        self._create_host_tool_order_tex(factor_mean.means, self._resources / filename)
+
+    def _create_host_tool_order_tex(self, df: pd.DataFrame, filename: Path):
+        self._logger.info("Generate: %s", filename)
+
+        df = self._order_tools(df)
+        latex = self._build_host_tool_order_lines(df)
+        with filename.open(mode="w", encoding="UTF_8") as f:
+            f.write(latex)
+
+    def _build_host_tool_order_lines(self, df: pd.DataFrame):
+        df = df.copy()
+
+        def get_host_entry(host: str) -> str:
+            if host == "raspi5":
+                return r"\gls{pi5}"
+            if host == "visionfive2":
+                return r"\gls{visionfive2}"
+            if host == "radxax4":
+                return r"\gls{radxax4}"
+            raise RuntimeError("unknown host: %s" % host)
+
+        host_column = "Platform / Rank"
+        df[host_column] = df[host_column].map(get_host_entry)
+
+        column_formats = ["l"] + ["c"] * (len(df.columns) - 1)
+        latex = (
+            df.style
+            .hide(axis="index")
+            #.format_index(escape=None, axis=1)
+            .to_latex(
+                #siunitx=True,
+                hrules=True,
+                #multicol_align="c",
+                column_format="".join(column_formats),
+            )
+        )
+
+        return latex
+
+    def _order_tools(self, df: pd.DataFrame) -> pd.DataFrame:
+        scores = df.rename(
+            columns=lambda c: c.split(maxsplit=1)[0]
+        )
+
+        ranked = pd.DataFrame(
+            scores.apply(
+                lambda row: row.sort_values(ascending=False).index.tolist(),
+                axis=1,
+            ).tolist(),
+            columns=range(1, scores.shape[1] + 1),
+        )
+
+        host_column = "Platform / Rank"
+        ranked[host_column] = scores.index
+        ranked.insert(0, host_column, ranked.pop(host_column))
+
+        ranked = ranked.sort_values(
+            by=host_column,
+            key=lambda col: pd.Categorical(
+                col,
+                categories=ORDER_HOST,
+                ordered=True,
+            ),
+        )
+
+        return ranked
+
+    @abstractmethod
+    def _get_base_from_input_file(self, input_file: Path) -> str:
+        pass
+
+    @abstractmethod
+    def _build_output_base_from_input_file(self, input_file: Path, output_kind: str) -> str:
         pass
 
     @abstractmethod
