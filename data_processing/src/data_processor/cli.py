@@ -5,6 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
+from .ranks import ThroughputRanking
 from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
@@ -74,12 +75,18 @@ class Processor:
         subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
 
+        parser_ranks_tp = subparsers_ranks.add_parser('tp', help="calculate throughput ranks",
+                                                      parents=[common_parser, factor_parser, tex_parser,
+                                                               log_parser])
+        parser_ranks_tp .add_argument('tp_file', type=Path, help="calculated throughput file")
+        parser_ranks_tp .set_defaults(func=self._ranks_tp)
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
-                                                       parents=[common_parser, factor_parser,tex_parser,
+                                                       parents=[common_parser, factor_parser, tex_parser,
                                                                 log_parser, rng_parser])
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
@@ -169,6 +176,12 @@ class Processor:
     def _multimeter_validate(self, _):
         validate = MultimeterValidate()
         validate.validate()
+
+    def _ranks_tp(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        ranking = ThroughputRanking(resources_folder,#, args.reslog, args.boot, args.seed,
+                                    args.threading, args.mode)#, args.tex)
+        ranking.process(args.tp_file)
 
     def _stats_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
