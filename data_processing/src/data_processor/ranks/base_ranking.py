@@ -1,11 +1,10 @@
 import logging
 from pathlib import Path
 from abc import abstractmethod
+from itertools import combinations
 
 import pandas as pd
-from itertools import combinations
 from scipy.stats import kendalltau
-import tabulate
 
 from data_processor.processor import Processor
 from data_processor.util import tabulate_pint
@@ -213,7 +212,8 @@ class BaseRanking(Processor):
     def _print_pair_tau(self, label: str, result: pd.DataFrame):
         self._logger.info(label)
         self._logger.info("Comparisons:                  %d", len(result))
-        self._logger.info("Utilities:                    %d to %d", result["utilities"].min(), result["utilities"].max())
+        self._logger.info("Utilities:                    %d to %d", result["utilities"].min(),
+                          result["utilities"].max())
         description = result["tau_b"].describe()[["min", "50%", "max"]]
         description = description.to_frame()
 
