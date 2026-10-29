@@ -38,7 +38,7 @@ class Processor:
             yaml = YAML(typ="safe")
             return yaml.load(f)
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-statements
     def main(self):
         parser = argparse.ArgumentParser()
         default = ' (default: %(default)s)'
