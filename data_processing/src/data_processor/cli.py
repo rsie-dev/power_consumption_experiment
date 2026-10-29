@@ -66,6 +66,10 @@ class Processor:
         log_parser = argparse.ArgumentParser(add_help=False)
         log_parser.add_argument('--reslog', action='store_true', help="create logfile in resources")
 
+        parser_ranks = subparsers.add_parser('ranks', help="ranking subcommands")
+        subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                                       description='valid subcommands')
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
