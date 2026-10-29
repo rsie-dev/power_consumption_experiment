@@ -66,6 +66,10 @@ class Processor:
         log_parser = argparse.ArgumentParser(add_help=False)
         log_parser.add_argument('--reslog', action='store_true', help="create logfile in resources")
 
+        rng_parser = argparse.ArgumentParser(add_help=False)
+        rng_parser.add_argument('--boot', default=10000, type=int, help="bootstrap count")
+        rng_parser.add_argument('--seed', type=int, help="RNG seed value")
+
         parser_ranks = subparsers.add_parser('ranks', help="ranking subcommands")
         subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
@@ -75,9 +79,8 @@ class Processor:
                                                        description='valid subcommands')
 
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
-                                                       parents=[common_parser, factor_parser, tex_parser, log_parser])
-        parser_stats_tp.add_argument('--boot', default=10000, type=int, help="bootstrap count")
-        parser_stats_tp.add_argument('--seed', type=int, help="RNG seed value")
+                                                       parents=[common_parser, factor_parser,tex_parser,
+                                                                log_parser, rng_parser])
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
 
@@ -86,14 +89,12 @@ class Processor:
                                                              description='valid subcommands')
 
         ee_parser = argparse.ArgumentParser(add_help=False)
-        ee_parser.add_argument('--boot', default=10000, type=int, help="bootstrap count")
-        ee_parser.add_argument('--seed', type=int, help="RNG seed value")
         ee_parser.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
 
         parser_stats_ee_total = subparsers_stats_ee.add_parser('total',
                                                                help="calculate total energy efficiency statistics",
                                                                parents=[common_parser, factor_parser, tex_parser,
-                                                                        ee_parser, log_parser])
+                                                                        ee_parser, log_parser, rng_parser])
         parser_stats_ee_total.set_defaults(func=self._stats_ee_total)
 
         parser_stats_ee_net = subparsers_stats_ee.add_parser('net', help="calculate net energy efficiency statistics",
