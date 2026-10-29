@@ -1,5 +1,6 @@
 import logging
 from itertools import product, combinations
+from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
@@ -10,6 +11,11 @@ import tabulate
 
 from data_processor.constants import get_factor_levels
 from data_processor.util import tabulate_pint
+
+
+@dataclass(frozen=True)
+class FactorMeansResult:
+    means: dict
 
 
 class FactorMeans:
@@ -25,7 +31,7 @@ class FactorMeans:
 
     def show_factor_means_ci(self, comp: pd.DataFrame,
                              model: RegressionResultsWrapper, model_hc3: OLSResults,
-                             relevant_factors: list) -> dict:
+                             relevant_factors: list) -> FactorMeansResult:
         self._logger.info("")
         self._logger.info("Factor means CI")
         result = {}
@@ -52,7 +58,11 @@ class FactorMeans:
                                                                                  relevant_factor,
                                                                                  factor2_levels)
                 self._print_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
-        return result
+
+        factor_means = FactorMeansResult(
+            means=result
+        )
+        return factor_means
 
     def _print_mean_cis(self, factor: str | list[str], mean_cis: pd.DataFrame):
         if isinstance(factor, str):
