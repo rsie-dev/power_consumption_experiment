@@ -20,7 +20,7 @@ from .model_compare import ModelCompare
 from .bootstrap_ci_calculator import BootstrapCiCalculator
 from .effect_ranking import EffectRanking
 from .stat_model import StatModel
-from .factor_means import FactorMeans, FactorMeansResult
+from .factor_means import FactorMeans, FactorMeansCIResult
 from .diagnostic import Diagnostic
 from .extreme_finder import StudentizedResidualExtremeFinder
 from .residual_variance import ResidualVariance
@@ -31,7 +31,7 @@ class InferenceResult:
     anova_hc3: pd.DataFrame
     ranked_effects_df: pd.DataFrame
     confidence_intervals: pd.DataFrame
-    factor_means: FactorMeansResult
+    factor_means_ci: FactorMeansCIResult
     rank_stability: pd.DataFrame
 
 
@@ -68,7 +68,7 @@ class BaseStatistics(Processor):
         effect_ranking_df = self._results(inference_result)
 
         self._create_rank_file(effect_ranking_df, input_file)
-        self._create_means_ci_files(inference_result.factor_means, input_file)
+        self._create_means_ci_files(inference_result.factor_means_ci, input_file)
         self._post_process(effect_ranking_df, input_file)
 
     @abstractmethod
@@ -315,7 +315,7 @@ class BaseStatistics(Processor):
         self._log_section("3.2 Estimate effects")
         factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         factor_means.show_factor_means(df, relevant_factors)
-        factor_means_result = factor_means.show_factor_means_ci(df, model, full_model_hc3, relevant_factors)
+        factor_means_ci_result = factor_means.show_factor_means_ci(df, model, full_model_hc3, relevant_factors)
 
         self._log_section("3.3 Quantify importance")
         order_summary = self._calculate_order_summary(ranked_effects_df)
@@ -340,7 +340,7 @@ class BaseStatistics(Processor):
             anova_hc3=anova_hc3,
             ranked_effects_df=ranked_effects_df,
             confidence_intervals=confidence_intervals,
-            factor_means=factor_means_result,
+            factor_means_ci=factor_means_ci_result,
             rank_stability=rank_stability,
         )
         return result
@@ -368,7 +368,7 @@ class BaseStatistics(Processor):
         pass
 
     @abstractmethod
-    def _create_means_ci_files(self, factor_means: FactorMeansResult, input_file: Path) -> None:
+    def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path) -> None:
         pass
 
     @abstractmethod

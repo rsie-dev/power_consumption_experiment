@@ -10,7 +10,7 @@ from data_processor import ureg
 from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
 from .effect_names import get_effect_name
-from .factor_means import FactorMeans, FactorMeansResult
+from .factor_means import FactorMeans, FactorMeansCIResult
 
 
 class ThroughputStatistics(BaseStatistics):
@@ -45,7 +45,7 @@ class ThroughputStatistics(BaseStatistics):
             raise ValueError(f"Found {invalid.sum()} invalid throughput values")
         self._logger.info("Invalid throughput values:    %d", invalid.sum())
 
-    def _create_means_ci_files(self, factor_means: FactorMeansResult, input_file: Path):
+    def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path):
         base = input_file.stem.removeprefix("tp_")
         for effect, df in factor_means.means.items():
             filename = "tp_effect_%s_%s_%s_%s" % (self._threading, self._mode, effect, base) + ".csv"

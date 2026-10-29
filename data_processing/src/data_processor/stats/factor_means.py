@@ -14,8 +14,8 @@ from data_processor.util import tabulate_pint
 
 
 @dataclass(frozen=True)
-class FactorMeansResult:
-    means: dict
+class FactorMeansCIResult:
+    means: dict[str, pd.DataFrame]
 
 
 class FactorMeans:
@@ -31,7 +31,7 @@ class FactorMeans:
 
     def show_factor_means_ci(self, comp: pd.DataFrame,
                              model: RegressionResultsWrapper, model_hc3: OLSResults,
-                             relevant_factors: list) -> FactorMeansResult:
+                             relevant_factors: list) -> FactorMeansCIResult:
         self._logger.info("")
         self._logger.info("Factor means CI")
         result = {}
@@ -59,7 +59,7 @@ class FactorMeans:
                                                                                  factor2_levels)
                 self._print_ratios_within_factor_levels(list(relevant_factor), combination_ratios)
 
-        factor_means = FactorMeansResult(
+        factor_means = FactorMeansCIResult(
             means=result
         )
         return factor_means
@@ -95,7 +95,7 @@ class FactorMeans:
         self._logger.info(table_str)
 
     def _calculate_factor_ci(self, comp: pd.DataFrame, model: RegressionResultsWrapper, model_hc3: OLSResults,
-                             factor: str):
+                             factor: str) -> pd.DataFrame:
         levels, grid, x_grid = self.calculate_x_grid(comp, model)
         beta, cov = self.get_beta_cov(model, model_hc3)
 
@@ -109,7 +109,7 @@ class FactorMeans:
 
     def _calculate_factor_combination_ci(self, comp: pd.DataFrame,
                                          model: RegressionResultsWrapper, model_hc3: OLSResults,
-                                         factor_combination: list[str], factor2_levels: list[str]):
+                                         factor_combination: list[str], factor2_levels: list[str]) -> pd.DataFrame:
         levels, grid, x_grid = self.calculate_x_grid(comp, model)
         beta, cov = self.get_beta_cov(model, model_hc3)
 
@@ -221,7 +221,7 @@ class FactorMeans:
         return combination_ratios
 
     def marginal_mean_ci(self, factor: str, levels: dict, grid, x_grid: np.ndarray,
-                         beta: np.ndarray, cov: np.ndarray, comp: pd.DataFrame):
+                         beta: np.ndarray, cov: np.ndarray, comp: pd.DataFrame) -> pd.DataFrame:
         rows = []
         mean_column = "mean_%s" % self._base_column
         for level in levels[factor]:
@@ -268,16 +268,16 @@ class FactorMeans:
         cov = np.asarray(model_hc3.cov_params())
         return beta, cov
 
-    def show_factor_means(self, comp: pd.DataFrame, relevant_factors: list):
+    def show_factor_means(self, df: pd.DataFrame, relevant_factors: list):
         self._logger.info("")
         self._logger.info("Factor means")
         for relevant_factor in relevant_factors:
             if isinstance(relevant_factor, str):
-                means_df = self._calculate_mean(comp, relevant_factor)
+                means_df = self._calculate_mean(df, relevant_factor)
                 self._print_means(relevant_factor, means_df)
             else:
-                factor2_levels = get_factor_levels(relevant_factor[1], comp)
-                means_df = self._calculate_mean_combined(comp, relevant_factor, factor2_levels)
+                factor2_levels = get_factor_levels(relevant_factor[1], df)
+                means_df = self._calculate_mean_combined(df, relevant_factor, factor2_levels)
                 self._print_means(" / ".join(relevant_factor), means_df, factor2_levels)
 
     def _print_means(self, factor: str, means: pd.DataFrame, extra_columns: list | None = None):

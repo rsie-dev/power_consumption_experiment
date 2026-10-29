@@ -8,7 +8,7 @@ from statsmodels.regression.linear_model import OLSResults
 
 from data_processor.util import tabulate_pint
 from .base_statistics import BaseStatistics
-from .factor_means import FactorMeans, FactorMeansResult
+from .factor_means import FactorMeans, FactorMeansCIResult
 from .effect_names import get_effect_name
 
 
@@ -41,7 +41,7 @@ class EnergyEfficiencyStatistics(BaseStatistics):
         rank_filename = "ee_%s_effect_ranking_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, base)
         self._create_csv(rank_filename, effect_ranking_df)
 
-    def _create_means_ci_files(self, factor_means: FactorMeansResult, input_file: Path):
+    def _create_means_ci_files(self, factor_means: FactorMeansCIResult, input_file: Path):
         base = input_file.stem.removeprefix("ee_")
         for effect, df in factor_means.means.items():
             filename = "ee_%s_effect_%s_%s_%s_%s.csv" % (self.effect_name, self._threading, self._mode, effect, base)
