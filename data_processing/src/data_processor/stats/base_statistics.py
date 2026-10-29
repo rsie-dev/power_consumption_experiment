@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from pandas.core.interchange import column
 from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
@@ -318,8 +317,14 @@ class BaseStatistics(Processor):
 
         self._log_section("3.2 Estimate effects")
         factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
-        factor_means_result = factor_means.show_factor_means(df, relevant_factors)
-        factor_means_ci_result = factor_means.show_factor_means_ci(df, model, full_model_hc3, relevant_factors)
+
+        relevant_host_tool_factors = relevant_factors[:]
+        #host_tool = ("host", "tool")
+        #if host_tool  not in relevant_host_tool_factors:
+        #    relevant_host_tool_factors.append(host_tool)
+        factor_means_result = factor_means.show_factor_means(df, relevant_host_tool_factors)
+        factor_means_ci_result = factor_means.show_factor_means_ci(df, model, full_model_hc3,
+                                                                   relevant_host_tool_factors)
 
         self._log_section("3.3 Quantify importance")
         order_summary = self._calculate_order_summary(ranked_effects_df)
@@ -416,11 +421,8 @@ class BaseStatistics(Processor):
         latex = (
             df.style
             .hide(axis="index")
-            #.format_index(escape=None, axis=1)
             .to_latex(
-                #siunitx=True,
                 hrules=True,
-                #multicol_align="c",
                 column_format="".join(column_formats),
             )
         )
