@@ -22,4 +22,4 @@ def test_get_effect_name_two_way():
 def test_get_effect_name_two_way_pandas():
     actual_name = get_effect_name("tool × strength")
 
-    assert actual_name == "utility x strength"
+    assert actual_name == "utility x level"
