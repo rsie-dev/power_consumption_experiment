@@ -40,16 +40,26 @@ class BaseStatistics(Processor):
         self._effect_ranking = EffectRanking(self.factors)
         self._stat_model = StatModel()
 
-    def process(self, used_power_file: Path):
+    def process(self, input_file: Path):
         if self._logfile:
-            base = self.extra_log_base(used_power_file)
+            base = self.extra_log_base(input_file)
             logfile_path = self._resources / f"{base}_{self._threading}_{self._mode}.log"
             cm = self._add_logfile(logfile_path)
             self._logger.info("create extra logfile: %s", logfile_path)
         else:
             cm = nullcontext()
         with cm:
-            self._do_process(used_power_file)
+            self._analyze(input_file)
+
+    def _analyze(self, input_file: Path):
+        df = self._preparation(input_file)
+        model = self._modeling(df)
+        inference_data = self._inference(df, model)
+        effect_ranking_df, means_ci = self._results(*inference_data)
+
+        self._create_rank_file(effect_ranking_df, input_file)
+        self._create_means_ci_files(means_ci, input_file)
+        self._post_process(effect_ranking_df, input_file)
 
     @abstractmethod
     def extra_log_base(self, input_file: Path) -> str:
@@ -92,7 +102,7 @@ class BaseStatistics(Processor):
         self._logger.info("%s %s %s", "-" * 20, title, "-" * 20)
         self._logger.info("")
 
-    def _do_process(self, input_file: Path):
+    def _preparation(self, input_file: Path) -> pd.DataFrame:
         self._log_section("1. Preparation")
         self._logger.info("load data")
         df = self._frameio.load(input_file)
@@ -109,12 +119,7 @@ class BaseStatistics(Processor):
 
         self._log_section("1.4 Check temporal drift")
         self._check_temporal_drift(df)
-
-        effect_ranking_df, means_ci = self._calculate_statistics(df)
-        self._create_rank_file(effect_ranking_df, input_file)
-        self._create_means_ci_files(means_ci, input_file)
-
-        self._post_process(effect_ranking_df, input_file)
+        return df
 
     def _check_temporal_drift(self, df: pd.DataFrame):
         drift_analyzer = DriftAnalyzer(self.factors, self.DRIFT_THRESHOLD, self._threading, self._mode, self.base_column)
@@ -241,7 +246,7 @@ class BaseStatistics(Processor):
     def _calculate_base(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
 
-    def _calculate_statistics(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    def _modeling(self, df: pd.DataFrame) -> RegressionResultsWrapper:
         self._log_section("2. Modeling")
 
         self._log_section("2.1 Check factorial completeness")
@@ -270,13 +275,15 @@ class BaseStatistics(Processor):
         extreme_finder = StudentizedResidualExtremeFinder(self.factors)
         extremes, criterion = extreme_finder.find_extremes(df, full_model)
         extreme_finder.print_extremes(extremes, criterion)
+        return full_model
 
+    def _inference(self, df: pd.DataFrame, model: RegressionResultsWrapper):
         self._log_section("3. Inference")
         self._log_section("3.1 Calculate robust ANOVA")
-        anova_hc3, std_error_description_df = self._calculate_anova_hc3(full_model)
+        anova_hc3, std_error_description_df = self._calculate_anova_hc3(model)
         self._print_anova_hc3(anova_hc3, std_error_description_df)
 
-        ranked_effects_df, decompositions = self._calculate_anova_effect_rankings(full_model)
+        ranked_effects_df, decompositions = self._calculate_anova_effect_rankings(model)
         self._print_anova_effect_rankings(ranked_effects_df)
         self._print_anova_effect_decompositions(decompositions)
 
@@ -290,14 +297,14 @@ class BaseStatistics(Processor):
         # Reason: HC3 protects significance tests and confidence intervals against unequal configuration
         # variability and keeps the method consistent with compression.
         # -> use HC3 version for confidence intervals and significance tests.
-        full_model_hc3 = full_model.get_robustcov_results(
+        full_model_hc3 = model.get_robustcov_results(
             cov_type="HC3"
         )
 
         self._log_section("3.2 Estimate effects")
         factor_means = FactorMeans(self.factors, self.base_column, self.display_unit)
         factor_means.show_factor_means(df, relevant_factors)
-        means_ci = factor_means.show_factor_means_ci(df, full_model, full_model_hc3, relevant_factors)
+        means_ci = factor_means.show_factor_means_ci(df, model, full_model_hc3, relevant_factors)
 
         self._log_section("3.3 Quantify importance")
         order_summary = self._calculate_order_summary(ranked_effects_df)
@@ -305,7 +312,7 @@ class BaseStatistics(Processor):
 
         # Check that the top confidence intervals do not overlap
         self._log_section("3.4 Bootstrap importance")
-        validation_results = self._bootstrap_ci_calculator.validate_data(df, full_model)
+        validation_results = self._bootstrap_ci_calculator.validate_data(df, model)
         self._bootstrap_ci_calculator.print_validation_results(validation_results )
         confidence_intervals, bootstrap_results, bootstrap_omega, point_omega = (
             self._bootstrap_ci_calculator.calculate_ci(df)
@@ -318,6 +325,10 @@ class BaseStatistics(Processor):
         self._effect_ranking.print_effect_rank_stability_table(rank_stability)
         self._effect_ranking.print_effect_adjacent_rank_comparisons_table(adjacent_comparisons)
 
+        return anova_hc3, ranked_effects_df, confidence_intervals, means_ci, rank_stability
+
+    def _results(self, anova_hc3, ranked_effects_df, confidence_intervals, means_ci,
+                 rank_stability) -> tuple[pd.DataFrame, dict]:
         self._log_section("4. Results")
         self._log_section("4.1 Rank terms")
         effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df,
@@ -334,6 +345,7 @@ class BaseStatistics(Processor):
         )
 
         return effect_rankings_stability, means_ci
+
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         pass
 
