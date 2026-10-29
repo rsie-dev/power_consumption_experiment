@@ -4,18 +4,26 @@ from abc import abstractmethod
 from itertools import combinations
 
 import pandas as pd
+import numpy as np
 from scipy.stats import kendalltau
+from tqdm import tqdm
+import tabulate
 
 from data_processor.processor import Processor
 from data_processor.util import tabulate_pint
 
 
 class BaseRanking(Processor):
-    def __init__(self, resources: Path, threading: str, mode: str):
+    def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._threading = threading
         self._mode = mode
+        self._n_boot = n_boot
+        if seed is None:
+            seed = 12345
+        self._seed = seed
+        self._rng = np.random.default_rng(seed)
 
     @property
     def factors(self):
@@ -49,8 +57,6 @@ class BaseRanking(Processor):
 
     def _calculate(self, df: pd.DataFrame):
         self._log_section("2. Calculate medians")
-
-        #self._log_section("2.1 Medians")
         summary = self._calculate_medians(df)
         self._print_medians(summary)
 
@@ -59,11 +65,21 @@ class BaseRanking(Processor):
         self._print_ranked_utilities(ranked)
         self._print_ties_utilities(ties)
 
-        self._log_section("4 Pairwise Kendall’s")
+        self._log_section("4 Quantify consistency")
+
+        self._log_section("4.1 Pairwise Kendall’s")
         platform_tau, dataset_tau = self._pair_utilities(ranked)
         self._print_pair_tau("Across platforms", platform_tau)
         self._logger.info("")
         self._print_pair_tau("Across datasets", dataset_tau)
+
+        self._log_section("4.2 Bootstrap")
+        platform_boot, dataset_boot = self._bootstrap(df)
+        self._print_bootstrap(platform_boot, dataset_boot)
+
+        self._log_section("4.3 CI intervals")
+        platform_results, dataset_results = self._calculate_ci(platform_tau, dataset_tau, platform_boot, dataset_boot)
+        self._print_ci(platform_results, dataset_results)
 
     def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
@@ -225,54 +241,182 @@ class BaseRanking(Processor):
         self._logger.info(table_str)
 
     def _pair_utilities(self, ranked: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        def pairwise_tau(frame, compare, fixed) -> pd.DataFrame:
-            rows = []
-
-            for fixed_values, group in frame.groupby(fixed, observed=True):
-                fixed_values = (
-                    fixed_values
-                    if isinstance(fixed_values, tuple)
-                    else (fixed_values,)
-                )
-                fixed_values = dict(zip(fixed, fixed_values))
-
-                values = sorted(group[compare].unique())
-
-                for first, second in combinations(values, 2):
-                    pair = (
-                        group[group[compare].isin([first, second])]
-                        .pivot(index="tool", columns=compare, values="rank")
-                        .dropna()
-                    )
-
-                    tau = kendalltau(
-                        pair[first],
-                        pair[second],
-                        variant="b",
-                    ).statistic
-
-                    rows.append({
-                        **fixed_values,
-                        "first": first,
-                        "second": second,
-                        "utilities": len(pair),
-                        "tau_b": tau,
-                    })
-
-            return pd.DataFrame(rows)
-
-        platform_tau = pairwise_tau(
+        platform_tau = self._pairwise_tau(
             ranked,
             compare="host",
             fixed=["dataset", "strength"],
         )
 
-        dataset_tau = pairwise_tau(
+        dataset_tau = self._pairwise_tau(
             ranked,
             compare="dataset",
             fixed=["host", "strength"],
         )
         return platform_tau, dataset_tau
+
+    def _pairwise_tau(self, frame, compare, fixed) -> pd.DataFrame:
+        rows = []
+
+        for fixed_values, group in frame.groupby(fixed, observed=True):
+            fixed_values = (
+                fixed_values
+                if isinstance(fixed_values, tuple)
+                else (fixed_values,)
+            )
+            fixed_values = dict(zip(fixed, fixed_values))
+
+            values = sorted(group[compare].unique())
+            for first, second in combinations(values, 2):
+                pair = (
+                    group[group[compare].isin([first, second])]
+                    .pivot(index="tool", columns=compare, values="rank")
+                    .dropna()
+                )
+
+                tau = kendalltau(
+                    pair[first],
+                    pair[second],
+                    variant="b",
+                ).statistic
+
+                rows.append({
+                    **fixed_values,
+                    "first": first,
+                    "second": second,
+                    "utilities": len(pair),
+                    "tau_b": tau,
+                })
+
+        return pd.DataFrame(rows)
+
+    def _print_bootstrap(self, platform_boot: pd.DataFrame, dataset_boot: pd.DataFrame):
+        self._logger.info("Platform bootstrap rows:     %d", len(platform_boot))
+        self._logger.info("Dataset bootstrap rows:      %d", len(dataset_boot))
+        self._logger.info("Missing platform tau:        %f", platform_boot["tau_b"].isna().sum())
+        self._logger.info("Missing dataset tau:         %f", dataset_boot["tau_b"].isna().sum())
+
+    def _bootstrap(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        platform_boot = []
+        dataset_boot = []
+        for iteration in tqdm(range(self._n_boot), colour="green"):
+            boot = (
+                df.groupby(self.factors, group_keys=False, observed=True)
+                .sample(
+                    frac=1,
+                    replace=True,
+                    random_state=int(self._rng.integers(0, 2 ** 32 - 1)),
+                )
+            )
+
+            median_column = "median_%s" % self.base_column
+            boot_summary = (
+                boot.groupby(self.factors, observed=True)[self.base_column]
+                .median()
+                .rename(median_column)
+                .reset_index()
+            )
+
+            boot_summary["rank"] = (
+                boot_summary.groupby(
+                    ["host", "dataset", "strength"],
+                    observed=True,
+                )[median_column]
+                .rank(ascending=False, method="average")
+            )
+
+            p = self._pairwise_tau(
+                boot_summary, "host", ["dataset", "strength"]
+            )
+            p["iteration"] = iteration
+            platform_boot.append(p)
+
+            d = self._pairwise_tau(
+                boot_summary, "dataset", ["host", "strength"]
+            )
+            d["iteration"] = iteration
+            dataset_boot.append(d)
+
+        platform_boot = pd.concat(platform_boot, ignore_index=True)
+        dataset_boot = pd.concat(dataset_boot, ignore_index=True)
+
+        return platform_boot, dataset_boot
+
+    def _print_ci(self, platform_results: pd.DataFrame, dataset_results: pd.DataFrame):
+        for label, result in [
+            ("Platforms", platform_results),
+            ("Datasets", dataset_results),
+        ]:
+            self._logger.info("")
+            self._logger.info(label)
+            self._logger.info("Rows:                         %d", len(result))
+            self._logger.info("Missing intervals:            %d",
+                              result[["ci_low", "ci_high"]].isna().sum().sum())
+            self._logger.info("CI width:                     %f to %f", result["ci_width"].min(),
+                              result["ci_width"].max())
+
+        self._logger.info("")
+        self._logger.info("Weakest platform comparisons:")
+        platform_results = platform_results.sort_values("tau_b")
+        platform_results = platform_results[["dataset", "strength", "first", "second",
+                                             "tau_b", "ci_low", "ci_high"]]
+        platform_results = platform_results.head(5)
+        headers = ["Dataset", "Strength", "First", "Second", "Tau_b", "CI low", "CI high"]
+        table_str = tabulate.tabulate(
+            platform_results,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+        dataset_results = dataset_results.sort_values("tau_b")
+        dataset_results = dataset_results[["host", "strength", "first", "second",
+                                           "tau_b", "ci_low", "ci_high"]]
+        dataset_results = dataset_results.head(5)
+
+        self._logger.info("")
+        self._logger.info("Weakest dataset comparisons:")
+        headers = ["Host", "Strength", "First", "Second", "Tau_b", "CI low", "CI high"]
+        table_str = tabulate.tabulate(
+            dataset_results,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _calculate_ci(self, platform_tau: pd.DataFrame, dataset_tau: pd.DataFrame,
+                      platform_boot: pd.DataFrame, dataset_boot: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        platform_results = self._attach_ci(
+            platform_tau,
+            platform_boot,
+            ["dataset", "strength", "first", "second"],
+        )
+
+        dataset_results = self._attach_ci(
+            dataset_tau,
+            dataset_boot,
+            ["host", "strength", "first", "second"],
+        )
+
+        return platform_results, dataset_results
+
+    def _attach_ci(self, point, bootstrap, keys):
+        ci = (
+            bootstrap.groupby(keys, observed=True)["tau_b"]
+            .quantile([0.025, 0.975])
+            .unstack()
+            .reset_index()
+            .rename(columns={0.025: "ci_low", 0.975: "ci_high"})
+        )
+
+        result = point.merge(
+            ci,
+            on=keys,
+            how="left",
+            validate="one_to_one",
+        )
+        result["ci_width"] = result["ci_high"] - result["ci_low"]
+        return result
+
 
     def _log_section(self, title: str):
         self._logger.info("")
