@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 from contextlib import contextmanager, nullcontext
 from abc import abstractmethod
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,15 @@ from .factor_means import FactorMeans
 from .diagnostic import Diagnostic
 from .extreme_finder import StudentizedResidualExtremeFinder
 from .residual_variance import ResidualVariance
+
+
+@dataclass(frozen=True)
+class InferenceResult:
+    anova_hc3: pd.DataFrame
+    ranked_effects_df: pd.DataFrame
+    confidence_intervals: pd.DataFrame
+    means_ci: dict
+    rank_stability: pd.DataFrame
 
 
 class BaseStatistics(Processor):
@@ -54,11 +64,11 @@ class BaseStatistics(Processor):
     def _analyze(self, input_file: Path):
         df = self._preparation(input_file)
         model = self._modeling(df)
-        inference_data = self._inference(df, model)
-        effect_ranking_df, means_ci = self._results(*inference_data)
+        inference_result = self._inference(df, model)
+        effect_ranking_df = self._results(inference_result)
 
         self._create_rank_file(effect_ranking_df, input_file)
-        self._create_means_ci_files(means_ci, input_file)
+        self._create_means_ci_files(inference_result.means_ci, input_file)
         self._post_process(effect_ranking_df, input_file)
 
     @abstractmethod
@@ -277,7 +287,7 @@ class BaseStatistics(Processor):
         extreme_finder.print_extremes(extremes, criterion)
         return full_model
 
-    def _inference(self, df: pd.DataFrame, model: RegressionResultsWrapper):
+    def _inference(self, df: pd.DataFrame, model: RegressionResultsWrapper) -> InferenceResult:
         self._log_section("3. Inference")
         self._log_section("3.1 Calculate robust ANOVA")
         anova_hc3, std_error_description_df = self._calculate_anova_hc3(model)
@@ -325,14 +335,21 @@ class BaseStatistics(Processor):
         self._effect_ranking.print_effect_rank_stability_table(rank_stability)
         self._effect_ranking.print_effect_adjacent_rank_comparisons_table(adjacent_comparisons)
 
-        return anova_hc3, ranked_effects_df, confidence_intervals, means_ci, rank_stability
+        result = InferenceResult(
+            anova_hc3=anova_hc3,
+            ranked_effects_df=ranked_effects_df,
+            confidence_intervals=confidence_intervals,
+            means_ci=means_ci,
+            rank_stability=rank_stability,
+        )
+        return result
 
-    def _results(self, anova_hc3, ranked_effects_df, confidence_intervals, means_ci,
-                 rank_stability) -> tuple[pd.DataFrame, dict]:
+    def _results(self, result: InferenceResult) -> pd.DataFrame:
         self._log_section("4. Results")
         self._log_section("4.1 Rank terms")
-        effect_rankings = self._effect_ranking.create_effect_ranking_table(ranked_effects_df,
-                                                                           confidence_intervals, anova_hc3)
+        effect_rankings = self._effect_ranking.create_effect_ranking_table(result.ranked_effects_df,
+                                                                           result.confidence_intervals,
+                                                                           result.anova_hc3)
         self._effect_ranking.print_effect_ranking_table(effect_rankings)
 
 
@@ -341,10 +358,10 @@ class BaseStatistics(Processor):
 
         effect_rankings_stability = (
             effect_rankings
-            .join(rank_stability[["rank_95_low", "rank_95_high", "probability_same_rank"]])
+            .join(result.rank_stability[["rank_95_low", "rank_95_high", "probability_same_rank"]])
         )
 
-        return effect_rankings_stability, means_ci
+        return effect_rankings_stability
 
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         pass
