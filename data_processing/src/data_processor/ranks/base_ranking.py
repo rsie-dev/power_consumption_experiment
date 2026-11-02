@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from abc import abstractmethod
 from itertools import combinations
+from math import comb
 
 import pandas as pd
 import numpy as np
@@ -81,6 +82,22 @@ class BaseRanking(Processor):
         platform_results, dataset_results = self._calculate_ci(platform_tau, dataset_tau, platform_boot, dataset_boot)
         self._print_ci(platform_results, dataset_results)
 
+        self._log_section("5 Ranking")
+
+        self._log_section("5.1 Rank ranges")
+        utility_ranks = self._rank_ranges(ranked)
+        self._print_rank_ranges(utility_ranks)
+
+        self._log_section("5.2 Rank reversals")
+        platform_reversals, dataset_reversals = self._rank_reversals(ranked)
+        utility_count = len(df["tool"].unique())
+        utility_pairs = int(utility_count * (utility_count -1) / 2)
+        self._print_rank_reversals(platform_reversals, dataset_reversals, utility_pairs)
+
+        self._log_section("6 Stability summary")
+        stability = self._stability_summary(ranked, platform_results, dataset_results, platform_reversals, dataset_reversals)
+        self._print_stability_summary(stability)
+
     def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
         df = df[df["threading"] == self._threading]
@@ -156,30 +173,32 @@ class BaseRanking(Processor):
 
         ranked["rank"] = ranked["rank"].pint.magnitude.astype("int64")
 
-        host = "radxax4"
-        dataset = "imagelarge"
-        strength = "default"
-        example = ranked[
-            (ranked["host"] == host)
-            & (ranked["dataset"] == dataset)
-            & (ranked["strength"] == strength)
-            ].sort_values("rank")
+        hosts = list(ranked["host"].unique())
+        for host in hosts:
+            dataset = "sensor"
+            strength = "default"
+            example = ranked[
+                (ranked["host"] == host)
+                & (ranked["dataset"] == dataset)
+                & (ranked["strength"] == strength)
+                ].sort_values("rank")
 
-        example_display = example[["tool", "rank"]].copy()
-        median_column = "median_%s" % self.base_column
-        example_display[median_column] = (
-            example[median_column]
-            .pint.to("MiB/s")
-        )
+            example_display = example[["tool", "rank"]].copy()
+            median_column = "median_%s" % self.base_column
+            example_display[median_column] = (
+                example[median_column]
+                .pint.to("MiB/s")
+            )
 
-        self._logger.info("Ranks on %s for %s with %s:", host, dataset, strength)
-        headers = ["Tool", "Rank", "Median"]
-        table_str = tabulate_pint(
-            example_display,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
+            self._logger.info("")
+            self._logger.info("Ranks on %s for %s with %s:", host, dataset, strength)
+            headers = ["Tool", "Rank", "Median"]
+            table_str = tabulate_pint(
+                example_display,
+                showindex=False,
+                headers=headers,
+            )
+            self._logger.info(table_str)
 
     def _print_ties_utilities(self, ties: pd.DataFrame):
         tie_display = ties[
@@ -417,6 +436,158 @@ class BaseRanking(Processor):
         result["ci_width"] = result["ci_high"] - result["ci_low"]
         return result
 
+    def _print_rank_ranges(self, utility_ranks: pd.DataFrame):
+        utility_ranks = utility_ranks.copy()
+        headers = ["Tool", "Contexts", "Best rank", "Median rank", "Worst rank", "Top count", "Rank range", "Top (%)"]
+        for column in ["best_rank", "median_rank", "worst_rank", "rank_range"]:
+            utility_ranks[column] = utility_ranks[column].pint.magnitude.astype("int64")
+
+        table_str = tabulate.tabulate(
+            utility_ranks,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _rank_ranges(self, ranked: pd.DataFrame) -> pd.DataFrame:
+        context = ["host", "dataset", "strength"]
+        median_column = "median_%s" % self.base_column
+        ranked["top_ranked"] = (
+                ranked[median_column]
+                == ranked.groupby(context, observed=True)[median_column]
+                .transform("max")
+        )
+
+        utility_ranks = (
+            ranked.groupby("tool", observed=True)
+            .agg(
+                contexts=("rank", "size"),
+                best_rank=("rank", "min"),
+                median_rank=("rank", "median"),
+                worst_rank=("rank", "max"),
+                top_count=("top_ranked", "sum"),
+            )
+            .reset_index()
+        )
+
+        utility_ranks["rank_range"] = (
+                utility_ranks["worst_rank"] - utility_ranks["best_rank"]
+        )
+        utility_ranks["top_percent"] = (
+                100 * utility_ranks["top_count"] / utility_ranks["contexts"]
+        )
+
+        utility_ranks = utility_ranks.sort_values(
+            ["median_rank", "worst_rank", "tool"]
+        )
+        return utility_ranks
+
+    def _print_rank_reversals(self, platform_reversals: pd.DataFrame, dataset_reversals: pd.DataFrame, utility_pairs: int):
+        self._summarize_reversals("Across platforms", platform_reversals, opportunities=36, pair_count=utility_pairs)
+        self._summarize_reversals("Across datasets", dataset_reversals, opportunities=54, pair_count=utility_pairs)
+
+    def _summarize_reversals(self, label, reversals, opportunities: int, pair_count: int):
+        counts = (
+            reversals.groupby(["tool_a", "tool_b"])
+            .size()
+            .rename("reversals")
+            .reset_index()
+            .sort_values("reversals", ascending=False)
+        )
+        counts["percent"] = 100 * counts["reversals"] / opportunities
+
+        self._logger.info("")
+        self._logger.info(label)
+        self._logger.info("Reversal events:        %d", len(reversals))
+        self._logger.info("Affected utility pairs: %d of %d", len(counts), pair_count)
+        counts = counts.head(10)
+        headers = ["Tool A", "Tool B", "Reversals", "%"]
+        table_str = tabulate_pint(
+            counts,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _rank_reversals(self, ranked: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        platform_reversals = self._find_reversals(
+            ranked, "host", ["dataset", "strength"]
+        )
+        dataset_reversals = self._find_reversals(
+            ranked, "dataset", ["host", "strength"]
+        )
+        return platform_reversals, dataset_reversals
+
+    def _find_reversals(self, frame, compare, fixed):
+        rows = []
+
+        for fixed_values, group in frame.groupby(fixed, observed=True):
+            if not isinstance(fixed_values, tuple):
+                fixed_values = (fixed_values,)
+            fixed_values = dict(zip(fixed, fixed_values))
+
+            for first, second in combinations(
+                sorted(group[compare].unique()), 2
+            ):
+                ranks = (
+                    group[group[compare].isin([first, second])]
+                    .pivot(index="tool", columns=compare, values="rank")
+                )
+
+                for tool_a, tool_b in combinations(sorted(ranks.index), 2):
+                    difference_first = (
+                        ranks.loc[tool_a, first] - ranks.loc[tool_b, first]
+                    )
+                    difference_second = (
+                        ranks.loc[tool_a, second] - ranks.loc[tool_b, second]
+                    )
+
+                    if difference_first * difference_second < 0:
+                        rows.append({
+                            **fixed_values,
+                            "first": first,
+                            "second": second,
+                            "tool_a": tool_a,
+                            "tool_b": tool_b,
+                        })
+
+        return pd.DataFrame(rows)
+
+    def _print_stability_summary(self, stability: pd.DataFrame):
+        headers = ["comparison", "Median tau b", "Minimum tau b", "Reversal events", "reversal %"]
+        table_str = tabulate_pint(
+            stability,
+            showindex=False,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _stability_summary(self, ranked: pd.DataFrame, platform_results: pd.DataFrame, dataset_results: pd.DataFrame,
+                           platform_reversals: pd.DataFrame, dataset_reversals: pd.DataFrame) -> pd.DataFrame:
+        utility_pairs = comb(ranked["tool"].nunique(), 2)  # 36
+
+        stability = pd.DataFrame({
+            "comparison": ["Platforms", "Datasets"],
+            "median_tau_b": [
+                platform_results["tau_b"].median(),
+                dataset_results["tau_b"].median(),
+            ],
+            "minimum_tau_b": [
+                platform_results["tau_b"].min(),
+                dataset_results["tau_b"].min(),
+            ],
+            "reversal_events": [
+                len(platform_reversals),
+                len(dataset_reversals),
+            ],
+            "reversal_percent": [
+                100 * len(platform_reversals)
+                / (len(platform_results) * utility_pairs),
+                100 * len(dataset_reversals)
+                / (len(dataset_results) * utility_pairs),
+            ],
+        })
+        return stability
 
     def _log_section(self, title: str):
         self._logger.info("")
