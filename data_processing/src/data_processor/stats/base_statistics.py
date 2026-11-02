@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 import re
-from contextlib import contextmanager, nullcontext
 from abc import abstractmethod
 from dataclasses import dataclass
 
@@ -11,7 +10,7 @@ from statsmodels.stats.anova import anova_lm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 import tabulate
 
-from data_processor.processor import Processor
+from data_processor.processor import LoggingProcessor
 from data_processor.constants import ORDER_STRENGTH, ORDER_HOST
 from data_processor.util import tabulate_pint
 from .effect_names import EFFECT_NAMES
@@ -36,14 +35,13 @@ class InferenceResult:
     rank_stability: pd.DataFrame
 
 
-class BaseStatistics(Processor):
+class BaseStatistics(LoggingProcessor):
     DRIFT_THRESHOLD = 1.0  # percentage points across runs 1–30
 
     def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
                  threading: str, mode: str, create_tex: bool):
-        super().__init__(resources)
+        super().__init__(resources, logfile)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._logfile = logfile
         self._threading = threading
         self._mode = mode
         self._create_tex = create_tex
@@ -51,16 +49,10 @@ class BaseStatistics(Processor):
         self._effect_ranking = EffectRanking(self.factors)
         self._stat_model = StatModel()
 
-    def process(self, input_file: Path):
-        if self._logfile:
-            base = self.extra_log_base(input_file)
-            logfile_path = self._resources / f"{base}_{self._threading}_{self._mode}.log"
-            cm = self._add_logfile(logfile_path)
-            self._logger.info("create extra logfile: %s", logfile_path)
-        else:
-            cm = nullcontext()
-        with cm:
-            self._analyze(input_file)
+    def extra_log_name(self, input_file: Path) -> str:
+        base = self.extra_log_base(input_file)
+        logfile_name = f"{base}_{self._threading}_{self._mode}"
+        return logfile_name
 
     def _analyze(self, input_file: Path):
         df = self._preparation(input_file)
@@ -87,24 +79,6 @@ class BaseStatistics(Processor):
     @abstractmethod
     def display_unit (self) -> str:
         pass
-
-    @contextmanager
-    def _add_logfile(self, logfile: Path):
-        handler = logging.FileHandler(logfile, mode="w")
-        file_logger = [""]
-        try:
-            handler.setLevel(logging.INFO)
-            formatter = logging.Formatter('%(message)s')
-            handler.setFormatter(formatter)
-            for logger in file_logger:
-                logging.getLogger(logger).addHandler(handler)
-            yield
-        finally:
-            try:
-                for logger in file_logger:
-                    logging.getLogger(logger).removeHandler(handler)
-            finally:
-                handler.close()
 
     @property
     def factors(self):
