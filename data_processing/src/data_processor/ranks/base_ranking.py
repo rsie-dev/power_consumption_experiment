@@ -10,20 +10,19 @@ from scipy.stats import kendalltau
 from tqdm import tqdm
 import tabulate
 
-from data_processor.processor import Processor
+from data_processor.processor import LoggingProcessor
 from data_processor.util import tabulate_pint
 
 
-class BaseRanking(Processor):
-    def __init__(self, resources: Path, n_boot: int, seed: int | None, threading: str, mode: str):
-        super().__init__(resources)
+class BaseRanking(LoggingProcessor):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str):
+        super().__init__(resources, logfile)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._threading = threading
         self._mode = mode
         self._n_boot = n_boot
         if seed is None:
             seed = 12345
-        self._seed = seed
         self._rng = np.random.default_rng(seed)
 
     @property
@@ -35,7 +34,7 @@ class BaseRanking(Processor):
     def base_column(self) -> str:
         pass
 
-    def process(self, input_file: Path) -> None:
+    def _analyze(self, input_file: Path) -> None:
         self._rank(input_file)
 
     def _rank(self, input_file: Path) -> None:

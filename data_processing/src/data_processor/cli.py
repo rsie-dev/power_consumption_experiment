@@ -181,7 +181,7 @@ class Processor:
 
     def _ranks_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        ranking = ThroughputRanking(resources_folder, args.boot, args.seed,
+        ranking = ThroughputRanking(resources_folder, args.reslog, args.boot, args.seed,
                                     args.threading, args.mode)#, args.tex)
         ranking.process(args.tp_file)
 
