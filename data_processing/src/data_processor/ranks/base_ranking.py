@@ -35,11 +35,16 @@ class BaseRanking(LoggingProcessor):
         pass
 
     def _analyze(self, input_file: Path) -> None:
-        self._rank(input_file)
-
-    def _rank(self, input_file: Path) -> None:
         df = self._preparation(input_file)
-        self._calculate(df)
+        stability = self._calculate(df)
+        stability.insert(0, "mode", self._mode)
+        stability.insert(1, "threading", self._threading)
+        self._create_stability_file(stability, input_file)
+
+    def _create_stability_file(self, stability: pd.DataFrame, input_file: Path) -> None:
+        base = self.extra_log_name(input_file)
+        filename = "%s_stability.csv" % base
+        self._frameio.persist(stability, self._resources / filename)
 
     def _preparation(self, input_file: Path) -> pd.DataFrame:
         self._log_section("1. Preparation")
@@ -55,7 +60,7 @@ class BaseRanking(LoggingProcessor):
 
         return df
 
-    def _calculate(self, df: pd.DataFrame):
+    def _calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         self._log_section("2. Calculate medians")
         summary = self._calculate_medians(df)
         self._print_medians(summary)
@@ -94,8 +99,10 @@ class BaseRanking(LoggingProcessor):
         self._print_rank_reversals(platform_reversals, dataset_reversals, utility_pairs)
 
         self._log_section("6 Stability summary")
-        stability = self._stability_summary(ranked, platform_results, dataset_results, platform_reversals, dataset_reversals)
+        stability = self._stability_summary(ranked, platform_results, dataset_results,
+                                            platform_reversals, dataset_reversals)
         self._print_stability_summary(stability)
+        return stability
 
     def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
@@ -553,7 +560,7 @@ class BaseRanking(LoggingProcessor):
         return pd.DataFrame(rows)
 
     def _print_stability_summary(self, stability: pd.DataFrame):
-        headers = ["comparison", "Median tau b", "Minimum tau b", "Reversal events", "reversal %"]
+        headers = ["comparison", "Median tau b", "Minimum tau b", "Maximum tau b", "Reversal events", "reversal %"]
         table_str = tabulate_pint(
             stability,
             showindex=False,
@@ -574,6 +581,10 @@ class BaseRanking(LoggingProcessor):
             "minimum_tau_b": [
                 platform_results["tau_b"].min(),
                 dataset_results["tau_b"].min(),
+            ],
+            "maximum_tau_b": [
+                platform_results["tau_b"].max(),
+                dataset_results["tau_b"].max(),
             ],
             "reversal_events": [
                 len(platform_reversals),
