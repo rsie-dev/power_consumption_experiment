@@ -34,6 +34,11 @@ class BaseRanking(LoggingProcessor):
     def base_column(self) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def display_unit (self) -> str:
+        pass
+
     def _analyze(self, input_file: Path) -> None:
         df = self._preparation(input_file)
         stability = self._calculate(df)
@@ -158,7 +163,7 @@ class BaseRanking(LoggingProcessor):
         median_column = "median_%s" % self.base_column
         display_summary[median_column] = (
             summary[median_column]
-            .pint.to("MiB/s")
+            .pint.to(self.display_unit)
         )
 
         self._logger.info("Summary rows:                 %d", len(summary))
@@ -175,12 +180,13 @@ class BaseRanking(LoggingProcessor):
         self._logger.info(table_str)
 
     def _calculate_medians(self, df: pd.DataFrame) -> pd.DataFrame:
+        median_column = "median_%s" % self.base_column
         summary = (
             df.groupby(self.factors, observed=True)[self.base_column]
-            .agg(
-                median_throughput="median",
-                trials="size"
-            )
+            .agg(**{
+                median_column: "median",
+                "trials": "size"
+            })
             .reset_index()
         )
         return summary
@@ -209,7 +215,7 @@ class BaseRanking(LoggingProcessor):
             median_column = "median_%s" % self.base_column
             example_display[median_column] = (
                 example[median_column]
-                .pint.to("MiB/s")
+                .pint.to(self.display_unit)
             )
 
             self._logger.info("")
@@ -232,7 +238,7 @@ class BaseRanking(LoggingProcessor):
         median_column = "median_%s" % self.base_column
         tie_display[median_column] = (
             ties[median_column]
-            .pint.to("MiB/s")
+            .pint.to(self.display_unit)
         )
 
         tie_display = tie_display.sort_values(["host", "dataset", "strength", "rank"])

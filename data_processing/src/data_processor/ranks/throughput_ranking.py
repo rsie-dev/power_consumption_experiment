@@ -20,3 +20,8 @@ class ThroughputRanking(BaseRanking):
     @property
     def base_column(self) -> str:
         return "throughput"
+
+    @property
+    def display_unit(self) -> str:
+        return "MiB/s"
+

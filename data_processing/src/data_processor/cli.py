@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .ranks import ThroughputRanking, RankingMerger
+from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, RankingMerger
 from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
@@ -67,9 +67,11 @@ class Processor:
         log_parser = argparse.ArgumentParser(add_help=False)
         log_parser.add_argument('--reslog', action='store_true', help="create logfile in resources")
 
-        rng_parser = argparse.ArgumentParser(add_help=False)
-        rng_parser.add_argument('--boot', default=10000, type=int, help="bootstrap count")
-        rng_parser.add_argument('--seed', type=int, help="RNG seed value")
+        seed_parser = argparse.ArgumentParser(add_help=False)
+        seed_parser.add_argument('--seed', type=int, help="RNG seed value")
+
+        rng_parser_ranks = argparse.ArgumentParser(add_help=False, parents=[seed_parser])
+        rng_parser_ranks.add_argument('--boot', default=2000, type=int, help="bootstrap count" + default)
 
         parser_ranks = subparsers.add_parser('ranks', help="ranking subcommands")
         subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
@@ -77,9 +79,7 @@ class Processor:
 
         parser_ranks_tp = subparsers_ranks.add_parser('tp', help="calculate throughput ranks",
                                                       parents=[common_parser, factor_parser, tex_parser,
-                                                               log_parser])
-        parser_ranks_tp .add_argument('--boot', default=2000, type=int, help="bootstrap count")
-        parser_ranks_tp .add_argument('--seed', type=int, help="RNG seed value")
+                                                               log_parser, rng_parser_ranks])
         parser_ranks_tp .add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_ranks_tp .set_defaults(func=self._ranks_tp)
 
@@ -87,13 +87,29 @@ class Processor:
         parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs="+", help="rank files to merge")
         parser_ranks_merge.set_defaults(func=self._ranks_merge)
 
+        parser_ranks_ee = subparsers_ranks.add_parser('ee', help="ee ranks subcommands")
+        subparsers_ranks_ee = parser_ranks_ee.add_subparsers(required=True, dest="subcommand", title='subcommands',
+                                                             description='valid subcommands')
+
+        ee_parser = argparse.ArgumentParser(add_help=False)
+        ee_parser.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
+
+        parser_ranks_ee_total = subparsers_ranks_ee.add_parser('total',
+                                                               help="calculate total energy efficiency ranks",
+                                                               parents=[common_parser, factor_parser,
+                                                                        ee_parser, log_parser, rng_parser_ranks])
+        parser_ranks_ee_total.set_defaults(func=self._ranks_ee_total)
+
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
 
+        rng_parser_stats = argparse.ArgumentParser(add_help=False, parents=[seed_parser])
+        rng_parser_stats.add_argument('--boot', default=10000, type=int, help="bootstrap count" + default)
+
         parser_stats_tp = subparsers_stats.add_parser('tp', help="calculate throughput statistics",
                                                        parents=[common_parser, factor_parser, tex_parser,
-                                                                log_parser, rng_parser])
+                                                                log_parser, rng_parser_stats])
         parser_stats_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_stats_tp.set_defaults(func=self._stats_tp)
 
@@ -101,13 +117,10 @@ class Processor:
         subparsers_stats_ee = parser_stats_ee.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                              description='valid subcommands')
 
-        ee_parser = argparse.ArgumentParser(add_help=False)
-        ee_parser.add_argument('ee_file', type=Path, help="calculated energy efficiency file")
-
         parser_stats_ee_total = subparsers_stats_ee.add_parser('total',
                                                                help="calculate total energy efficiency statistics",
                                                                parents=[common_parser, factor_parser, tex_parser,
-                                                                        ee_parser, log_parser, rng_parser])
+                                                                        ee_parser, log_parser, rng_parser_stats])
         parser_stats_ee_total.set_defaults(func=self._stats_ee_total)
 
         parser_stats_ee_net = subparsers_stats_ee.add_parser('net', help="calculate net energy efficiency statistics",
@@ -188,6 +201,12 @@ class Processor:
         ranking = ThroughputRanking(resources_folder, args.reslog, args.boot, args.seed,
                                     args.threading, args.mode)#, args.tex)
         ranking.process(args.tp_file)
+
+    def _ranks_ee_total(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        ranking = TotalEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
+                                               args.threading, args.mode)
+        ranking.process(args.ee_file)
 
     def _ranks_merge(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)

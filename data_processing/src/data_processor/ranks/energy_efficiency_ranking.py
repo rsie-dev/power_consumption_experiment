@@ -1,0 +1,18 @@
+import logging
+from pathlib import Path
+
+from .base_ranking import BaseRanking
+
+
+class EnergyEfficiencyRanking(BaseRanking):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str):
+        super().__init__(resources, logfile, n_boot, seed, threading, mode)
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+    def _get_base_from_input_file(self, input_file: Path) -> str:
+        base = input_file.stem.removeprefix("ee_")
+        return base
+
+    @property
+    def display_unit (self) -> str:
+        return "MiB/joule"
