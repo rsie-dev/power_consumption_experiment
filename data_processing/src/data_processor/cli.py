@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, RankingMerger
+from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, NetEnergyEfficiencyRanking, RankingMerger
 from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
@@ -99,6 +99,12 @@ class Processor:
                                                                parents=[common_parser, factor_parser,
                                                                         ee_parser, log_parser, rng_parser_ranks])
         parser_ranks_ee_total.set_defaults(func=self._ranks_ee_total)
+
+        parser_ranks_ee_net = subparsers_ranks_ee.add_parser('net',
+                                                              help="calculate net energy efficiency ranks",
+                                                              parents=[common_parser, factor_parser,
+                                                                       ee_parser, log_parser, rng_parser_ranks])
+        parser_ranks_ee_net.set_defaults(func=self._ranks_ee_net)
 
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
         subparsers_stats = parser_stats.add_subparsers(required=True, dest="subcommand", title='subcommands',
@@ -206,6 +212,12 @@ class Processor:
         resources_folder = self._prepare_resource_folder(args.resources)
         ranking = TotalEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
                                                args.threading, args.mode)
+        ranking.process(args.ee_file)
+
+    def _ranks_ee_net(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        ranking = NetEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
+                                             args.threading, args.mode)
         ranking.process(args.ee_file)
 
     def _ranks_merge(self, args):
