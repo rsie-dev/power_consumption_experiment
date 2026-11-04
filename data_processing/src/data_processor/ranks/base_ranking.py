@@ -37,8 +37,6 @@ class BaseRanking(LoggingProcessor):
     def _analyze(self, input_file: Path) -> None:
         df = self._preparation(input_file)
         stability = self._calculate(df)
-        stability.insert(0, "mode", self._mode)
-        stability.insert(1, "threading", self._threading)
         self._create_stability_file(stability, input_file)
 
     def _create_stability_file(self, stability: pd.DataFrame, input_file: Path) -> None:
@@ -102,6 +100,24 @@ class BaseRanking(LoggingProcessor):
         stability = self._stability_summary(ranked, platform_results, dataset_results,
                                             platform_reversals, dataset_reversals)
         self._print_stability_summary(stability)
+
+        stability_df = self._create_stability_frame(df, stability, platform_tau, dataset_tau)
+        return stability_df
+
+    def _create_stability_frame(self, df: pd.DataFrame, stability: pd.DataFrame,
+                                platform_tau: pd.DataFrame, dataset_tau: pd.DataFrame) -> pd.DataFrame:
+        stability = stability.copy()
+        stability.insert(0, "mode", self._mode)
+        stability.insert(1, "threading", self._threading)
+        tools = len(df["tool"].unique())
+        stability.insert(2, "tools", tools)
+        platform_pairs = len(platform_tau)
+        dataset_pairs = len(dataset_tau)
+        stability["pairs"] = stability["comparison"].map({
+            "Platforms": platform_pairs,
+            "Datasets": dataset_pairs,
+        })
+        stability.insert(4, "pairs", stability.pop("pairs"))
         return stability
 
     def _filter_data(self, df: pd.DataFrame):
