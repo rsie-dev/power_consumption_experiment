@@ -10,6 +10,7 @@ from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
 from .calc import CompressionRatio, Throughput, AveragePower, EnergyConsumption, EnergyEfficiency
+from .pareto import ParetoCreator
 
 
 class Processor:
@@ -73,6 +74,14 @@ class Processor:
         rng_parser_ranks = argparse.ArgumentParser(add_help=False, parents=[seed_parser])
         rng_parser_ranks.add_argument('--boot', default=2000, type=int, help="bootstrap count" + default)
 
+        parser_pareto = subparsers.add_parser('pareto', help="calculate pareto front",
+                                              parents=[common_parser])
+        parser_pareto.add_argument('--mode', required=True, choices=['compress', 'decompress'], help="operation mode")
+        parser_pareto.add_argument('--cr', type=Path, required=True, help="calculated compression ratio file")
+        parser_pareto.add_argument('--tp', type=Path, required=True, help="calculated throughput file")
+        parser_pareto.add_argument('--ee', type=Path, required=True, help="calculated energy efficiency file")
+        parser_pareto.set_defaults(func=self._pareto)
+
         parser_ranks = subparsers.add_parser('ranks', help="ranking subcommands")
         subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
@@ -80,8 +89,8 @@ class Processor:
         parser_ranks_tp = subparsers_ranks.add_parser('tp', help="calculate throughput ranks",
                                                       parents=[common_parser, factor_parser, tex_parser,
                                                                log_parser, rng_parser_ranks])
-        parser_ranks_tp .add_argument('tp_file', type=Path, help="calculated throughput file")
-        parser_ranks_tp .set_defaults(func=self._ranks_tp)
+        parser_ranks_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
+        parser_ranks_tp.set_defaults(func=self._ranks_tp)
 
         parser_ranks_merge = subparsers_ranks.add_parser('merge', help="merges ranking tables", parents=[common_parser])
         parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs="+", help="rank files to merge")
@@ -201,6 +210,11 @@ class Processor:
     def _multimeter_validate(self, _):
         validate = MultimeterValidate()
         validate.validate()
+
+    def _pareto(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        pareto = ParetoCreator(resources_folder, args.mode)
+        pareto.process(args.cr, args.tp, args.ee)
 
     def _ranks_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
