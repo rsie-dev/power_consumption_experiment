@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from dataclasses import dataclass, astuple, fields
+from dataclasses import dataclass, astuple
 
 import pandas as pd
 import numpy as np
@@ -8,6 +8,7 @@ import tabulate
 from paretoset import paretoset
 
 from data_processor.processor import Processor
+from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
 
 @dataclass(frozen=True)
 class Data:
@@ -20,419 +21,591 @@ class Data:
 
 
 class ParetoCreator(Processor):
-    CR_KEY = ["tool", "dataset", "strength"]
-    TRIAL_KEY = [
-        "host", "tool", "dataset", "mode",
-        "strength", "threading", "run",
+    CONFIG_COLS = [
+        "host", "tool", "dataset", "mode", "strength", "threading"
     ]
-    STRATUM_KEY = ["host", "dataset"]
-    CONFIGURATION_KEY = ["tool", "strength", "threading"]
-    GROUP_KEY = STRATUM_KEY + CONFIGURATION_KEY
+    TRIAL_COLS = CONFIG_COLS + ["run"]
+    CONTEXT_COLS = ["host", "dataset"]
+    OBJECTIVE_COLS = [
+        "throughput",
+        "energy_efficiency_net",
+        "cr",
+    ]
 
     def __init__(self, resources: Path, mode: str):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._mode = mode
-        self._n_boot = 10000
-        self._rng = np.random.default_rng(20261105)
+        self._n_boot = 2000
+        seed = None
+        if seed is None:
+            self._seed = 12345
+        self._seed = seed
+        self._rng = np.random.default_rng(seed)
 
     def process(self, cr_file: Path, tp_file: Path, ee_file: Path):
-        self._log_section("1. Data preparation")
+        self._log_section("1 Data preparation")
         self._logger.info("load data")
         data = self._load_data(cr_file, tp_file, ee_file)
 
-        self._log_section("1.3 Define subset")
+        self._log_section("1.1 Filter data")
         self._logger.info("Evaluate: %s", self._mode)
         data = self._filter_data(data)
+        self._present_data(data)
 
-        #for field in fields(data):
-        #    value = getattr(data, field.name)
-        #    self._logger.info("")
-        #    self._logger.info("frame: %s", field.name)
-        #    self._logger.info(value.dtypes)
-
+        self._log_section("1.2 Validate data")
         self._validate_data(data)
-        analysis_df = self._integrate_data(data)
-        config_df = self._configuration_level_estimation(analysis_df)
-        self._pareto_front_identification(config_df)
 
-    def _pareto_front_identification(self, config_df: pd.DataFrame):
-        self._log_section("5 Pareto fronts")
+        analysis_df, cr_lookup  = self._outcome_integration(data)
+        config_df = self._configuration_level_estimates(analysis_df, cr_lookup)
+        contexts, configuration_results, pareto_configurations = self._pareto_front_identification(config_df)
+        self._cross_context_consistency(contexts, configuration_results, pareto_configurations)
+        self._robustness_analysis()
 
-        self._log_section("5.1 Identify deterministic Pareto fronts")
-        config_df["pareto_optimal"] = False
+    def _robustness_analysis(self):
+        self._log_section("6 Robustness analysis")
 
-        for _, indices in config_df.groupby(self.STRATUM_KEY, observed=True).groups.items():
-            group = config_df.loc[indices]
+        self._log_section("6.1 Bootstrap Pareto membership")
 
-            # Temporary canonical-unit values; Pint columns remain unchanged.
-            objectives = pd.DataFrame({
-                "throughput": group["throughput_mean"].pint.to(
-                    "byte/second"
-                ).pint.magnitude,
-                "ee_net": group["ee_net_mean"].pint.to(
-                    "byte/joule"
-                ).pint.magnitude,
-                "cr": group["cr"],
-            })
 
-            config_df.loc[indices, "pareto_optimal"] = paretoset(
-                objectives,
-                sense=["max", "max", "max"],
+    def _cross_context_consistency(self, contexts: dict, configuration_results, pareto_configurations: pd.DataFrame):
+        self._log_section("5 Cross-context consistency")
+
+        self._log_section("5.1 Calculate utility coverage")
+        all_tools, utility_context_presence = self._calculate_utility_coverage(contexts, configuration_results, pareto_configurations)
+
+        self._log_section("5.2 Verify configuration-count bias is avoided")
+        self._verify_configuration_count_bias_is_avoided(pareto_configurations, all_tools, utility_context_presence)
+
+        self._log_section("5.3 Describe contributing configurations")
+        self._describe_contributing_configurations(contexts, pareto_configurations)
+
+    def _describe_contributing_configurations(self, contexts: dict, pareto_configurations: pd.DataFrame):
+        setting_context_presence = (
+            pareto_configurations[
+                ["tool", "strength", "threading", "host", "dataset"]
+            ]
+            .drop_duplicates()
+        )
+
+        setting_summary = (
+            setting_context_presence
+            .groupby(
+                ["tool", "strength", "threading"],
+                observed=True,
             )
-
-        pareto_counts = (
-            config_df.groupby(self.STRATUM_KEY, observed=True)["pareto_optimal"]
-            .sum()
-            .rename("pareto_configurations")
+            .size()
+            .rename("pareto_contexts")
+            .reset_index()
         )
 
-        pareto_counts_df = pareto_counts.copy()
-        pareto_counts_df = pareto_counts_df.reset_index()
-        pareto_counts_df["host"] = pareto_counts_df["host"].where(
-            pareto_counts_df["host"].ne(pareto_counts_df["host"].shift()), ""
+        total_contexts = len(contexts)
+        setting_summary["coverage_percent"] = (
+                100 * setting_summary["pareto_contexts"] / total_contexts
         )
+
+        setting_summary = setting_summary.sort_values(
+            ["tool", "pareto_contexts", "strength", "threading"],
+            ascending=[True, False, True, True],
+            ignore_index=True,
+        )
+
+        setting_summary_df = setting_summary.copy()
+        setting_summary_df["_tool_key"] = setting_summary_df["tool"].apply(ORDER_TOOL.index)
+        setting_summary_df["_strength_key"] = setting_summary_df["strength"].apply(ORDER_STRENGTH.index)
+        setting_summary_df = setting_summary_df.sort_values(
+            by=["_tool_key", "pareto_contexts", "_strength_key", "threading"],
+            ascending=[True, False, True, True],
+            ignore_index=True,
+        ).drop(columns=["_tool_key", "_strength_key"])
         table_str = tabulate.tabulate(
-            pareto_counts_df,
-            headers=["Host", "Dataset", "Count"],
+            setting_summary_df,
+            headers="keys",
+            showindex=False,
+            floatfmt=".1f",
+        )
+        self._logger.info(table_str)
+
+    def _verify_configuration_count_bias_is_avoided(self, pareto_configurations: pd.DataFrame,
+                                                    all_tools: list, utility_context_presence: pd.DataFrame):
+        tool_context_counts = (
+            pareto_configurations
+            .groupby(["tool", "host", "dataset"], observed=True)
+            .size()
+            .rename("pareto_configurations")
+            .reset_index()
+        )
+
+        bias_check = (
+            tool_context_counts
+            .groupby("tool", observed=True)
+            .agg(
+                pareto_contexts=("pareto_configurations", "size"),
+                total_pareto_configurations=("pareto_configurations", "sum"),
+                max_configurations_in_one_context=(
+                    "pareto_configurations", "max"
+                ),
+            )
+            .reindex(all_tools, fill_value=0)
+            .reset_index()
+            .sort_values(
+                ["pareto_contexts", "tool"],
+                ascending=[False, True],
+            )
+        )
+
+        self._logger.info("Duplicate utility-context rows: %d",
+              int(utility_context_presence.duplicated(
+                  ["tool", "host", "dataset"]
+              ).sum()))
+
+        table_str = tabulate.tabulate(
+            bias_check,
+            headers=["Tool", "Pareto contexts", "Total pareto configurations", "Max configurations in one context"],
             showindex=False,
         )
         self._logger.info(table_str)
 
-        self._logger.info("")
-        self._logger.info("Total Pareto-optimal configurations: %d", config_df["pareto_optimal"].sum())
+    def _calculate_utility_coverage(self, contexts: dict,
+                                    configuration_results: pd.DataFrame,
+                                    pareto_configurations: pd.DataFrame) -> tuple[list, pd.DataFrame]:
+        total_contexts = len(contexts)
 
-    def _configuration_level_estimation(self, analysis_df: pd.DataFrame) -> pd.DataFrame:
-        self._log_section("4 Configuration-level estimation")
+        utility_context_presence = (
+            pareto_configurations[
+                ["host", "dataset", "tool"]
+            ]
+            .drop_duplicates()
+        )
 
-        self._log_section("4.1 Define configurations and strata")
-        self._define_configurations(analysis_df)
+        all_tools = sorted(configuration_results["tool"].unique())
 
-        self._log_section("4.2 Calculate configuration-level means")
-        config_df = self._calculate_configuration_level_means(analysis_df)
+        utility_coverage = (
+            utility_context_presence
+            .groupby("tool", observed=True)
+            .size()
+            .reindex(all_tools, fill_value=0)
+            .rename("pareto_contexts")
+            .reset_index()
+        )
 
-        self._log_section("4.3 Calculate bootstrap confidence intervals")
-        self._calculate_bootstrap_ci(analysis_df, config_df)
-        return config_df
+        utility_coverage["coverage_percent"] = (
+                100
+                * utility_coverage["pareto_contexts"]
+                / total_contexts
+        )
 
-    def _calculate_bootstrap_ci(self, analysis_df: pd.DataFrame, config_df: pd.DataFrame):
-        records = []
-        for key, group in analysis_df.groupby(self.GROUP_KEY, observed=True, sort=False):
-            indices = self._rng.integers(
-                0, len(group),
-                size=(self._n_boot, len(group)),
+        utility_coverage = utility_coverage.sort_values(
+            ["pareto_contexts", "tool"],
+            ascending=[False, True],
+            ignore_index=True,
+        )
+
+        table_str = tabulate.tabulate(
+            utility_coverage,
+            headers="keys",
+            showindex=False,
+            floatfmt=".1f",
+        )
+        self._logger.info(table_str)
+
+        return all_tools, utility_context_presence
+
+    def _pareto_front_identification(self, config_df: pd.DataFrame) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
+        self._log_section("4 Context-specific Pareto analysis")
+
+        self._log_section("4.1 Separate contexts")
+        contexts = self._separate_contexts(config_df)
+
+        self._log_section("4.2 Determine dominance")
+        self._determine_dominance(contexts)
+
+        self._log_section("4.3 Identify Pareto-optimal configurations")
+
+        configuration_results, pareto_configurations= self._identify_pareto_optimal_configurations(contexts)
+        return contexts, configuration_results, pareto_configurations
+
+    def _identify_pareto_optimal_configurations(self, contexts: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+        marked_contexts = []
+        for frame in contexts.values():
+            frame = frame.copy()
+            frame["pareto_optimal"] = self._pareto_mask_maximize(frame)
+            marked_contexts.append(frame)
+
+        configuration_results = pd.concat(
+            marked_contexts,
+            ignore_index=True,
+        )
+
+        pareto_configurations = (
+            configuration_results.loc[
+                configuration_results["pareto_optimal"]
+            ]
+            .copy()
+        )
+
+        pareto_counts = (
+            pareto_configurations
+            .groupby(self.CONTEXT_COLS, observed=True)
+            .size()
+        )
+
+        self._logger.info("Pareto-optimal configurations: %d", len(pareto_configurations))
+        self._logger.info("Dominated configurations:      %d", int((~configuration_results["pareto_optimal"]).sum()))
+        self._logger.info("Pareto-count range:            %d - %d",
+              int(pareto_counts.min()),
+              int(pareto_counts.max()))
+        self._logger.info("Duplicate configurations:      %d",
+              int(pareto_configurations.duplicated(self.CONFIG_COLS).sum()))
+        return configuration_results, pareto_configurations
+
+    def _determine_dominance(self, contexts: dict):
+        dominance_rows = []
+        for (host, dataset), frame in contexts.items():
+            pareto_mask = self._pareto_mask_maximize(frame)
+
+            dominance_rows.append({
+                "host": host,
+                "dataset": dataset,
+                "dominated": int((~pareto_mask).sum()),
+                "nondominated": int(pareto_mask.sum()),
+                "total": len(frame),
+            })
+
+        dominance_summary = pd.DataFrame(dominance_rows)
+
+        dominance_summary_df = dominance_summary.copy()
+        dominance_summary_df["host"] = dominance_summary_df["host"].mask(dominance_summary_df["host"].eq(dominance_summary_df["host"].shift()), "")
+        table_str = tabulate.tabulate(
+            dominance_summary_df,
+            headers="keys",
+            showindex=False,
+        )
+        self._logger.info(table_str)
+
+    def _pareto_mask_maximize(self, frame):
+        numeric_objectives = pd.DataFrame({
+            column: self._magnitude(frame[column]).to_numpy(dtype=float)
+            for column in self.OBJECTIVE_COLS
+        })
+
+        if not np.isfinite(numeric_objectives.to_numpy()).all():
+            raise ValueError("Objective values contain non-finite values.")
+
+        return np.asarray(
+            paretoset(
+                numeric_objectives,
+                sense=["max", "max", "max"],
+            ),
+            dtype=bool,
+        )
+
+    def _separate_contexts(self, configuration_metrics: pd.DataFrame) -> dict:
+        contexts = {
+            key: group.copy()
+            for key, group in configuration_metrics.groupby(
+                self.CONTEXT_COLS,
+                observed=True,
+                sort=True,
             )
-
-            tp = group["throughput"].array.quantity
-            ee = group["energy_efficiency_net"].array.quantity
-
-            tp_boot = tp[indices].mean(axis=1)
-            ee_boot = ee[indices].mean(axis=1)
-
-            tp_ci = np.quantile(tp_boot, [0.025, 0.975])
-            ee_ci = np.quantile(ee_boot, [0.025, 0.975])
-
-            records.append(
-                dict(
-                    zip(self.GROUP_KEY, key),
-                    throughput_ci_low=tp_ci[0],
-                    throughput_ci_high=tp_ci[1],
-                    ee_net_ci_low=ee_ci[0],
-                    ee_net_ci_high=ee_ci[1],
-                )
-            )
-
-        ci_df = pd.DataFrame(records)
-
-        # Convert quantity-object columns into Pint columns.
-        units = {
-            "throughput_ci_low": "byte/second",
-            "throughput_ci_high": "byte/second",
-            "ee_net_ci_low": "byte/joule",
-            "ee_net_ci_high": "byte/joule",
         }
 
-        for column, unit in units.items():
-            ci_df[column] = pd.Series(
-                [value.to(unit).magnitude for value in ci_df[column]],
-                dtype=f"pint[{unit}][Float64]",
-            )
-
-        config_df = config_df.merge(
-            ci_df,
-            on=self.GROUP_KEY,
-            how="left",
-            validate="one_to_one",
-        )
-
-        tp_valid = (
-                (config_df["throughput_ci_low"] <= config_df["throughput_mean"])
-                & (config_df["throughput_mean"] <= config_df["throughput_ci_high"])
-        )
-
-        ee_valid = (
-                (config_df["ee_net_ci_low"] <= config_df["ee_net_mean"])
-                & (config_df["ee_net_mean"] <= config_df["ee_net_ci_high"])
-        )
-
-        self._logger.info("CI rows:                      %d", len(ci_df))
-        self._logger.info("Invalid throughput intervals: %d", (~tp_valid).sum())
-        self._logger.info("Invalid EE_net intervals:     %d", (~ee_valid).sum())
-        self._logger.info("")
-        self._logger.info("CI dtypes:")
-        table_str = tabulate.tabulate(
-            config_df[list(units)].dtypes.to_frame(),
-            headers=["Column", "Type"],
-        )
-        self._logger.info(table_str)
-
-    def _calculate_configuration_level_means(self, analysis_df: pd.DataFrame) -> pd.DataFrame:
-        grouped = analysis_df.groupby(self.GROUP_KEY, observed=True)
-
-        frames = [
-            grouped["throughput"].mean().rename("throughput_mean"),
-            grouped["energy_efficiency_net"].mean().rename("ee_net_mean"),
-            grouped["cr"].first().rename("cr"),
-            grouped.size().rename("n_trials"),
-        ]
-        config_df = pd.concat(
-            frames,
-            axis=1,
-        ).reset_index()
-
-        self._logger.info("Configuration rows: %d", len(config_df))
-        trials = [str(s) for s in sorted(config_df["n_trials"].unique())]
-        self._logger.info("Trial-count values: %s", ", ".join(trials))
-
-        table_str = tabulate.tabulate(
-            config_df[["throughput_mean", "ee_net_mean", "cr"]].dtypes.to_frame(),
-            headers=["Column", "Type"],
-        )
-        self._logger.info("")
-        self._logger.info("Measurement dtypes:")
-        self._logger.info(table_str)
-
-        table_str = tabulate.tabulate(
-            config_df[
-                ["throughput_mean", "ee_net_mean", "cr"]
-            ].isna().sum().to_frame(),
-            headers=["Value", "Count"]
-        )
-        self._logger.info("")
-        self._logger.info("Missing values:")
-        self._logger.info(table_str)
-        return config_df
-
-    def _define_configurations(self, analysis_df: pd.DataFrame):
-        unique_configs = analysis_df[self.GROUP_KEY].drop_duplicates()
-
-        configs_per_stratum = (
-            unique_configs.groupby(self.STRATUM_KEY, observed=True)
+        context_counts = (
+            configuration_metrics
+            .groupby(self.CONTEXT_COLS, observed=True)
             .size()
             .rename("configurations")
         )
 
-        self._logger.info("Number of strata: %d", len(configs_per_stratum))
-        self._logger.info("")
-        self._logger.info("Configurations per stratum:")
-        configs_per_stratum = configs_per_stratum.to_frame()
+        self._logger.info("Contexts:                  %d", len(contexts))
+        self._logger.info("Configuration-count range: %d - %d",
+              int(context_counts.min()),
+              int(context_counts.max()))
 
-        configs_per_stratum_df = configs_per_stratum.copy()
-        configs_per_stratum_df = configs_per_stratum_df .reset_index()
-        configs_per_stratum_df["host"] = configs_per_stratum_df["host"].where(
-            configs_per_stratum_df["host"].ne(configs_per_stratum_df["host"].shift()), ""
+        context_counts_df = context_counts.to_frame().copy()
+        context_counts_df = context_counts_df.reset_index()
+        context_counts_df["host"] = context_counts_df["host"].where(
+            context_counts_df["host"].ne(context_counts_df["host"].shift()), ""
         )
-
         table_str = tabulate.tabulate(
-            configs_per_stratum_df,
-            headers=["Host", "Dataset", "Configurations"],
+            context_counts_df,
+            headers=["Host", "Dataset", "Count"],
             showindex=False,
         )
         self._logger.info(table_str)
+        return contexts
 
-    def _integrate_data(self, data: Data) -> pd.DataFrame:
-        self._log_section("3 Integrate data")
+    def _configuration_level_estimates(self, analysis_df: pd.DataFrame, cr_lookup: pd.DataFrame) -> pd.DataFrame:
+        self._log_section("3 Configuration-level estimates")
 
-        self._log_section("3.1 Merge throughput and energy-efficiency")
-        analysis_df = self._merge_throughput_energy_efficiency(data)
+        self._log_section("3.1 Aggregate trials")
+        config_df = self._aggregate_trials(analysis_df)
 
-        self._log_section("3.2 Merge compression ratio")
-        analysis_df = self._merge_compression_ratio(data, analysis_df)
+        self._log_section("3.2 Assign compression ratio")
+        config_df = self._assign_compression_ratio(config_df, cr_lookup)
 
-        self._log_section("3.3 Validate the integrated dataset")
-        self._validate_integrated_dataset(analysis_df)
-        return analysis_df
+        return config_df
 
-    def _validate_integrated_dataset(self, analysis_df: pd.DataFrame):
-        duplicate_trials = analysis_df.duplicated(self.TRIAL_KEY, keep=False)
-        cr_variation = (
-            analysis_df.groupby(self.CR_KEY, observed=True)["cr"]
-            .nunique(dropna=False)
-        )
-
-        self._logger.info("Rows:                            %d", len(analysis_df))
-        self._logger.info("Unique trial keys:               %d", analysis_df[self.TRIAL_KEY].drop_duplicates().shape[0])
-        self._logger.info("Rows with duplicated trial keys: %d", duplicate_trials.sum())
-        self._logger.info("CR keys with multiple values:    %d", (cr_variation != 1).sum())
-
-    def _merge_compression_ratio(self, data: Data, analysis_df: pd.DataFrame) -> pd.DataFrame:
-        cr_lookup = data.cr_df[self.CR_KEY+ ["cr"]].copy()
-
-        analysis_df = analysis_df.merge(
+    def _assign_compression_ratio(self, config_df: pd.DataFrame, cr_lookup: pd.DataFrame) -> pd.DataFrame:
+        config_df = config_df.merge(
             cr_lookup,
-            on=self.CR_KEY,
+            on=["dataset", "tool", "strength"],
             how="left",
             validate="many_to_one",
             indicator=True,
         )
 
-        self._logger.info("Rows: %d", len(analysis_df))
-
-        self._logger.info("")
+        self._logger.info("Configurations:        %d", len(config_df))
         self._logger.info("Merge status:")
-        value_counts = analysis_df["_merge"].value_counts()
         table_str = tabulate.tabulate(
-            value_counts.to_frame(),
+            config_df["_merge"].value_counts().to_frame(),
         )
         self._logger.info(table_str)
 
-        self._logger.info("")
-        self._logger.info("Missing CR values: %d", analysis_df["cr"].isna().sum())
+        self._logger.info("Missing CR:            %d", int(config_df["cr"].isna().sum()))
+        self._logger.info("Duplicate configurations: %d", int(config_df.duplicated(self.CONFIG_COLS).sum()))
+        self._logger.info("CR dtype:              %s", config_df["cr"].dtype)
 
-        analysis_df = analysis_df.drop(columns="_merge")
-        return analysis_df
+        config_df = config_df.drop(columns="_merge")
+        return config_df
 
-    def _merge_throughput_energy_efficiency(self, data: Data) -> pd.DataFrame:
-        analysis_df = data.tp_df.merge(
-            data.ee_df,
-            on=self.TRIAL_KEY,
-            how="outer",
+    def _aggregate_trials(self, analysis_trials: pd.DataFrame) -> pd.DataFrame:
+        configuration_metrics = (
+            analysis_trials
+            .groupby(self.CONFIG_COLS, observed=True)
+            .agg(
+                throughput=("throughput", "mean"),
+                energy_efficiency_net=("energy_efficiency_net", "mean"),
+                trials=("run", "nunique"),
+            )
+            .reset_index()
+        )
+
+        self._logger.info("Configurations:        %d", len(configuration_metrics))
+        self._logger.info("Trial-count range:     %d %d",
+              int(configuration_metrics["trials"].min()),
+              int(configuration_metrics["trials"].max()))
+        self._logger.info("Missing values:        %d", int(configuration_metrics.isna().sum().sum()))
+        self._logger.info("Throughput dtype:      %s",
+              configuration_metrics["throughput"].dtype)
+        self._logger.info("Net-efficiency dtype:  %s",
+              configuration_metrics["energy_efficiency_net"].dtype)
+
+        return configuration_metrics
+
+    def _outcome_integration(self, data: Data) -> tuple[pd.DataFrame, pd.DataFrame]:
+        self._log_section("2 Outcome integration")
+
+        self._log_section("2.1 Merge outcomes")
+        analysis_df = self._merge_trial_level_outcomes(data)
+
+        self._log_section("2.2 Merge compression ratio")
+        analysis_df, cr_lookup  = self._merge_compression_ratio(data, analysis_df)
+
+        self._log_section("2.3 Validate merged configurations")
+        self._validate_integrated_dataset(analysis_df)
+        return analysis_df, cr_lookup
+
+    def _merge_trial_level_outcomes(self, data: Data) -> pd.DataFrame:
+        analysis_trials = data.tp_df[
+            self.TRIAL_COLS + ["throughput"]
+            ].merge(
+            data.ee_df[
+                self.TRIAL_COLS
+                + ["energy_consumption_net", "energy_efficiency_net"]
+                ],
+            on=self.TRIAL_COLS,
+            how="inner",
             validate="one_to_one",
-            indicator=True,
+            indicator=True
         )
 
-        self._logger.info("Rows: %d", len(analysis_df))
-
-        self._logger.info("")
-        self._logger.info("Merge status:")
-        value_counts = analysis_df["_merge"].value_counts()
+        self._logger.info("Rows:                  %d", len(analysis_trials))
         table_str = tabulate.tabulate(
-            value_counts.to_frame(),
+            analysis_trials["_merge"].value_counts().to_frame(),
         )
+        self._logger.info("Merge status:")
         self._logger.info(table_str)
 
-        analysis_df = analysis_df.drop(columns="_merge")
+        self._logger.info("Missing values:        %d", int(analysis_trials.isna().sum().sum()))
 
-        analysis_df_info = analysis_df[[
-            "duration",
+        analysis_trials = analysis_trials.drop(columns="_merge")
+        return analysis_trials
+
+    def _validate_integrated_dataset(self, analysis_df: pd.DataFrame):
+        required_outcomes = [
             "throughput",
             "energy_consumption_net",
             "energy_efficiency_net",
-        ]]
-
-        table_str = tabulate.tabulate(
-            analysis_df_info.dtypes.to_frame(),
-        )
-        self._logger.info("")
-        self._logger.info("Measurement dtypes:")
-        self._logger.info(table_str)
-        return analysis_df
-
-    def _validate_data(self, data: Data):
-        self._log_section("2 Validate data")
-        self._log_section("2.1 Validate net energy and efficiency")
-        self._validate_data_energy(data.ee_df)
-
-        self._log_section("2.2 Validate trial-key uniqueness")
-        self._validate_trial_key_uniqueness(data)
-
-        self._log_section("2.3 Validate compression-ratio uniqueness")
-        self._validate_compression_ratio_uniqueness(data)
-
-        self._log_section("2.4 Validate 30 trials per configuration")
-        self._validate_trials(data)
-
-        self._log_section("2.5 Validate feasible threading modes")
-        self._validate_feasible_threading_modes(data)
-
-
-    def _validate_feasible_threading_modes(self, data: Data):
-        threading_by_tool = (
-            data.tp_df.groupby("tool", observed=True)["threading"]
-            .agg(lambda values: set(values))
-            .to_dict()
-        )
-
-        for tool in sorted(threading_by_tool):
-            self._logger.info("%6s: %s", tool, sorted(threading_by_tool[tool]))
-
-    def _validate_trials(self, data: Data):
-        config_key = [
-            "host", "tool", "dataset", "mode",
-            "strength", "threading",
+            "cr",
         ]
 
-        for field in fields(data):
-            if field.name == "cr_df":
-                continue
+        duplicates = analysis_df.duplicated(self.TRIAL_COLS).sum()
 
-            df = getattr(data, field.name)
-            counts = df.groupby(config_key, observed=True).size()
-            invalid_counts = counts[counts != 30]
-
-            self._logger.info("")
-            self._logger.info("%s:", field.name)
-            self._logger.info("Configurations:                   %d", len(counts))
-            self._logger.info("Minimum trials:                   %d", counts.min())
-            self._logger.info("Maximum trials:                   %d", counts.max())
-            self._logger.info("Configurations without 30 trials: %d", len(invalid_counts))
-
-            if not invalid_counts.empty:
-                self._logger.info(invalid_counts.to_string())
-
-    def _validate_compression_ratio_uniqueness(self, data: Data):
-        cr_lookup = data.cr_df[self.CR_KEY + ["cr"]].copy()
-        duplicate_mask = cr_lookup.duplicated(self.CR_KEY, keep=False)
-        self._logger.info("Rows:                      %d", len(cr_lookup))
-        self._logger.info("Unique configuration keys: %d", cr_lookup[self.CR_KEY].drop_duplicates().shape[0])
-        self._logger.info("Rows with duplicated keys: %d", duplicate_mask.sum())
-        self._logger.info("Missing CR values:         %d", data.cr_df["cr"].isna().sum())
-        self._logger.info("Nonpositive CR values:     %d", (data.cr_df["cr"] <= 0).sum())
-
-    def _validate_trial_key_uniqueness(self, data: Data):
-        for field in fields(data):
-            if field.name == "cr_df":
-                continue
-            df = getattr(data, field.name)
-            duplicate_mask = df.duplicated(self.TRIAL_KEY, keep=False)
-
-            self._logger.info("")
-            self._logger.info("%s:", field.name)
-            self._logger.info("Rows:                       %d", len(df))
-            self._logger.info("Unique trial keys:          %d", df[self.TRIAL_KEY].drop_duplicates().shape[0])
-            self._logger.info("Rows with duplicated keys:  %d", duplicate_mask.sum())
-
-    def _validate_data_energy(self, ee_df: pd.DataFrame):
-        net_energy = pd.Series(
-            np.asarray(ee_df["energy_consumption_net"].pint.magnitude, dtype=float),
-            index=ee_df.index,
-        )
-        net_ee = pd.Series(
-            np.asarray(ee_df["energy_efficiency_net"].pint.magnitude, dtype=float),
-            index=ee_df.index,
-        )
-        invalid = (
-                (net_energy <= 0)
-                | ~np.isfinite(net_energy)
-                | ~np.isfinite(net_ee)
+        config_summary = (
+            analysis_df
+            .groupby(self.CONFIG_COLS, observed=True)
+            .agg(
+                trials=("run", "nunique"),
+                throughput_values=("throughput", "count"),
+                ee_values=("energy_efficiency_net", "count"),
+                cr_values=("cr", "count"),
+                distinct_cr=("cr", "nunique"),
+            )
         )
 
-        self._logger.info("Validate net energy and efficiency")
-        self._logger.info("Total rows:             %d", len(ee_df))
-        self._logger.info("Nonpositive net energy: %d", (net_energy <= 0).sum())
-        self._logger.info("Nonfinite net energy:   %d", (~np.isfinite(net_energy)).sum())
-        self._logger.info("Nonfinite EE_net:       %d", (~np.isfinite(net_ee)).sum())
-        self._logger.info("Invalid rows:           %d", invalid.sum())
+        invalid_configs = config_summary[
+            (config_summary["trials"] != 30)
+            | (config_summary["throughput_values"] != 30)
+            | (config_summary["ee_values"] != 30)
+            | (config_summary["cr_values"] != 30)
+            | (config_summary["distinct_cr"] != 1)
+            ]
+
+        configs = analysis_df[self.CONFIG_COLS].drop_duplicates()
+
+        self._logger.info("Rows:                  %d", len(analysis_df))
+        self._logger.info("Configurations:        %d", len(configs))
+        self._logger.info("Duplicate trials:      %d", int(duplicates))
+        self._logger.info("Missing outcomes:      %d",
+                          int(analysis_df[required_outcomes].isna().sum().sum()))
+        self._logger.info("Invalid configurations:%d", len(invalid_configs))
+
+        by_utility = configs.groupby("tool", observed=True).size().sort_index()
+        table_str = tabulate.tabulate(
+            by_utility.to_frame(),
+            headers=["Utility", "Configurations"]
+        )
+        self._logger.info("")
+        self._logger.info("Configurations by utility:")
+        self._logger.info(table_str)
+
+    def _merge_compression_ratio(self, data: Data, analysis_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+        cr_lookup = data.cr_df[
+            ["dataset", "tool", "strength", "cr"]
+        ].copy()
+
+        analysis_df = analysis_df.merge(
+            cr_lookup,
+            on=["dataset", "tool", "strength"],
+            how="left",
+            validate="many_to_one",
+            indicator=True
+        )
+
+        self._logger.info("Rows:                  %d", len(analysis_df))
+        self._logger.info("Merge status:")
+
+        table_str = tabulate.tabulate(
+            analysis_df["_merge"].value_counts().to_frame(),
+        )
+        self._logger.info(table_str)
+        self._logger.info("Missing CR:            %d", int(analysis_df["cr"].isna().sum()))
+
+        cr_counts = (
+            analysis_df
+            .groupby(
+                ["host", "tool", "dataset", "strength"],
+                observed=True
+            )["cr"]
+            .nunique()
+        )
+
+        self._logger.info("Maximum CR values per base configuration: %d", int(cr_counts.max()))
+
+        analysis_df = analysis_df.drop(columns="_merge")
+        return analysis_df, cr_lookup
+
+    def _validate_data(self, data: Data):
+        cr_cols = ["dataset", "tool", "strength"]
+
+        single_only = {"gzip", "bzip2", "lzop"}
+
+        # Missing values
+        self._logger.info("Missing values:")
+        self._logger.info("CR:                    %d", int(data.cr_df.isna().sum().sum()))
+        self._logger.info("Throughput:            %d", int(data.tp_df.isna().sum().sum()))
+        self._logger.info("Energy efficiency:     %d", int(data.ee_df.isna().sum().sum()))
+
+        # Duplicate observations
+        self._logger.info("")
+        self._logger.info("Duplicate keys:")
+        self._logger.info("CR:                    %d", int(data.cr_df.duplicated(cr_cols).sum()))
+        self._logger.info("Throughput:            %d", int(data.tp_df.duplicated(self.TRIAL_COLS).sum()))
+        self._logger.info("Energy efficiency:     %d", int(data.ee_df.duplicated(self.TRIAL_COLS).sum()))
+
+        # Replications
+        tp_reps = data.tp_df.groupby(self.CONFIG_COLS, observed=True).size()
+        ee_reps = data.ee_df.groupby(self.CONFIG_COLS, observed=True).size()
+
+        self._logger.info("")
+        self._logger.info("Configurations and repetitions:")
+        self._logger.info("Throughput:            %d %d %d", tp_reps.size, tp_reps.min(), tp_reps.max())
+        self._logger.info("Energy efficiency:     %d %d %d", ee_reps.size, ee_reps.min(), ee_reps.max())
+
+        # Matching trial keys
+        tp_keys = pd.MultiIndex.from_frame(data.tp_df[self.TRIAL_COLS])
+        ee_keys = pd.MultiIndex.from_frame(data.ee_df[self.TRIAL_COLS])
+
+        self._logger.info("")
+        self._logger.info("Unmatched trial keys:  %d",
+              len(tp_keys.symmetric_difference(ee_keys)))
+
+        # Threading feasibility and coverage
+        configs = data.tp_df[self.CONFIG_COLS].drop_duplicates()
+
+        single_violations = configs[
+            configs["tool"].isin(single_only)
+            & configs["threading"].ne("single")
+            ]
+
+        thread_counts = (
+            configs.groupby(
+                ["host", "tool", "dataset", "strength"],
+                observed=True
+            )["threading"]
+            .nunique()
+        )
+
+        expected_threads = (
+            thread_counts.index.get_level_values("tool")
+            .map(lambda tool: 1 if tool in single_only else 2)
+        )
+
+        self._logger.info("Threading violations:  %d",
+              len(single_violations) + int((thread_counts != expected_threads).sum()))
+
+        # Invalid measurements
+        invalid_cr = self._magnitude(data.cr_df["cr"]).le(0).sum()
+        invalid_tp = self._magnitude(data.tp_df["throughput"]).le(0).sum()
+        invalid_duration = self._magnitude(data.tp_df["duration"]).le(0).sum()
+        invalid_net_energy = self._magnitude(data.ee_df["energy_consumption_net"]).le(0).sum()
+        invalid_net_ee = self._magnitude(data.ee_df["energy_efficiency_net"]).le(0).sum()
+
+        self._logger.info("")
+        self._logger.info("Nonpositive values:")
+        self._logger.info("CR:                    %d", int(invalid_cr))
+        self._logger.info("Throughput:            %d", int(invalid_tp))
+        self._logger.info("Duration:              %d", int(invalid_duration))
+        self._logger.info("Net energy:            %d", int(invalid_net_energy))
+        self._logger.info("Net energy efficiency: %d", int(invalid_net_ee))
+
+    def _magnitude(self, series):
+        try:
+            return series.pint.magnitude
+        except (AttributeError, TypeError):
+            return pd.to_numeric(series, errors="coerce")
+
+    def _present_data(self, data: Data):
+        self._logger.info("Rows:")
+        self._logger.info("CR:                 %d", len(data.cr_df))
+        self._logger.info("Throughput:         %d", len(data.tp_df))
+        self._logger.info("Energy efficiency:  %d", len(data.ee_df))
+
+        self._logger.info("")
+        self._logger.info("Modes:")
+        self._logger.info("Throughput:         %s", ", ".join(data.tp_df["mode"].unique().tolist()))
+        self._logger.info("Energy efficiency:  %s", ", ".join(data.ee_df["mode"].unique().tolist()))
 
     def _filter_data(self, data: Data) -> Data:
         return Data(
