@@ -8,7 +8,7 @@ import tabulate
 from paretoset import paretoset
 
 from data_processor.processor import Processor
-from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH
+from data_processor.constants import ORDER_TOOL, ORDER_STRENGTH, ORDER_HOST, ORDER_DATASET
 
 @dataclass(frozen=True)
 class Data:
@@ -31,17 +31,17 @@ class ParetoCreator(Processor):
         "energy_efficiency_net",
         "cr",
     ]
+    SETTING_COLS = ["tool", "strength", "threading"]
 
-    def __init__(self, resources: Path, mode: str):
+    def __init__(self, resources: Path, n_boot: int, seed: int | None, mode: str):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._mode = mode
-        self._n_boot = 2000
-        seed = None
+        self._n_boot = n_boot
         if seed is None:
             self._seed = 12345
         self._seed = seed
         self._rng = np.random.default_rng(seed)
+        self._mode = mode
 
     def process(self, cr_file: Path, tp_file: Path, ee_file: Path):
         self._log_section("1 Data preparation")
@@ -59,28 +59,298 @@ class ParetoCreator(Processor):
         analysis_df, cr_lookup  = self._outcome_integration(data)
         config_df = self._configuration_level_estimates(analysis_df, cr_lookup)
         contexts, configuration_results, pareto_configurations = self._pareto_front_identification(config_df)
-        self._cross_context_consistency(contexts, configuration_results, pareto_configurations)
-        self._robustness_analysis()
+        setting_summary, utility_coverage = self._cross_context_consistency(contexts, configuration_results, pareto_configurations)
+        bootstrap_results = self._robustness_analysis(contexts, analysis_df, configuration_results)
+        self._reporting(setting_summary, bootstrap_results, utility_coverage)
 
-    def _robustness_analysis(self):
+    def _reporting(self, setting_summary: pd.DataFrame, bootstrap_results: pd.DataFrame, utility_coverage: pd.DataFrame):
+        self._log_section("7 Reporting")
+
+        self._log_section("7.1 Report utility consistency")
+        self._report_utility_consistency(setting_summary, bootstrap_results, utility_coverage)
+
+    def _report_utility_consistency(self, setting_summary: pd.DataFrame, bootstrap_results: pd.DataFrame,
+                                    utility_coverage: pd.DataFrame):
+        #tool_order = [
+        #    "gzip", "pigz", "bzip2", "lbzip2", "bzip3",
+        #    "xz", "lz4", "lzop", "zstd",
+        #]
+        #strength_order = ["min", "default", "max"]
+
+        # Select each utility's most frequently Pareto-optimal setting.
+        setting_rank = setting_summary.copy()
+        setting_rank["tool"] = pd.Categorical(
+            setting_rank["tool"],
+            categories=ORDER_TOOL,
+            ordered=True,
+        )
+        setting_rank["strength"] = pd.Categorical(
+            setting_rank["strength"],
+            categories=ORDER_STRENGTH,
+            ordered=True,
+        )
+
+        representative_settings = (
+            setting_rank
+            .sort_values(
+                ["tool", "pareto_contexts", "strength", "threading"],
+                ascending=[True, False, True, True],
+            )
+            .drop_duplicates("tool")
+            [["tool", "strength", "threading", "pareto_contexts"]]
+            .rename(columns={
+                "pareto_contexts": "setting_contexts"
+            })
+        )
+
+        # Calculate bootstrap support for those settings.
+        bootstrap_for_report = bootstrap_results.copy()
+
+        for column in self.SETTING_COLS:
+            bootstrap_for_report[column] = (
+                bootstrap_for_report[column].astype(str)
+            )
+            representative_settings[column] = (
+                representative_settings[column].astype(str)
+            )
+
+        representative_bootstrap = bootstrap_for_report.merge(
+            representative_settings[self.SETTING_COLS],
+            on=self.SETTING_COLS,
+            how="inner",
+            validate="many_to_one",
+        )
+
+        bootstrap_support = (
+            representative_bootstrap
+            .groupby("tool", observed=True)
+            .agg(
+                bootstrap_mean=("pareto_frequency", "mean"),
+                bootstrap_contexts_at_least_50=(
+                    "pareto_frequency",
+                    lambda values: int((values >= 0.50).sum()),
+                ),
+            )
+            .reset_index()
+        )
+
+        # Construct final table.
+        rq3_table = (
+            utility_coverage
+            .merge(
+                representative_settings,
+                on="tool",
+                validate="one_to_one",
+            )
+            .merge(
+                bootstrap_support,
+                on="tool",
+                validate="one_to_one",
+            )
+        )
+
+        #rq3_table["representative_setting"] = (
+        #        rq3_table["strength"]
+        #        + " / "
+        #        + rq3_table["threading"]
+        #)
+
+        rq3_table["bootstrap_mean_percent"] = (
+                100 * rq3_table["bootstrap_mean"]
+        )
+
+        rq3_table["tool"] = pd.Categorical(
+            rq3_table["tool"],
+            categories=ORDER_TOOL,
+            ordered=True,
+        )
+
+        rq3_table = rq3_table.sort_values(
+            ["pareto_contexts", "tool"],
+            ascending=[False, True],
+            ignore_index=True,
+        )
+
+        display_columns = [
+            "tool",
+            "pareto_contexts",
+            "coverage_percent",
+            #"representative_setting",
+            "strength",
+            "threading",
+            "setting_contexts",
+            "bootstrap_mean_percent",
+            "bootstrap_contexts_at_least_50",
+        ]
+
+        table_df = rq3_table[display_columns]
+
+        headers = ["tool", "pareto contexts", "coverage %", "strength", "threading", "setting contexts",
+                   "bootstrap mean %", "bootstrap contexts at least 50"]
+        table_str = tabulate.tabulate(
+            table_df,
+            headers=headers,
+            showindex=False,
+            floatfmt=".1f",
+        )
+        self._logger.info(table_str)
+
+    def _robustness_analysis(self, contexts: dict, analysis_df: pd.DataFrame,
+                             configuration_results: pd.DataFrame) -> pd.DataFrame:
         self._log_section("6 Robustness analysis")
 
         self._log_section("6.1 Bootstrap Pareto membership")
+        bootstrap_results = self._bootstrap_pareto_membership(contexts, analysis_df, configuration_results)
+        return bootstrap_results
 
+    def _bootstrap_pareto_membership(self, contexts: dict, analysis_trials: pd.DataFrame,
+                                     configuration_results: pd.DataFrame) -> pd.DataFrame:
+        bootstrap_rows = []
 
-    def _cross_context_consistency(self, contexts: dict, configuration_results, pareto_configurations: pd.DataFrame):
+        for (host, dataset), _ in contexts.items():
+            context_trials = analysis_trials.loc[
+                analysis_trials["host"].eq(host)
+                & analysis_trials["dataset"].eq(dataset)
+                ]
+
+            settings = []
+            throughput_arrays = []
+            efficiency_arrays = []
+            cr_values = []
+
+            for setting, group in context_trials.groupby(
+                    self.SETTING_COLS,
+                    observed=True,
+                    sort=True,
+            ):
+                group = group.sort_values("run")
+
+                if len(group) != 30:
+                    raise ValueError(f"{host}/{dataset}/{setting} has {len(group)} trials.")
+
+                settings.append(setting)
+                throughput_arrays.append(
+                    self._magnitude(group["throughput"]).to_numpy(dtype=float)
+                )
+                efficiency_arrays.append(
+                    self._magnitude(
+                        group["energy_efficiency_net"]
+                    ).to_numpy(dtype=float)
+                )
+                cr_values.append(
+                    float(self._magnitude(group["cr"]).iloc[0])
+                )
+
+            throughput_values = np.vstack(throughput_arrays)
+            efficiency_values = np.vstack(efficiency_arrays)
+            cr_values = np.asarray(cr_values)
+
+            selection_counts = np.zeros(len(settings), dtype=int)
+
+            for _ in range(self._n_boot):
+                sample_indices = self._rng.integers(
+                    0,
+                    30,
+                    size=(len(settings), 30),
+                )
+
+                throughput_means = np.take_along_axis(
+                    throughput_values,
+                    sample_indices,
+                    axis=1,
+                ).mean(axis=1)
+
+                efficiency_means = np.take_along_axis(
+                    efficiency_values,
+                    sample_indices,
+                    axis=1,
+                ).mean(axis=1)
+
+                objectives = np.column_stack([
+                    throughput_means,
+                    efficiency_means,
+                    cr_values,
+                ])
+
+                selection_counts += np.asarray(
+                    paretoset(
+                        objectives,
+                        sense=["max", "max", "max"],
+                    ),
+                    dtype=bool,
+                )
+
+            for setting, count in zip(settings, selection_counts):
+                bootstrap_rows.append({
+                    "host": host,
+                    "dataset": dataset,
+                    "tool": setting[0],
+                    "strength": setting[1],
+                    "threading": setting[2],
+                    "pareto_frequency": count / self._n_boot,
+                })
+
+        bootstrap_results = pd.DataFrame(bootstrap_rows)
+
+        deterministic_flags = configuration_results[
+            self.CONTEXT_COLS + self.SETTING_COLS + ["pareto_optimal"]
+            ]
+
+        bootstrap_results = bootstrap_results.merge(
+            deterministic_flags,
+            on=self.CONTEXT_COLS + self.SETTING_COLS,
+            validate="one_to_one",
+        )
+
+        bootstrap_summary = (
+            bootstrap_results
+            .groupby(self.CONTEXT_COLS, observed=True)
+            .agg(
+                configurations=("pareto_frequency", "size"),
+                deterministic_pareto=("pareto_optimal", "sum"),
+                frequency_at_least_50=(
+                    "pareto_frequency",
+                    lambda values: int((values >= 0.50).sum()),
+                ),
+                maximum_frequency=("pareto_frequency", "max"),
+            )
+            .reset_index()
+        )
+
+        self._logger.info("Configurations:        %d", len(bootstrap_results))
+        self._logger.info("Frequency range:       %.3f - %.3f",
+              bootstrap_results["pareto_frequency"].min(),
+              bootstrap_results["pareto_frequency"].max())
+
+        bootstrap_summary["_host_key"] = bootstrap_summary["host"].apply(ORDER_HOST.index)
+        bootstrap_summary["_dataset_key"] = bootstrap_summary["dataset"].apply(ORDER_DATASET.index)
+        bootstrap_summary = bootstrap_summary.sort_values(
+            by=["_host_key", "_dataset_key"],
+            ignore_index=True,
+        ).drop(columns=["_host_key", "_dataset_key"])
+        table_str = tabulate.tabulate(
+            bootstrap_summary,
+            headers="keys",
+            showindex=False,
+        )
+        self._logger.info(table_str)
+        return bootstrap_results
+
+    def _cross_context_consistency(self, contexts: dict, configuration_results,
+                                   pareto_configurations: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         self._log_section("5 Cross-context consistency")
 
         self._log_section("5.1 Calculate utility coverage")
-        all_tools, utility_context_presence = self._calculate_utility_coverage(contexts, configuration_results, pareto_configurations)
+        all_tools, utility_context_presence, utility_coverage = self._calculate_utility_coverage(contexts, configuration_results, pareto_configurations)
 
         self._log_section("5.2 Verify configuration-count bias is avoided")
         self._verify_configuration_count_bias_is_avoided(pareto_configurations, all_tools, utility_context_presence)
 
         self._log_section("5.3 Describe contributing configurations")
-        self._describe_contributing_configurations(contexts, pareto_configurations)
+        setting_summary = self._describe_contributing_configurations(contexts, pareto_configurations)
+        return setting_summary, utility_coverage
 
-    def _describe_contributing_configurations(self, contexts: dict, pareto_configurations: pd.DataFrame):
+    def _describe_contributing_configurations(self, contexts: dict, pareto_configurations: pd.DataFrame) -> pd.DataFrame:
         setting_context_presence = (
             pareto_configurations[
                 ["tool", "strength", "threading", "host", "dataset"]
@@ -125,6 +395,7 @@ class ParetoCreator(Processor):
             floatfmt=".1f",
         )
         self._logger.info(table_str)
+        return setting_summary
 
     def _verify_configuration_count_bias_is_avoided(self, pareto_configurations: pd.DataFrame,
                                                     all_tools: list, utility_context_presence: pd.DataFrame):
@@ -168,7 +439,7 @@ class ParetoCreator(Processor):
 
     def _calculate_utility_coverage(self, contexts: dict,
                                     configuration_results: pd.DataFrame,
-                                    pareto_configurations: pd.DataFrame) -> tuple[list, pd.DataFrame]:
+                                    pareto_configurations: pd.DataFrame) -> tuple[list, pd.DataFrame, pd.DataFrame]:
         total_contexts = len(contexts)
 
         utility_context_presence = (
@@ -209,7 +480,7 @@ class ParetoCreator(Processor):
         )
         self._logger.info(table_str)
 
-        return all_tools, utility_context_presence
+        return all_tools, utility_context_presence, utility_coverage
 
     def _pareto_front_identification(self, config_df: pd.DataFrame) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
         self._log_section("4 Context-specific Pareto analysis")
