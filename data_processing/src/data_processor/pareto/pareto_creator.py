@@ -33,7 +33,7 @@ class ParetoCreator(Processor):
     ]
     SETTING_COLS = ["tool", "strength", "threading"]
 
-    def __init__(self, resources: Path, n_boot: int, seed: int | None, mode: str):
+    def __init__(self, resources: Path, n_boot: int, seed: int | None, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._n_boot = n_boot
@@ -42,6 +42,7 @@ class ParetoCreator(Processor):
         self._seed = seed
         self._rng = np.random.default_rng(seed)
         self._mode = mode
+        self._create_tex = create_tex
 
     def process(self, cr_file: Path, tp_file: Path, ee_file: Path):
         self._log_section("1 Data preparation")
@@ -61,22 +62,77 @@ class ParetoCreator(Processor):
         contexts, configuration_results, pareto_configurations = self._pareto_front_identification(config_df)
         setting_summary, utility_coverage = self._cross_context_consistency(contexts, configuration_results, pareto_configurations)
         bootstrap_results = self._robustness_analysis(contexts, analysis_df, configuration_results)
-        self._reporting(setting_summary, bootstrap_results, utility_coverage)
+        summary_df = self._reporting(setting_summary, bootstrap_results, utility_coverage, contexts)
+        if self._create_tex:
+            base = ee_file.stem.removeprefix("ee_")
+            filename = f"pareto_{self._mode}_{base}.tex"
+            self._create_summary_table(summary_df, self._resources / filename)
 
-    def _reporting(self, setting_summary: pd.DataFrame, bootstrap_results: pd.DataFrame, utility_coverage: pd.DataFrame):
+    def _create_summary_table(self, df: pd.DataFrame, filename: Path):
+        self._logger.info("Generate: %s", filename)
+
+        latex = self._build_summary_lines(df)
+        with filename.open(mode="w", encoding="UTF_8") as f:
+            f.write(latex)
+
+    def _build_summary_lines(self, df: pd.DataFrame):
+        df = df.copy()
+
+        tex_columns = [
+            "tool",
+            "coverage_percent",
+            "strength",
+            "threading",
+            "setting_contexts_percent",
+        ]
+        df = df[tex_columns]
+
+        df.columns = pd.MultiIndex.from_tuples([
+            ("", "Utility"),
+            ("", r"Coverage (\%)"),
+            ("Settings", "Strength"),
+            ("Settings", "Threading"),
+            ("Settings", r"Coverage (\%)"),
+        ])
+
+        int_format = "S[table-format=2]"
+        percent_format = "S[round-mode=places, round-precision=0, table-format=3]"
+        column_formats = ["l",
+                          percent_format,
+                          "c",
+                          "c",
+                          percent_format,
+                          ]
+        latex = (
+            df.style
+            .hide(axis="index")
+            .to_latex(
+                siunitx=True,
+                multicol_align="c",
+                hrules=True,
+                column_format="".join(column_formats),
+            )
+        )
+
+        lines = latex.splitlines()
+        toprule_index = next(
+            i for i, line in enumerate(lines)
+            if line.strip() == r"\toprule"
+        )
+        lines.insert(toprule_index + 2, r"\cmidrule(lr){3-5}")
+        latex = "\n".join(lines)
+        return latex
+
+    def _reporting(self, setting_summary: pd.DataFrame, bootstrap_results: pd.DataFrame,
+                   utility_coverage: pd.DataFrame, contexts: dict) -> pd.DataFrame:
         self._log_section("7 Reporting")
 
         self._log_section("7.1 Report utility consistency")
-        self._report_utility_consistency(setting_summary, bootstrap_results, utility_coverage)
+        summary_df = self._report_utility_consistency(setting_summary, bootstrap_results, utility_coverage, contexts)
+        return summary_df
 
     def _report_utility_consistency(self, setting_summary: pd.DataFrame, bootstrap_results: pd.DataFrame,
-                                    utility_coverage: pd.DataFrame):
-        #tool_order = [
-        #    "gzip", "pigz", "bzip2", "lbzip2", "bzip3",
-        #    "xz", "lz4", "lzop", "zstd",
-        #]
-        #strength_order = ["min", "default", "max"]
-
+                                    utility_coverage: pd.DataFrame, contexts: dict) -> pd.DataFrame:
         # Select each utility's most frequently Pareto-optimal setting.
         setting_rank = setting_summary.copy()
         setting_rank["tool"] = pd.Categorical(
@@ -149,14 +205,13 @@ class ParetoCreator(Processor):
             )
         )
 
-        #rq3_table["representative_setting"] = (
-        #        rq3_table["strength"]
-        #        + " / "
-        #        + rq3_table["threading"]
-        #)
-
         rq3_table["bootstrap_mean_percent"] = (
                 100 * rq3_table["bootstrap_mean"]
+        )
+
+        total_contexts = len(contexts)
+        rq3_table["setting_contexts_percent"] = (
+                100 * rq3_table["setting_contexts"] / total_contexts
         )
 
         rq3_table["tool"] = pd.Categorical(
@@ -164,7 +219,6 @@ class ParetoCreator(Processor):
             categories=ORDER_TOOL,
             ordered=True,
         )
-
         rq3_table = rq3_table.sort_values(
             ["pareto_contexts", "tool"],
             ascending=[False, True],
@@ -175,17 +229,18 @@ class ParetoCreator(Processor):
             "tool",
             "pareto_contexts",
             "coverage_percent",
-            #"representative_setting",
             "strength",
             "threading",
             "setting_contexts",
+            "setting_contexts_percent",
             "bootstrap_mean_percent",
             "bootstrap_contexts_at_least_50",
         ]
 
         table_df = rq3_table[display_columns]
 
-        headers = ["tool", "pareto contexts", "coverage %", "strength", "threading", "setting contexts",
+        headers = ["tool", "pareto contexts", "coverage %",
+                   "strength", "threading", "setting contexts", "setting contexts %",
                    "bootstrap mean %", "bootstrap contexts at least 50"]
         table_str = tabulate.tabulate(
             table_df,
@@ -194,6 +249,7 @@ class ParetoCreator(Processor):
             floatfmt=".1f",
         )
         self._logger.info(table_str)
+        return table_df
 
     def _robustness_analysis(self, contexts: dict, analysis_df: pd.DataFrame,
                              configuration_results: pd.DataFrame) -> pd.DataFrame:

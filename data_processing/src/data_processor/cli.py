@@ -75,7 +75,7 @@ class Processor:
         rng_parser_ranks.add_argument('--boot', default=2000, type=int, help="bootstrap count" + default)
 
         parser_pareto = subparsers.add_parser('pareto', help="calculate pareto front",
-                                              parents=[common_parser])
+                                              parents=[common_parser, rng_parser_ranks, tex_parser])
         parser_pareto.add_argument('--mode', required=True, choices=['compress', 'decompress'], help="operation mode")
         parser_pareto.add_argument('--cr', type=Path, required=True, help="calculated compression ratio file")
         parser_pareto.add_argument('--tp', type=Path, required=True, help="calculated throughput file")
@@ -213,7 +213,7 @@ class Processor:
 
     def _pareto(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        pareto = ParetoCreator(resources_folder, args.mode)
+        pareto = ParetoCreator(resources_folder, args.boot, args.seed, args.mode, args.tex)
         pareto.process(args.cr, args.tp, args.ee)
 
     def _ranks_tp(self, args):
