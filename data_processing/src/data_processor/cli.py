@@ -140,7 +140,7 @@ class Processor:
 
         parser_stats_ee_net = subparsers_stats_ee.add_parser('net', help="calculate net energy efficiency statistics",
                                                              parents=[common_parser, factor_parser, tex_parser,
-                                                                      ee_parser, log_parser])
+                                                                      ee_parser, log_parser, rng_parser_stats])
         parser_stats_ee_net.set_defaults(func=self._stats_ee_net)
 
         parser_stats_ee_merge = subparsers_stats_ee.add_parser('merge',
