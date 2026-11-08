@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from dataclasses import dataclass, astuple
+from contextlib import contextmanager, nullcontext
 
 import pandas as pd
 import numpy as np
@@ -33,9 +34,10 @@ class ParetoCreator(Processor):
     ]
     SETTING_COLS = ["tool", "strength", "threading"]
 
-    def __init__(self, resources: Path, n_boot: int, seed: int | None, mode: str, create_tex: bool):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, mode: str, create_tex: bool):
         super().__init__(resources)
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._logfile = logfile
         self._n_boot = n_boot
         if seed is None:
             self._seed = 12345
@@ -45,6 +47,40 @@ class ParetoCreator(Processor):
         self._create_tex = create_tex
 
     def process(self, cr_file: Path, tp_file: Path, ee_file: Path):
+        if self._logfile:
+            name = self.extra_log_name(ee_file)
+            logfile_path = self._resources / f"{name}.log"
+            cm = self._add_logfile(logfile_path)
+            self._logger.info("create extra logfile: %s", logfile_path)
+        else:
+            cm = nullcontext()
+        with cm:
+            self._analyze(cr_file, tp_file, ee_file)
+
+    def extra_log_name(self, ee_file: Path) -> str:
+        base = ee_file.stem.removeprefix("ee_")
+        filename = f"pareto_{self._mode}_{base}"
+        return filename
+
+    @contextmanager
+    def _add_logfile(self, logfile: Path):
+        handler = logging.FileHandler(logfile, mode="w")
+        file_logger = [""]
+        try:
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(message)s')
+            handler.setFormatter(formatter)
+            for logger in file_logger:
+                logging.getLogger(logger).addHandler(handler)
+            yield
+        finally:
+            try:
+                for logger in file_logger:
+                    logging.getLogger(logger).removeHandler(handler)
+            finally:
+                handler.close()
+
+    def _analyze(self, cr_file: Path, tp_file: Path, ee_file: Path):
         self._log_section("1 Data preparation")
         self._logger.info("load data")
         data = self._load_data(cr_file, tp_file, ee_file)

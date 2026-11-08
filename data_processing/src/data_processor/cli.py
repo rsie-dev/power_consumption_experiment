@@ -75,7 +75,7 @@ class Processor:
         rng_parser_ranks.add_argument('--boot', default=2000, type=int, help="bootstrap count" + default)
 
         parser_pareto = subparsers.add_parser('pareto', help="calculate pareto front",
-                                              parents=[common_parser, rng_parser_ranks, tex_parser])
+                                              parents=[common_parser, rng_parser_ranks, tex_parser, log_parser])
         parser_pareto.add_argument('--mode', required=True, choices=['compress', 'decompress'], help="operation mode")
         parser_pareto.add_argument('--cr', type=Path, required=True, help="calculated compression ratio file")
         parser_pareto.add_argument('--tp', type=Path, required=True, help="calculated throughput file")
@@ -93,8 +93,10 @@ class Processor:
         parser_ranks_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_ranks_tp.set_defaults(func=self._ranks_tp)
 
-        parser_ranks_merge = subparsers_ranks.add_parser('merge', help="merges ranking tables", parents=[common_parser])
-        parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs="+", help="rank files to merge")
+        parser_ranks_merge = subparsers_ranks.add_parser('merge', help="merges ranking tables",
+                                                         parents=[common_parser])
+        parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs="+",
+                                        help="rank files to merge")
         parser_ranks_merge.set_defaults(func=self._ranks_merge)
 
         parser_ranks_ee = subparsers_ranks.add_parser('ee', help="ee ranks subcommands")
@@ -214,7 +216,7 @@ class Processor:
 
     def _pareto(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
-        pareto = ParetoCreator(resources_folder, args.boot, args.seed, args.mode, args.tex)
+        pareto = ParetoCreator(resources_folder, args.reslog, args.boot, args.seed, args.mode, args.tex)
         pareto.process(args.cr, args.tp, args.ee)
 
     def _ranks_tp(self, args):
