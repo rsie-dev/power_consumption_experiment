@@ -96,7 +96,7 @@ class ParetoCreator(Processor):
         ])
 
         int_format = "S[table-format=2]"
-        percent_format = "S[round-mode=places, round-precision=0, table-format=3]"
+        percent_format = "S[round-mode=places, round-precision=1, table-format=3.1]"
         column_formats = ["l",
                           percent_format,
                           "c",
