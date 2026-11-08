@@ -88,7 +88,8 @@ class Processor:
 
         parser_ranks_tp = subparsers_ranks.add_parser('tp', help="calculate throughput ranks",
                                                       parents=[common_parser, factor_parser, tex_parser,
-                                                               log_parser, rng_parser_ranks])
+                                                               log_parser, seed_parser])
+        parser_ranks_tp.add_argument('--boot', default=10000, type=int, help="bootstrap count" + default)
         parser_ranks_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_ranks_tp.set_defaults(func=self._ranks_tp)
 
@@ -219,7 +220,7 @@ class Processor:
     def _ranks_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
         ranking = ThroughputRanking(resources_folder, args.reslog, args.boot, args.seed,
-                                    args.threading, args.mode)#, args.tex)
+                                    args.threading, args.mode, args.tex)
         ranking.process(args.tp_file)
 
     def _ranks_ee_total(self, args):

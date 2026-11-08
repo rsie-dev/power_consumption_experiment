@@ -1,21 +1,19 @@
 import logging
 from pathlib import Path
 from abc import abstractmethod
-from itertools import combinations
-from math import comb
 
 import pandas as pd
 import numpy as np
-from scipy.stats import kendalltau
-from tqdm import tqdm
 import tabulate
 
 from data_processor.processor import LoggingProcessor
 from data_processor.util import tabulate_pint
+from data_processor.constants import ORDER_TOOL, ORDER_HOST
 
 
 class BaseRanking(LoggingProcessor):
-    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None, threading: str, mode: str):
+    def __init__(self, resources: Path, logfile: bool, n_boot: int, seed: int | None,
+                 threading: str, mode: str, create_tex: bool):
         super().__init__(resources, logfile)
         self._logger = logging.getLogger(self.__class__.__name__)
         self._threading = threading
@@ -24,6 +22,7 @@ class BaseRanking(LoggingProcessor):
         if seed is None:
             seed = 12345
         self._rng = np.random.default_rng(seed)
+        self._create_tex = create_tex
 
     @property
     def factors(self):
@@ -39,587 +38,432 @@ class BaseRanking(LoggingProcessor):
     def display_unit (self) -> str:
         pass
 
+    @abstractmethod
+    def _get_base_from_input_file(self, input_file: Path) -> str:
+        pass
+
     def _analyze(self, input_file: Path) -> None:
         df = self._preparation(input_file)
-        stability = self._calculate(df)
-        self._create_stability_file(stability, input_file)
+        utility_metric  = self._calculate(df)
+        ranked_metric, boot_estimates  = self._construct_rankings(df, utility_metric)
+        ranking_report = self._report_results(ranked_metric, utility_metric, boot_estimates)
+        if self._create_tex:
+            base = self._get_base_from_input_file(input_file)
+            filename = f"tp_ranking_{base}_{self._threading}_{self._mode}.tex"
+            self._create_ranking_report_table(ranking_report, self._resources / filename)
 
-    def _create_stability_file(self, stability: pd.DataFrame, input_file: Path) -> None:
-        base = self.extra_log_name(input_file)
-        filename = "%s_stability.csv" % base
-        self._frameio.persist(stability, self._resources / filename)
+    def _create_ranking_report_table(self, ranking_report: pd.DataFrame, filename: Path) -> None:
+        self._logger.info("Generate: %s", filename)
+        latex = self._build_ranking_lines(ranking_report)
+        with filename.open(mode="w", encoding="UTF_8") as f:
+            f.write(latex)
+
+    def _build_ranking_lines(self, df: pd.DataFrame):
+        df = df.copy()
+
+        def get_host_entry(host: str) -> str:
+            if host == "raspi5":
+                return r"\gls{pi5}"
+            if host == "visionfive2":
+                return r"\gls{visionfive2}"
+            if host == "radxax4":
+                return r"\gls{radxax4}"
+            raise RuntimeError("unknown host: %s" % host)
+
+        host_column = "Platform / Rank"
+        df[host_column] = df.index
+        df.insert(0, host_column, df.pop(host_column))
+
+        df[host_column] = df[host_column].map(get_host_entry)
+
+        column_formats = ["l"] + ["c"] * 9
+        latex = (
+            df.style
+            .hide(axis="index")
+            .to_latex(
+                siunitx=True,
+                hrules=True,
+                column_format="".join(column_formats),
+            )
+        )
+
+        return latex
+
+    def _report_results(self, ranked_metric: pd.DataFrame, utility_metric: pd.DataFrame,
+                        boot_estimates: dict) -> pd.DataFrame:
+        self._log_section("4 Report results")
+
+        self._log_section("4.1 Present the ranking table")
+        ranking_report = self._present_ranking_table(ranked_metric)
+
+        self._log_section("4.2 Report estimates")
+        self._report_estimates(utility_metric, ranked_metric, boot_estimates)
+
+        self._log_section("4.3 Summarize platform differences")
+        self._summarize_platform_differences(ranked_metric)
+        return ranking_report
+
+    def _summarize_platform_differences(self, ranked_metric: pd.DataFrame):
+        effective_tool_order = [item for item in ORDER_TOOL if item not in ["brotli", "sleep"]]
+        rank_comparison = (
+            ranked_metric.pivot(
+                index="tool",
+                columns="host",
+                values="rank",
+            )
+            .reindex(effective_tool_order)
+            .loc[:, ORDER_HOST]
+        )
+
+        rank_comparison["best_rank"] = rank_comparison.min(axis=1)
+        rank_comparison["worst_rank"] = rank_comparison.max(axis=1)
+        rank_comparison["rank_range"] = (
+                rank_comparison["worst_rank"]
+                - rank_comparison["best_rank"]
+        )
+
+        headers = ["tool / host"] + ORDER_HOST + ["best rank", "worst rank", "rank range"]
+        table_str = tabulate_pint(
+            rank_comparison,
+            headers=headers,
+        )
+        self._logger.info(table_str)
+
+    def _report_estimates(self, utility_metric: pd.DataFrame,
+                          ranked_metric: pd.DataFrame, boot_estimates: dict):
+        point_lookup = utility_metric.set_index(
+            ["host", "tool"]
+        )["metric_mean"]
+
+        rank_lookup = ranked_metric.set_index(
+            ["host", "tool"]
+        )["rank"]
+
+        records = []
+        for key, bootstrap_values in boot_estimates.items():
+            host, tool = key
+            ci_low, ci_high = np.quantile(
+                bootstrap_values,
+                [0.025, 0.975],
+            )
+
+            records.append({
+                "host": host,
+                "tool": tool,
+                "rank": rank_lookup.loc[key],
+                self.base_column: point_lookup.loc[key],
+                "ci_low": ci_low,
+                "ci_high": ci_high,
+            })
+
+        metric_report = pd.DataFrame(records)
+
+        metric_report = metric_report.pint.convert_object_dtype()
+        for column in [self.base_column, "ci_low", "ci_high"]:
+            metric_report[column] = metric_report[column].pint.to(self.display_unit)
+
+        metric_report["host"] = pd.Categorical(
+            metric_report["host"],
+            categories=ORDER_HOST,
+            ordered=True,
+        )
+        metric_report["tool"] = pd.Categorical(
+            metric_report["tool"],
+            categories=ORDER_TOOL,
+            ordered=True,
+        )
+
+        metric_report = metric_report.sort_values(
+            ["host", "tool"]
+        )
+
+        headers = ["host", "tool", "rank", self.base_column, "ci_low", "ci_high"]
+        table_str = tabulate_pint(
+            metric_report,
+            headers=headers,
+            showindex=False,
+            floatfmt=".2f",
+        )
+        self._logger.info(table_str)
+
+    def _present_ranking_table(self, ranked_metric: pd.DataFrame) -> pd.DataFrame:
+        ranking_report = (
+            ranked_metric.pivot(
+                index="host",
+                columns="rank",
+                values="tool",
+            )
+            .reindex(ORDER_HOST)
+        )
+
+        ranking_report.index.name = "Platform / Rank"
+        ranking_report.columns.name = None
+
+        table_str = tabulate.tabulate(
+            ranking_report,
+            headers="keys",
+        )
+        self._logger.info(table_str)
+        return ranking_report
+
+    def _construct_rankings(self, df: pd.DataFrame, utility_metric: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+        self._log_section("3 Construct rankings")
+
+        self._log_section("3.1 Rank utilities")
+        ranked_metric = self._rank_utilities(utility_metric)
+
+        self._log_section("3.2 Quantify uncertainty")
+        boot_estimates = self._quantify_uncertainty(df, ranked_metric)
+        return ranked_metric, boot_estimates
+
+    def _quantify_uncertainty(self, df: pd.DataFrame, ranked_metric: pd.DataFrame) -> dict:
+        col = df[self.base_column]
+        tp_unit = col.pint.units
+
+        boot_sums = {}
+        cell_counts = {}
+        for key, group in df.groupby(
+                self.factors,
+                observed=True,
+        ):
+            host, tool, _, _ = key
+            utility_key = (host, tool)
+
+            values = (
+                    tp_unit
+                    * group[self.base_column].pint.magnitude.to_numpy()
+            )
+
+            indices = self._rng.integers(
+                0,
+                len(values),
+                size=(self._n_boot, len(values)),
+            )
+
+            cell_means = values[indices].mean(axis=1)
+
+            if utility_key not in boot_sums:
+                boot_sums[utility_key] = tp_unit * np.zeros(self._n_boot)
+                cell_counts[utility_key] = 0
+
+            boot_sums[utility_key] += cell_means
+            cell_counts[utility_key] += 1
+
+        boot_estimates = {
+            key: values / cell_counts[key]
+            for key, values in boot_sums.items()
+        }
+
+        point_ranks = ranked_metric.set_index(
+            ["host", "tool"]
+        )["rank"]
+
+        records = []
+        for host in sorted(df["host"].unique()):
+            tools = sorted(df["tool"].unique())
+
+            estimates = np.column_stack([
+                boot_estimates[(host, tool)].magnitude
+                for tool in tools
+            ])
+
+            order = np.argsort(-estimates, axis=1, kind="stable")
+            ranks = np.empty_like(order)
+            ranks[
+                np.arange(self._n_boot)[:, None],
+                order
+            ] = np.arange(1, len(tools) + 1)
+
+            for column, tool in enumerate(tools):
+                tool_ranks = ranks[:, column]
+                frequencies = np.bincount(
+                    tool_ranks,
+                    minlength=len(tools) + 1,
+                )
+
+                records.append({
+                    "host": host,
+                    "tool": tool,
+                    "point_rank": point_ranks.loc[(host, tool)],
+                    "modal_bootstrap_rank": frequencies[1:].argmax() + 1,
+                    "rank_95_low": np.quantile(
+                        tool_ranks, 0.025, method="nearest"
+                    ),
+                    "rank_95_high": np.quantile(
+                        tool_ranks, 0.975, method="nearest"
+                    ),
+                    "point_rank_probability": np.mean(
+                        tool_ranks == point_ranks.loc[(host, tool)]
+                    ),
+                })
+
+        rank_uncertainty = pd.DataFrame(records)
+
+        rank_uncertainty["_host_key"] = rank_uncertainty["host"].apply(ORDER_HOST.index)
+        rank_uncertainty["_tool_key"] = rank_uncertainty["tool"].apply(ORDER_TOOL.index)
+        rank_uncertainty = rank_uncertainty.sort_values(
+            by=["_host_key", "_tool_key"],
+            ignore_index=True,
+        ).drop(columns=["_host_key", "_tool_key"])
+
+        table_str = tabulate.tabulate(
+            rank_uncertainty,
+            showindex=False,
+            headers="keys",
+        )
+        self._logger.info(table_str)
+        return boot_estimates
+
+    def _rank_utilities(self, utility_metric: pd.DataFrame) -> pd.DataFrame:
+        ranked_metric = (
+            utility_metric
+            .sort_values(
+                ["host", "metric_mean", "tool"],
+                ascending=[True, False, True],
+            )
+            .copy()
+        )
+
+        ranked_metric["rank"] = (
+            ranked_metric.groupby("host", observed=True)
+            .cumcount()
+            .add(1)
+        )
+
+        ranking_table = ranked_metric.pivot(
+            index="host",
+            columns="rank",
+            values="tool",
+        )
+
+        table_str = tabulate.tabulate(
+            ranking_table,
+            headers="keys",
+        )
+        self._logger.info(table_str)
+        return ranked_metric
+
+    def _calculate_utility_level_values(self, configuration_means: pd.DataFrame) -> pd.DataFrame:
+        utility_metric = (
+            configuration_means.groupby(
+                ["host", "tool"],
+                observed=True,
+                as_index=False,
+            )
+            .agg(
+                metric_mean=("metric_mean", "mean"),
+                configurations=("metric_mean", "size"),
+            )
+        )
+
+        self._logger.info("Utility-platform estimates:    %d", len(utility_metric))
+        self._logger.info("Unit:                          %s", utility_metric["metric_mean"].pint.units)
+        self._logger.info("Configurations per estimate:   %s", ", ".join([str(i) for i in sorted(utility_metric["configurations"].unique())]))
+        return utility_metric
+
+    def _calculate(self, df: pd.DataFrame) -> pd.DataFrame:
+        self._log_section("2 Aggregate metric")
+
+        self._log_section("2.1 Average repetitions")
+        configuration_means = self._calculate_medians(df)
+
+        self._log_section("2.2 Calculate utility-level values")
+        utility_metric = self._calculate_utility_level_values(configuration_means )
+        return utility_metric
+
+    def _calculate_medians(self, df: pd.DataFrame) -> pd.DataFrame:
+        configuration_means = (
+            df.groupby(
+                self.factors,
+                observed=True,
+                as_index=False,
+            )
+            .agg(
+                metric_mean=("throughput", "mean"),
+                trials=("run", "size"),
+            )
+        )
+
+        self._logger.info("Configuration means:           %d", len(configuration_means))
+        self._logger.info("Unit:                          %s", configuration_means["metric_mean"].pint.units)
+        self._logger.info("Trials per mean:               %s", ", ".join([str(i) for i in sorted(configuration_means["trials"].unique())]))
+        return configuration_means
 
     def _preparation(self, input_file: Path) -> pd.DataFrame:
-        self._log_section("1. Preparation")
+        self._log_section("1. Prepare the data")
         self._logger.info("load data")
         df = self._frameio.load(input_file)
 
-        self._log_section("1.1 Define subset")
+        self._log_section("1.1 Select observations")
         self._logger.info("Evaluate: %s %s", self._threading, self._mode)
         df = self._filter_data(df)
 
         self._log_section("1.2 Validate data")
         self._validate_data(df)
 
+        self._log_section("1.3 Check measurements")
+        self._check_measurements(df)
+
         return df
 
-    def _calculate(self, df: pd.DataFrame) -> pd.DataFrame:
-        self._log_section("2. Calculate medians")
-        summary = self._calculate_medians(df)
-        self._print_medians(summary)
+    def _check_measurements(self, df: pd.DataFrame):
+        col = df[self.base_column]
+        tp_unit = col.pint.units
 
-        self._log_section("3 Ranks")
-        ranked, ties = self._rank_utilities(summary)
-        self._print_ranked_utilities(ranked)
-        self._print_ties_utilities(ties)
+        missing = col.isna()
+        nonfinite = pd.Series(
+            ~np.isfinite(col.pint.magnitude),
+            index=df.index,
+        )
+        nonpositive = col <= 0 * tp_unit
 
-        self._log_section("4 Quantify consistency")
+        group_cols = ["host", "tool", "dataset", "strength"]
+        grouped = df.groupby(group_cols, observed=True)[self.base_column]
 
-        self._log_section("4.1 Pairwise Kendall’s")
-        platform_tau, dataset_tau = self._pair_utilities(ranked)
-        self._print_pair_tau("Across platforms", platform_tau)
-        self._logger.info("")
-        self._print_pair_tau("Across datasets", dataset_tau)
+        q1 = grouped.transform(lambda x: x.quantile(0.25))
+        q3 = grouped.transform(lambda x: x.quantile(0.75))
+        iqr = q3 - q1
 
-        self._log_section("4.2 Bootstrap")
-        platform_boot, dataset_boot = self._bootstrap(df)
-        self._print_bootstrap(platform_boot, dataset_boot)
+        potential_outlier = (
+                (col < q1 - 3 * iqr)
+                | (col > q3 + 3 * iqr)
+        )
 
-        self._log_section("4.3 CI intervals")
-        platform_results, dataset_results = self._calculate_ci(platform_tau, dataset_tau, platform_boot, dataset_boot)
-        self._print_ci(platform_results, dataset_results)
+        self._logger.info("Unit:                          %s", tp_unit)
+        self._logger.info("Missing:                       %d", missing.sum())
+        self._logger.info("Non-finite:                    %d", nonfinite.sum())
+        self._logger.info("Nonpositive:                   %d", nonpositive.sum())
+        self._logger.info("Potential outliers:            %d", potential_outlier.sum())
 
-        self._log_section("5 Ranking")
+    def _validate_data(self, df: pd.DataFrame):
+        df = df.copy()
 
-        self._log_section("5.1 Rank ranges")
-        utility_ranks = self._rank_ranges(ranked)
-        self._print_rank_ranges(utility_ranks)
+        coverage = (
+            df.groupby(self.factors, observed=True)
+            .agg(
+                rows=("run", "size"),
+                unique_runs=("run", "nunique"),
+            )
+        )
 
-        self._log_section("5.2 Rank reversals")
-        platform_reversals, dataset_reversals = self._rank_reversals(ranked)
-        utility_count = len(df["tool"].unique())
-        utility_pairs = int(utility_count * (utility_count -1) / 2)
-        self._print_rank_reversals(platform_reversals, dataset_reversals, utility_pairs)
+        incomplete = coverage.loc[
+            (coverage["rows"] != 30)
+            | (coverage["unique_runs"] != 30)
+            ]
 
-        self._log_section("6 Stability summary")
-        stability = self._stability_summary(ranked, platform_results, dataset_results,
-                                            platform_reversals, dataset_reversals)
-        self._print_stability_summary(stability)
-
-        stability_df = self._create_stability_frame(df, stability, platform_tau, dataset_tau)
-        return stability_df
-
-    def _create_stability_frame(self, df: pd.DataFrame, stability: pd.DataFrame,
-                                platform_tau: pd.DataFrame, dataset_tau: pd.DataFrame) -> pd.DataFrame:
-        stability = stability.copy()
-        stability.insert(0, "mode", self._mode)
-        stability.insert(1, "threading", self._threading)
-        tools = len(df["tool"].unique())
-        stability.insert(2, "tools", tools)
-        platform_pairs = len(platform_tau)
-        dataset_pairs = len(dataset_tau)
-        stability["pairs"] = stability["comparison"].map({
-            "Platforms": platform_pairs,
-            "Datasets": dataset_pairs,
-        })
-        stability.insert(4, "pairs", stability.pop("pairs"))
-        return stability
+        self._logger.info("Configurations:                %d", len(coverage))
+        self._logger.info("Trials per configuration:      %s", "%, ".join([str(i) for i in sorted(coverage["rows"].unique())]))
+        self._logger.info("Unique runs per configuration: %s", "%, ".join([str(i) for i in sorted(coverage["unique_runs"].unique())]))
+        self._logger.info("Incomplete configurations:     %d", len(incomplete))
 
     def _filter_data(self, df: pd.DataFrame):
         df = df[df["mode"] == self._mode]
         df = df[df["threading"] == self._threading]
+
+        self._logger.info("Rows:      %d", len(df))
+        self._logger.info("Modes:     %s", list(df["mode"].unique()))
+        self._logger.info("Threading: %s", list(df["threading"].unique()))
         return df
-
-    def _validate_data(self, df: pd.DataFrame):
-        df = df.copy()
-        self._validate_data_quantity(df)
-
-    def _validate_data_quantity(self, df: pd.DataFrame):
-        keys = self.factors + ["run"]
-
-        cell_counts = df.groupby(
-            self.factors,
-            observed=True
-        ).size()
-
-        self._logger.info("Observations:                 %d", len(df))
-        self._logger.info("Configurations:               %d", len(cell_counts))
-        self._logger.info("Min trials per configuration: %d", cell_counts.min())
-        self._logger.info("Max trials per configuration: %d", cell_counts.max())
-        missing = df[self.base_column].isna().sum()
-        self._logger.info("Missing response values:      %d", missing)
-        self._logger.info("Hosts:                        %s", ", ".join(df["host"].unique()))
-        self._logger.info("Tools:                        %s", ", ".join(df["tool"].unique()))
-        self._logger.info("Datasets:                     %s", ", ".join(df["dataset"].unique()))
-        self._logger.info("Strengths:                    %s", ", ".join(df["strength"].unique()))
-        self._logger.info("Base unit:                    %s", df[self.base_column].pint.units)
-        self._logger.info("Duplicate trials:             %d", df.duplicated(keys).sum())
-
-        if missing:
-            raise ValueError("Missing response values: %d" % missing)
-
-    def _print_medians(self, summary: pd.DataFrame):
-        display_summary = summary[self.factors + ["trials"]].copy()
-        median_column = "median_%s" % self.base_column
-        display_summary[median_column] = (
-            summary[median_column]
-            .pint.to(self.display_unit)
-        )
-
-        self._logger.info("Summary rows:                 %d", len(summary))
-        self._logger.info("Trials per summary:           %d to %d", summary["trials"].min(), summary["trials"].max())
-
-        display_summary = display_summary.head(12)
-
-        headers = self.factors + ["Trials", "Median"]
-        table_str = tabulate_pint(
-            display_summary,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _calculate_medians(self, df: pd.DataFrame) -> pd.DataFrame:
-        median_column = "median_%s" % self.base_column
-        summary = (
-            df.groupby(self.factors, observed=True)[self.base_column]
-            .agg(**{
-                median_column: "median",
-                "trials": "size"
-            })
-            .reset_index()
-        )
-        return summary
-
-    def _print_ranked_utilities(self, ranked: pd.DataFrame):
-        context = ["host", "dataset", "strength"]
-        ranked = ranked.copy()
-        group_sizes = ranked.groupby(context, observed=True).size()
-
-        self._logger.info("Contexts:                     %d", group_sizes.size)
-        self._logger.info("Utilities per context:        %d to %d", group_sizes.min(), group_sizes.max())
-
-        ranked["rank"] = ranked["rank"].pint.magnitude.astype("int64")
-
-        hosts = list(ranked["host"].unique())
-        for host in hosts:
-            dataset = "sensor"
-            strength = "default"
-            example = ranked[
-                (ranked["host"] == host)
-                & (ranked["dataset"] == dataset)
-                & (ranked["strength"] == strength)
-                ].sort_values("rank")
-
-            example_display = example[["tool", "rank"]].copy()
-            median_column = "median_%s" % self.base_column
-            example_display[median_column] = (
-                example[median_column]
-                .pint.to(self.display_unit)
-            )
-
-            self._logger.info("")
-            self._logger.info("Ranks on %s for %s with %s:", host, dataset, strength)
-            headers = ["Tool", "Rank", "Median"]
-            table_str = tabulate_pint(
-                example_display,
-                showindex=False,
-                headers=headers,
-            )
-            self._logger.info(table_str)
-
-    def _print_ties_utilities(self, ties: pd.DataFrame):
-        tie_display = ties[
-            self.factors + ["rank"]
-        ].copy()
-
-        tie_display["rank"] = tie_display["rank"].pint.magnitude
-
-        median_column = "median_%s" % self.base_column
-        tie_display[median_column] = (
-            ties[median_column]
-            .pint.to(self.display_unit)
-        )
-
-        tie_display = tie_display.sort_values(["host", "dataset", "strength", "rank"])
-
-        self._logger.info("")
-        self._logger.info("Tied utility rows:            %d", len(ties))
-        headers = [f.capitalize() for f in self.factors] + ["Rank", "Median"]
-        table_str = tabulate_pint(
-            tie_display,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _rank_utilities(self, summary: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        context = ["host", "dataset", "strength"]
-
-        median_column = "median_%s" % self.base_column
-        ranked = summary.copy()
-        ranked["rank"] = (
-            ranked.groupby(context, observed=True)[median_column]
-            .rank(method="average", ascending=False)
-        )
-
-        ties = ranked[
-            ranked.duplicated(
-                context + [median_column],
-                keep=False,
-            )
-        ]
-
-        return ranked, ties
-
-    def _print_pair_tau(self, label: str, result: pd.DataFrame):
-        self._logger.info(label)
-        self._logger.info("Comparisons:                  %d", len(result))
-        self._logger.info("Utilities:                    %d to %d", result["utilities"].min(),
-                          result["utilities"].max())
-        description = result["tau_b"].describe()[["min", "50%", "max"]]
-        description = description.to_frame()
-
-        headers = ["Item", "Tau_b"]
-        table_str = tabulate_pint(
-            description,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _pair_utilities(self, ranked: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        platform_tau = self._pairwise_tau(
-            ranked,
-            compare="host",
-            fixed=["dataset", "strength"],
-        )
-
-        dataset_tau = self._pairwise_tau(
-            ranked,
-            compare="dataset",
-            fixed=["host", "strength"],
-        )
-        return platform_tau, dataset_tau
-
-    def _pairwise_tau(self, frame, compare, fixed) -> pd.DataFrame:
-        rows = []
-
-        for fixed_values, group in frame.groupby(fixed, observed=True):
-            fixed_values = (
-                fixed_values
-                if isinstance(fixed_values, tuple)
-                else (fixed_values,)
-            )
-            fixed_values = dict(zip(fixed, fixed_values))
-
-            values = sorted(group[compare].unique())
-            for first, second in combinations(values, 2):
-                pair = (
-                    group[group[compare].isin([first, second])]
-                    .pivot(index="tool", columns=compare, values="rank")
-                    .dropna()
-                )
-
-                tau = kendalltau(
-                    pair[first],
-                    pair[second],
-                    variant="b",
-                ).statistic
-
-                rows.append({
-                    **fixed_values,
-                    "first": first,
-                    "second": second,
-                    "utilities": len(pair),
-                    "tau_b": tau,
-                })
-
-        return pd.DataFrame(rows)
-
-    def _print_bootstrap(self, platform_boot: pd.DataFrame, dataset_boot: pd.DataFrame):
-        self._logger.info("Platform bootstrap rows:     %d", len(platform_boot))
-        self._logger.info("Dataset bootstrap rows:      %d", len(dataset_boot))
-        self._logger.info("Missing platform tau:        %f", platform_boot["tau_b"].isna().sum())
-        self._logger.info("Missing dataset tau:         %f", dataset_boot["tau_b"].isna().sum())
-
-    def _bootstrap(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        platform_boot = []
-        dataset_boot = []
-        for iteration in tqdm(range(self._n_boot), colour="green"):
-            boot = (
-                df.groupby(self.factors, group_keys=False, observed=True)
-                .sample(
-                    frac=1,
-                    replace=True,
-                    random_state=int(self._rng.integers(0, 2 ** 32 - 1)),
-                )
-            )
-
-            median_column = "median_%s" % self.base_column
-            boot_summary = (
-                boot.groupby(self.factors, observed=True)[self.base_column]
-                .median()
-                .rename(median_column)
-                .reset_index()
-            )
-
-            boot_summary["rank"] = (
-                boot_summary.groupby(
-                    ["host", "dataset", "strength"],
-                    observed=True,
-                )[median_column]
-                .rank(ascending=False, method="average")
-            )
-
-            p = self._pairwise_tau(
-                boot_summary, "host", ["dataset", "strength"]
-            )
-            p["iteration"] = iteration
-            platform_boot.append(p)
-
-            d = self._pairwise_tau(
-                boot_summary, "dataset", ["host", "strength"]
-            )
-            d["iteration"] = iteration
-            dataset_boot.append(d)
-
-        platform_boot = pd.concat(platform_boot, ignore_index=True)
-        dataset_boot = pd.concat(dataset_boot, ignore_index=True)
-
-        return platform_boot, dataset_boot
-
-    def _print_ci(self, platform_results: pd.DataFrame, dataset_results: pd.DataFrame):
-        for label, result in [
-            ("Platforms", platform_results),
-            ("Datasets", dataset_results),
-        ]:
-            self._logger.info("")
-            self._logger.info(label)
-            self._logger.info("Rows:                         %d", len(result))
-            self._logger.info("Missing intervals:            %d",
-                              result[["ci_low", "ci_high"]].isna().sum().sum())
-            self._logger.info("CI width:                     %f to %f", result["ci_width"].min(),
-                              result["ci_width"].max())
-
-        self._logger.info("")
-        self._logger.info("Weakest platform comparisons:")
-        platform_results = platform_results.sort_values("tau_b")
-        platform_results = platform_results[["dataset", "strength", "first", "second",
-                                             "tau_b", "ci_low", "ci_high"]]
-        platform_results = platform_results.head(5)
-        headers = ["Dataset", "Strength", "First", "Second", "Tau_b", "CI low", "CI high"]
-        table_str = tabulate.tabulate(
-            platform_results,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-        dataset_results = dataset_results.sort_values("tau_b")
-        dataset_results = dataset_results[["host", "strength", "first", "second",
-                                           "tau_b", "ci_low", "ci_high"]]
-        dataset_results = dataset_results.head(5)
-
-        self._logger.info("")
-        self._logger.info("Weakest dataset comparisons:")
-        headers = ["Host", "Strength", "First", "Second", "Tau_b", "CI low", "CI high"]
-        table_str = tabulate.tabulate(
-            dataset_results,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _calculate_ci(self, platform_tau: pd.DataFrame, dataset_tau: pd.DataFrame,
-                      platform_boot: pd.DataFrame, dataset_boot: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        platform_results = self._attach_ci(
-            platform_tau,
-            platform_boot,
-            ["dataset", "strength", "first", "second"],
-        )
-
-        dataset_results = self._attach_ci(
-            dataset_tau,
-            dataset_boot,
-            ["host", "strength", "first", "second"],
-        )
-
-        return platform_results, dataset_results
-
-    def _attach_ci(self, point, bootstrap, keys):
-        ci = (
-            bootstrap.groupby(keys, observed=True)["tau_b"]
-            .quantile([0.025, 0.975])
-            .unstack()
-            .reset_index()
-            .rename(columns={0.025: "ci_low", 0.975: "ci_high"})
-        )
-
-        result = point.merge(
-            ci,
-            on=keys,
-            how="left",
-            validate="one_to_one",
-        )
-        result["ci_width"] = result["ci_high"] - result["ci_low"]
-        return result
-
-    def _print_rank_ranges(self, utility_ranks: pd.DataFrame):
-        utility_ranks = utility_ranks.copy()
-        headers = ["Tool", "Contexts", "Best rank", "Median rank", "Worst rank", "Top count", "Rank range", "Top (%)"]
-        for column in ["best_rank", "median_rank", "worst_rank", "rank_range"]:
-            utility_ranks[column] = utility_ranks[column].pint.magnitude.astype("int64")
-
-        table_str = tabulate.tabulate(
-            utility_ranks,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _rank_ranges(self, ranked: pd.DataFrame) -> pd.DataFrame:
-        context = ["host", "dataset", "strength"]
-        median_column = "median_%s" % self.base_column
-        ranked["top_ranked"] = (
-                ranked[median_column]
-                == ranked.groupby(context, observed=True)[median_column]
-                .transform("max")
-        )
-
-        utility_ranks = (
-            ranked.groupby("tool", observed=True)
-            .agg(
-                contexts=("rank", "size"),
-                best_rank=("rank", "min"),
-                median_rank=("rank", "median"),
-                worst_rank=("rank", "max"),
-                top_count=("top_ranked", "sum"),
-            )
-            .reset_index()
-        )
-
-        utility_ranks["rank_range"] = (
-                utility_ranks["worst_rank"] - utility_ranks["best_rank"]
-        )
-        utility_ranks["top_percent"] = (
-                100 * utility_ranks["top_count"] / utility_ranks["contexts"]
-        )
-
-        utility_ranks = utility_ranks.sort_values(
-            ["median_rank", "worst_rank", "tool"]
-        )
-        return utility_ranks
-
-    def _print_rank_reversals(self, platform_reversals: pd.DataFrame, dataset_reversals: pd.DataFrame, utility_pairs: int):
-        self._summarize_reversals("Across platforms", platform_reversals, opportunities=36, pair_count=utility_pairs)
-        self._summarize_reversals("Across datasets", dataset_reversals, opportunities=54, pair_count=utility_pairs)
-
-    def _summarize_reversals(self, label, reversals, opportunities: int, pair_count: int):
-        counts = (
-            reversals.groupby(["tool_a", "tool_b"])
-            .size()
-            .rename("reversals")
-            .reset_index()
-            .sort_values("reversals", ascending=False)
-        )
-        counts["percent"] = 100 * counts["reversals"] / opportunities
-
-        self._logger.info("")
-        self._logger.info(label)
-        self._logger.info("Reversal events:        %d", len(reversals))
-        self._logger.info("Affected utility pairs: %d of %d", len(counts), pair_count)
-        counts = counts.head(10)
-        headers = ["Tool A", "Tool B", "Reversals", "%"]
-        table_str = tabulate_pint(
-            counts,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _rank_reversals(self, ranked: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-        platform_reversals = self._find_reversals(
-            ranked, "host", ["dataset", "strength"]
-        )
-        dataset_reversals = self._find_reversals(
-            ranked, "dataset", ["host", "strength"]
-        )
-        return platform_reversals, dataset_reversals
-
-    def _find_reversals(self, frame, compare, fixed):
-        rows = []
-
-        for fixed_values, group in frame.groupby(fixed, observed=True):
-            if not isinstance(fixed_values, tuple):
-                fixed_values = (fixed_values,)
-            fixed_values = dict(zip(fixed, fixed_values))
-
-            for first, second in combinations(
-                sorted(group[compare].unique()), 2
-            ):
-                ranks = (
-                    group[group[compare].isin([first, second])]
-                    .pivot(index="tool", columns=compare, values="rank")
-                )
-
-                for tool_a, tool_b in combinations(sorted(ranks.index), 2):
-                    difference_first = (
-                        ranks.loc[tool_a, first] - ranks.loc[tool_b, first]
-                    )
-                    difference_second = (
-                        ranks.loc[tool_a, second] - ranks.loc[tool_b, second]
-                    )
-
-                    if difference_first * difference_second < 0:
-                        rows.append({
-                            **fixed_values,
-                            "first": first,
-                            "second": second,
-                            "tool_a": tool_a,
-                            "tool_b": tool_b,
-                        })
-
-        return pd.DataFrame(rows)
-
-    def _print_stability_summary(self, stability: pd.DataFrame):
-        headers = ["comparison", "Median tau b", "Minimum tau b", "Maximum tau b", "Reversal events", "reversal %"]
-        table_str = tabulate_pint(
-            stability,
-            showindex=False,
-            headers=headers,
-        )
-        self._logger.info(table_str)
-
-    def _stability_summary(self, ranked: pd.DataFrame, platform_results: pd.DataFrame, dataset_results: pd.DataFrame,
-                           platform_reversals: pd.DataFrame, dataset_reversals: pd.DataFrame) -> pd.DataFrame:
-        utility_pairs = comb(ranked["tool"].nunique(), 2)  # 36
-
-        stability = pd.DataFrame({
-            "comparison": ["Platforms", "Datasets"],
-            "median_tau_b": [
-                platform_results["tau_b"].median(),
-                dataset_results["tau_b"].median(),
-            ],
-            "minimum_tau_b": [
-                platform_results["tau_b"].min(),
-                dataset_results["tau_b"].min(),
-            ],
-            "maximum_tau_b": [
-                platform_results["tau_b"].max(),
-                dataset_results["tau_b"].max(),
-            ],
-            "reversal_events": [
-                len(platform_reversals),
-                len(dataset_reversals),
-            ],
-            "reversal_percent": [
-                100 * len(platform_reversals)
-                / (len(platform_results) * utility_pairs),
-                100 * len(dataset_reversals)
-                / (len(dataset_results) * utility_pairs),
-            ],
-        })
-        return stability
 
     def _log_section(self, title: str):
         self._logger.info("")
