@@ -466,6 +466,7 @@ class BaseRanking(LoggingProcessor):
         self._logger.info("Rows:      %d", len(df))
         self._logger.info("Modes:     %s", list(df["mode"].unique()))
         self._logger.info("Threading: %s", list(df["threading"].unique()))
+        self._logger.info("Tools:     %s", ", ".join(df["tool"].unique()))
         return df
 
     def _log_section(self, title: str):
