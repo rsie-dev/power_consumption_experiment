@@ -114,8 +114,8 @@ class Processor:
 
         parser_ranks_ee_net = subparsers_ranks_ee.add_parser('net',
                                                               help="calculate net energy efficiency ranks",
-                                                              parents=[common_parser, factor_parser,
-                                                                       ee_parser, log_parser, rng_parser_ranks])
+                                                              parents=[common_parser, factor_parser, ee_parser,
+                                                                       log_parser, rng_parser_ranks, tex_parser])
         parser_ranks_ee_net.set_defaults(func=self._ranks_ee_net)
 
         parser_stats = subparsers.add_parser('stats', help="statistics subcommands")
@@ -234,7 +234,7 @@ class Processor:
     def _ranks_ee_net(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
         ranking = NetEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
-                                             args.threading, args.mode)
+                                             args.threading, args.mode, args.tex)
         ranking.process(args.ee_file)
 
     def _ranks_merge(self, args):
