@@ -4,6 +4,8 @@ GROUP_COLS = ["host", "tool", "dataset", "mode", "strength", "threading"]
 
 ORDER_TOOL = ["gzip", "pigz", "bzip2", "lbzip2", "bzip3", "xz", "lz4", "lzop", "zstd", "brotli", "sleep"]
 
+SINGLE_THREADED_TOOLS = ["gzip", "bzip2", "lzop"]
+
 ORDER_STRENGTH = ["min", "default", "max"]
 
 ORDER_THREADING = ["single", "multi"]

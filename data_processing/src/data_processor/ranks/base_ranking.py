@@ -8,7 +8,7 @@ import tabulate
 
 from data_processor.processor import LoggingProcessor
 from data_processor.util import tabulate_pint
-from data_processor.constants import ORDER_TOOL, ORDER_HOST
+from data_processor.constants import ORDER_TOOL, ORDER_HOST, SINGLE_THREADED_TOOLS
 
 
 class BaseRanking(LoggingProcessor):
@@ -104,7 +104,10 @@ class BaseRanking(LoggingProcessor):
         return ranking_report
 
     def _summarize_platform_differences(self, ranked_metric: pd.DataFrame):
-        effective_tool_order = [item for item in ORDER_TOOL if item not in ["brotli", "sleep"]]
+        excluded_tools = ["brotli", "sleep"]
+        if self._threading == "multi":
+            excluded_tools += SINGLE_THREADED_TOOLS
+        effective_tool_order = [item for item in ORDER_TOOL if item not in excluded_tools]
         rank_comparison = (
             ranked_metric.pivot(
                 index="tool",
