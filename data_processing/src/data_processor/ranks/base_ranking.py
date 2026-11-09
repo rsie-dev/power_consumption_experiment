@@ -38,9 +38,18 @@ class BaseRanking(LoggingProcessor):
     def display_unit (self) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def kind(self) -> str:
+        pass
+
     @abstractmethod
     def _get_base_from_input_file(self, input_file: Path) -> str:
         pass
+
+    def extra_log_name(self, input_file: Path) -> str:
+        base = self._get_base_from_input_file(input_file)
+        return f"{self.kind}_ranking_{base}_{self._threading}_{self._mode}"
 
     def _analyze(self, input_file: Path) -> None:
         df = self._preparation(input_file)
@@ -48,8 +57,8 @@ class BaseRanking(LoggingProcessor):
         ranked_metric, boot_estimates  = self._construct_rankings(df, utility_metric)
         ranking_report = self._report_results(ranked_metric, utility_metric, boot_estimates)
         if self._create_tex:
-            base = self._get_base_from_input_file(input_file)
-            filename = f"tp_ranking_{base}_{self._threading}_{self._mode}.tex"
+            base = self.extra_log_name(input_file)
+            filename = f"{base}.tex"
             self._create_ranking_report_table(ranking_report, self._resources / filename)
 
     def _create_ranking_report_table(self, ranking_report: pd.DataFrame, filename: Path) -> None:

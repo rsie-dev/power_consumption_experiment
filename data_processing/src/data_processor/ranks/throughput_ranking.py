@@ -10,10 +10,6 @@ class ThroughputRanking(BaseRanking):
         super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
 
-    def extra_log_name(self, input_file: Path) -> str:
-        base = self._get_base_from_input_file(input_file)
-        return f"tp_ranking_{base}_{self._threading}_{self._mode}"
-
     def _get_base_from_input_file(self, input_file: Path) -> str:
         base = input_file.stem.removeprefix("tp_")
         return base
@@ -25,3 +21,7 @@ class ThroughputRanking(BaseRanking):
     @property
     def display_unit(self) -> str:
         return "MiB/s"
+
+    @property
+    def kind(self) -> str:
+        return "tp"
