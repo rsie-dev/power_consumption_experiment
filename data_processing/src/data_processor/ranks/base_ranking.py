@@ -382,7 +382,7 @@ class BaseRanking(LoggingProcessor):
                 as_index=False,
             )
             .agg(
-                metric_mean=("throughput", "mean"),
+                metric_mean=(self.base_column, "mean"),
                 trials=("run", "size"),
             )
         )
