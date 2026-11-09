@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, NetEnergyEfficiencyRanking, RankingMerger
+from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, NetEnergyEfficiencyRanking
 from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
@@ -92,12 +92,6 @@ class Processor:
         parser_ranks_tp.add_argument('--boot', default=10000, type=int, help="bootstrap count" + default)
         parser_ranks_tp.add_argument('tp_file', type=Path, help="calculated throughput file")
         parser_ranks_tp.set_defaults(func=self._ranks_tp)
-
-        parser_ranks_merge = subparsers_ranks.add_parser('merge', help="merges ranking tables",
-                                                         parents=[common_parser])
-        parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs="+",
-                                        help="rank files to merge")
-        parser_ranks_merge.set_defaults(func=self._ranks_merge)
 
         parser_ranks_ee = subparsers_ranks.add_parser('ee', help="ee ranks subcommands")
         subparsers_ranks_ee = parser_ranks_ee.add_subparsers(required=True, dest="subcommand", title='subcommands',
@@ -236,11 +230,6 @@ class Processor:
         ranking = NetEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
                                              args.threading, args.mode, args.tex)
         ranking.process(args.ee_file)
-
-    def _ranks_merge(self, args):
-        resources_folder = self._prepare_resource_folder(args.resources)
-        merger = RankingMerger(resources_folder)
-        merger.merge(args.rank_files)
 
     def _stats_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
