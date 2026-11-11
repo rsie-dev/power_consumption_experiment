@@ -16,6 +16,10 @@ class TotalEnergyEfficiencyStatistics(EnergyEfficiencyStatistics):
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @property
+    def id(self) -> str:
+        return "ee_total"
+
+    @property
     def base_column(self) -> str:
         return "energy_efficiency_total"
 

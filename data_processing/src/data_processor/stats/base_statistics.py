@@ -49,6 +49,11 @@ class BaseStatistics(LoggingProcessor):
         self._effect_ranking = EffectRanking(self.factors)
         self._stat_model = StatModel()
 
+    @property
+    @abstractmethod
+    def id(self) -> str:
+        pass
+
     def extra_log_name(self, input_file: Path) -> str:
         base = self.extra_log_base(input_file)
         logfile_name = f"{base}_{self._threading}_{self._mode}"
@@ -60,6 +65,7 @@ class BaseStatistics(LoggingProcessor):
         inference_result = self._inference(df, model)
         effect_ranking_df = self._results(inference_result)
 
+        self._create_effect_size_file(inference_result.ranked_effects_df, input_file)
         self._create_rank_file(effect_ranking_df, input_file)
         if self._create_tex:
             self._create_host_tool_order_files(inference_result.factor_means, input_file)
@@ -347,6 +353,38 @@ class BaseStatistics(LoggingProcessor):
         )
 
         return effect_rankings_stability
+
+    def _create_effect_size_file(self, ranked_effects_df: pd.DataFrame, input_file: Path) -> None:
+        base = self._get_base_from_input_file(input_file)
+        filename = f"{self.id}_effect_size_{self._threading}_{self._mode}_{base}.csv"
+        effect_size_df = self._create_effect_size_frame(ranked_effects_df)
+        self._frameio.persist(effect_size_df, self._resources / filename)
+
+    def _create_effect_size_frame(self, effect_df: pd.DataFrame) -> pd.DataFrame:
+        result = (
+            effect_df[
+                ["effect", "percent_total_variation"]
+            ]
+            .copy()
+            .rename(
+                columns={
+                    "percent_total_variation": "eta2_pct"
+                }
+            )
+        )
+
+        result["response"] = self.base_column
+        result["mode"] = self._mode
+        result["threading"] = self._threading
+
+        result = result[[
+                "response",
+                "mode",
+                "threading",
+                "effect",
+                "eta2_pct",
+        ]].reset_index(drop=True)
+        return result
 
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
         pass

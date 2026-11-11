@@ -19,6 +19,10 @@ class ThroughputStatistics(BaseStatistics):
         super().__init__(resources, logfile, n_boot, seed, threading, mode, create_tex)
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    @property
+    def id(self) -> str:
+        return "tp"
+
     def extra_log_base(self, input_file: Path) -> str:
         base = self._get_base_from_input_file(input_file)
         return "tp_stat_%s" % base
