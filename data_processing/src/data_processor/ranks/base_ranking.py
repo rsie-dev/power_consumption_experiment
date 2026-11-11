@@ -56,10 +56,11 @@ class BaseRanking(LoggingProcessor):
         utility_metric  = self._calculate(df)
         ranked_metric, boot_estimates  = self._construct_rankings(df, utility_metric)
         ranking_report = self._report_results(ranked_metric, utility_metric, boot_estimates)
+
+        base = self.extra_log_name(input_file)
+        self._create_ranking_report_file(ranking_report, self._resources / f"{base}.csv")
         if self._create_tex:
-            base = self.extra_log_name(input_file)
-            filename = f"{base}.tex"
-            self._create_ranking_report_table(ranking_report, self._resources / filename)
+            self._create_ranking_report_table(ranking_report, self._resources / f"{base}.tex")
 
     def _create_ranking_report_table(self, ranking_report: pd.DataFrame, filename: Path) -> None:
         self._logger.info("Generate: %s", filename)
@@ -97,6 +98,11 @@ class BaseRanking(LoggingProcessor):
         )
 
         return latex
+
+    def _create_ranking_report_file(self, ranking_report: pd.DataFrame, filename: Path) -> None:
+        ranking_report = ranking_report.copy()
+        ranking_report.insert(0, "platform_rank", ranking_report.index)
+        self._frameio.persist(ranking_report, filename)
 
     def _report_results(self, ranked_metric: pd.DataFrame, utility_metric: pd.DataFrame,
                         boot_estimates: dict) -> pd.DataFrame:
