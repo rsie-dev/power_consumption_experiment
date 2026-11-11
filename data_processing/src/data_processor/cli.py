@@ -102,8 +102,8 @@ class Processor:
 
         parser_ranks_ee_total = subparsers_ranks_ee.add_parser('total',
                                                                help="calculate total energy efficiency ranks",
-                                                               parents=[common_parser, factor_parser,
-                                                                        ee_parser, log_parser, rng_parser_ranks])
+                                                               parents=[common_parser, factor_parser, ee_parser,
+                                                                        log_parser, rng_parser_ranks, tex_parser])
         parser_ranks_ee_total.set_defaults(func=self._ranks_ee_total)
 
         parser_ranks_ee_net = subparsers_ranks_ee.add_parser('net',
@@ -222,7 +222,7 @@ class Processor:
     def _ranks_ee_total(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)
         ranking = TotalEnergyEfficiencyRanking(resources_folder, args.reslog, args.boot, args.seed,
-                                               args.threading, args.mode)
+                                               args.threading, args.mode, args.tex)
         ranking.process(args.ee_file)
 
     def _ranks_ee_net(self, args):
