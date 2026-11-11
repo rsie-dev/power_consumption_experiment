@@ -13,7 +13,7 @@ import tabulate
 from data_processor.processor import LoggingProcessor
 from data_processor.constants import ORDER_STRENGTH, ORDER_HOST
 from data_processor.util import tabulate_pint
-from .effect_names import EFFECT_NAMES
+from .effect_names import EFFECT_NAMES, get_effect_name
 from .drift_analyzer import DriftAnalyzer
 from .model_compare import ModelCompare
 from .bootstrap_ci_calculator import BootstrapCiCalculator
@@ -384,6 +384,16 @@ class BaseStatistics(LoggingProcessor):
                 "effect",
                 "eta2_pct",
         ]].reset_index(drop=True)
+
+        def map_effect_names(effect: str):
+            factors = self._extract_factors(effect)
+            if isinstance(factors, str):
+                factors = [factors]
+            factors = " x ".join(factors)
+            return factors
+
+        result["effect"] = result["effect"].map(map_effect_names)
+
         return result
 
     def _create_rank_file(self, effect_ranking_df: pd.DataFrame, input_file: Path) -> None:
