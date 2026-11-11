@@ -5,7 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 
 from .multimeter import MultimeterValidate
-from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, NetEnergyEfficiencyRanking
+from .ranks import ThroughputRanking, TotalEnergyEfficiencyRanking, NetEnergyEfficiencyRanking, RankingMerger
 from .stats import ThroughputStatistics
 from .stats import TotalEnergyEfficiencyStatistics, NetEnergyEfficiencyStatistics, EnergyEfficiencyMerger
 from .calc import EnergyParams
@@ -85,6 +85,12 @@ class Processor:
         parser_ranks = subparsers.add_parser('ranks', help="ranking subcommands")
         subparsers_ranks = parser_ranks.add_subparsers(required=True, dest="subcommand", title='subcommands',
                                                        description='valid subcommands')
+
+        parser_ranks_merge = subparsers_ranks.add_parser('merge', help="merges ranking tables",
+                                                         parents = [common_parser])
+        parser_ranks_merge.add_argument('rank_files', type=Path, metavar="rank-file", nargs=2,
+                                        help = "rank files to merge")
+        parser_ranks_merge.set_defaults(func=self._ranks_merge)
 
         parser_ranks_tp = subparsers_ranks.add_parser('tp', help="calculate throughput ranks",
                                                       parents=[common_parser, factor_parser, tex_parser,
@@ -212,6 +218,11 @@ class Processor:
         resources_folder = self._prepare_resource_folder(args.resources)
         pareto = ParetoCreator(resources_folder, args.reslog, args.boot, args.seed, args.mode, args.tex)
         pareto.process(args.cr, args.tp, args.ee)
+
+    def _ranks_merge(self, args):
+        resources_folder = self._prepare_resource_folder(args.resources)
+        merger = RankingMerger(resources_folder)
+        merger.merge(args.rank_files)
 
     def _ranks_tp(self, args):
         resources_folder = self._prepare_resource_folder(args.resources)

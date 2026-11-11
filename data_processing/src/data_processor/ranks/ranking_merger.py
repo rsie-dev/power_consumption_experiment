@@ -6,6 +6,24 @@ import pandas as pd
 from data_processor.processor import Processor
 
 
+def get_host_entry(host: str) -> str:
+    if host == "raspi5":
+        return r"\gls{pi5}"
+    if host == "visionfive2":
+        return r"\gls{visionfive2}"
+    if host == "radxax4":
+        return r"\gls{radxax4}"
+    raise RuntimeError("unknown host: %s" % host)
+
+
+def get_mode(mode: str) -> str:
+    if mode == "compress":
+        return "Compression"
+    if mode == "decompress":
+        return "Decompression"
+    raise RuntimeError("unknown mode: %s" % mode)
+
+
 class RankingMerger(Processor):
     def __init__(self, resources: Path):
         super().__init__(resources)
@@ -16,68 +34,74 @@ class RankingMerger(Processor):
         for rank_file in rank_files:
             df = self._frameio.load(rank_file)
             frames.append(df)
-        merged_df = pd.concat(frames)
-        print(merged_df)
-        base = rank_files[0].name[:2]
-        self._create_ranking_tex(merged_df, f"{base}_ranking_stability_merged.tex")
 
-    def _create_ranking_tex(self, df: pd.DataFrame, filename: str):
-        tex_file = self._resources / filename
-        self._logger.info("Generate: %s", tex_file)
-        latex = self._build_ranking_lines(df)
-        with tex_file.open(mode="w", encoding="UTF_8") as f:
-            f.write(latex)
+        base = self._merge_paths(rank_files[0], rank_files[1])
+        modes = self._last_parts(*rank_files)
+        pairs = list(zip(frames, modes))
+        filename = base.with_suffix(".tex")
+        self._create_merged_ranking_report_tex(pairs, filename)
 
-    def _build_ranking_lines(self, df: pd.DataFrame) -> str:
-        df.columns = pd.MultiIndex.from_tuples([
-            ("", "Mode"),
-            ("", "Threading"),
-            ("", "Utilities "),
-            ("", "Comparison"),
-            ("", "Pairs"),
-            (r"$\tau_b$", "Median"),
-            (r"$\tau_b$", "Min"),
-            (r"$\tau_b$", "Max"),
-            ("Reversals", "Count"),
-            ("Reversals", r"\%"),
-        ])
+    def _create_merged_ranking_report_tex(self, pairs: list[tuple[pd.DataFrame, str]], filename: Path) -> None:
+        self._logger.info("Generate: %s", filename)
+        latex = self._build_ranking_pairs(pairs)
+        with filename.open(mode="w", encoding="UTF_8") as f:
+            f.write("\n".join(latex))
 
-        int_format = "S[table-format=2]"
-        float_format = "S[round-mode=places, round-precision=3, table-format=1.3]"
-        percent_format = "S[round-mode=places, round-precision=2, table-format=2.2]"
-        range_format = "S[table-format=1.3, table-auto-round]"
-        range_format2 = "S[table-format=1, table-auto-round]"
-        #range_format = "S[round-mode=places, round-precision=3], table-format=1.3]"
-                     #"table-fixed-width=true, table-column-width=0.9cm, table-text-alignment=center]")
+    def _build_ranking_pairs(self, pairs: list[tuple[pd.DataFrame, str]]):
+        entries = []
+        for df, mode in pairs:
+            lines = self._build_ranking_lines(df)
+            entries.append((lines, mode))
+        first_lines, first_mode = entries[0]
+        second_lines, second_mode = entries[1]
+
+        header = first_lines[:4]
+        footer = first_lines[-2:]
+        tool_count = len(pairs[0][0].columns)
+
+        body1 = first_lines[4:-2]
+        body1.insert(0, "\\multicolumn{%d}{l}{\\textit{%s}} \\\\" % (tool_count, get_mode(first_mode)))
+        body1.append("\\midrule")
+
+        body2 = second_lines[4:-2]
+        body2.insert(0, "\\multicolumn{%d}{l}{\\textit{%s}} \\\\" % (tool_count, get_mode(second_mode)))
+
+        result = header + body1 + body2 + footer
+        return result
+
+    def _build_ranking_lines(self, df: pd.DataFrame):
+        host_column = "Platform / Rank"
+        df = df.rename(columns={"platform_rank": host_column})
+        df[host_column] = df[host_column].map(get_host_entry)
+
+        column_formats = ["l"] + ["c"] * 9
         latex = (
             df.style
             .hide(axis="index")
-            .format_index(escape=None, axis=1)
             .to_latex(
                 siunitx=True,
                 hrules=True,
-                multicol_align="c",
-                column_format=(
-                        "l" +
-                        "c" +
-                        int_format +
-                        "c" +
-                        int_format +
-                        float_format +
-                        range_format +
-                        range_format2 +
-                        int_format +
-                        percent_format
-                ),
+                column_format="".join(column_formats),
             )
         )
 
         lines = latex.splitlines()
-        toprule_index = next(
-            i for i, line in enumerate(lines)
-            if line.strip() == r"\toprule"
-        )
-        lines.insert(toprule_index + 2, r"\cmidrule(lr){6-8}\cmidrule(lr){9-10}")
-        latex = "\n".join(lines)
+        return lines
 
-        return latex
+    def _last_parts(self, *paths: Path) -> list[str]:
+        return [p.stem.rsplit("_", 1)[-1] for p in paths]
+
+    def _merge_paths(self, a: Path, b: Path) -> Path:
+        a_parts = a.stem.split("_")
+        b_parts = b.stem.split("_")
+
+        if a.suffix != b.suffix:
+            raise ValueError(f"Suffix mismatch: {a.suffix!r} vs {b.suffix!r}")
+        if a.parent != b.parent:
+            raise ValueError(f"Directory mismatch: {a.parent} vs {b.parent}")
+        if a_parts[:-1] != b_parts[:-1]:
+            raise ValueError(f"Common prefix differs: {a_parts[:-1]} vs {b_parts[:-1]}")
+        if a_parts[-1] == b_parts[-1]:
+            raise ValueError(f"Last parts are identical: {a_parts[-1]!r}")
+
+        return a.with_name("_".join(a_parts[:-1]) + a.suffix)
