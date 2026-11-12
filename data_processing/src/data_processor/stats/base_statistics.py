@@ -390,6 +390,7 @@ class BaseStatistics(LoggingProcessor):
             if isinstance(factors, str):
                 factors = [factors]
             factors = " x ".join(factors)
+            factors = get_effect_name(factors)
             return factors
 
         result["effect"] = result["effect"].map(map_effect_names)
